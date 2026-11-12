@@ -69,7 +69,7 @@ const addTime=(u,ms)=>u.frozen
   ?db.prepare('UPDATE users SET freeze_left=MAX(0,freeze_left+?) WHERE id=?').run(ms,u.id)
   :db.prepare('UPDATE users SET sub_until=? WHERE id=?').run(Math.max(u.sub_until,Date.now())+ms,u.id);
 
-http.createServer(async(req,res)=>{
+const srv=http.createServer(async(req,res)=>{
   try{
     const ip=String(req.headers['x-forwarded-for']||'').split(',')[0].trim()||req.socket.remoteAddress;
     if(req.method==='GET'&&!req.url.startsWith('/api/')){
@@ -323,5 +323,7 @@ http.createServer(async(req,res)=>{
     bad('Не найдено',404);
   }catch(e){send(res,400,{error:'Ошибка запроса'})}
 }).listen(process.env.PORT||3000,()=>console.log('FOREV EXT: http://localhost:'+(process.env.PORT||3000)));
+// keep-alive дольше, чем у прокси Render (иначе первый запрос после простоя рвётся: «Load failed»)
+srv.keepAliveTimeout=65e3;srv.headersTimeout=66e3;
 
 require('./keepalive')(); // анти-сон, настраивается через PING_URL
