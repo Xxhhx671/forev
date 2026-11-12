@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>FOREV EXT — CS2</title><link rel="icon" href="/favicon.png">
 <style>
 :root{--r:#ff1f3d;--r2:#b0001b;--b:#262626;--m:#9b9b9b;--c:14px;--ch:polygon(var(--c) 0,100% 0,100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,0 100%,0 var(--c))}
@@ -192,6 +192,36 @@ footer{text-align:center;color:var(--m);padding:36px;font-size:13px;border-top:1
 .tv{margin-top:16px;padding-top:12px;border-top:1px solid var(--b)}
 .stg{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.stg div{padding:14px;border:1px solid var(--b);border-radius:12px;background:#0f0f0f}.stg b{display:block;font-size:24px}.stg small{color:var(--m)}
 .cab-in .fld.n{flex:0 1 150px;min-width:130px}
+
+/* mobile + touch */
+.card::before,.card::after{pointer-events:none} /* перекрывали клики по вкладкам и кнопкам внутри карточек */
+html{-webkit-text-size-adjust:100%}
+button,.chips span,.seg button,.it{touch-action:manipulation}
+header{padding-top:calc(14px + env(safe-area-inset-top))}
+#toast{bottom:calc(28px + env(safe-area-inset-bottom))}
+.ov{overflow-y:auto}.am{margin:auto}
+.seg{max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}.seg::-webkit-scrollbar{display:none}.seg button{flex:none;white-space:nowrap}
+@media(hover:none){.card:hover{transform:none;box-shadow:none}.btn:hover{color:#fff}.btn:hover::before{transform:scaleX(0)}.ml:hover{padding-left:0}}
+@media(max-width:760px){
+section{padding:72px 4.5vw}
+.hero{min-height:100svh;padding-top:80px}.hw{width:min(420px,88vw,52svh)}
+h2{letter-spacing:1px}.tagl{font-size:15px}
+#cab{padding-top:92px}
+.prof{gap:14px}.av{width:68px;height:68px;font-size:30px;border-radius:22px}.prof h2{font-size:26px}
+.card{padding:22px 18px}.grid{gap:14px}
+.ring,.rt{width:64px;height:64px;right:16px;top:16px}.rt b{font-size:19px}.rt small{font-size:10px}
+.btn{height:52px}.btn.sm{height:48px}
+.row .btn,.cab-in .btn{flex:1 1 140px}
+.cab-in{gap:10px}.cab-in .fld,.cab-in .fld.n{flex:1 1 100%;min-width:0}
+.fld input,.fld.ta textarea,.mi{font-size:16px}
+.it{padding:12px}.it .row{width:100%;margin-top:8px!important}.mi{flex:1;min-width:0;width:auto}
+.xs{width:40px;height:40px}.chips span{padding:10px 16px}.seg button{padding:11px 16px}
+.frm{padding:28px 18px}.am{border-radius:20px}
+#menu{width:min(340px,88vw);padding:92px 24px 24px}.ml{font-size:19px;padding:14px 0}
+.cta{padding:40px 16px}.mq div{font-size:18px}
+.stg{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:380px){.btns .btn{width:100%}}
 </style></head><body>
 <canvas id="cv"></canvas><div id="pg"></div>
 <div id="pre"><img src="/logo.webp" alt=""><div class="pbar"><i></i></div></div>
@@ -315,7 +345,13 @@ const tEl=document.createElement('div');tEl.id='toast';document.body.append(tEl)
 function toast(m,bad){tEl.innerHTML='<svg viewBox="0 0 24 24"><path d="'+(bad?'m6 6 12 12M18 6 6 18':'m5 12 5 5 9-10')+'"/></svg><span></span>';tEl.lastChild.textContent=m;tEl.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>tEl.classList.remove('on'),3000)}
 function countTo(el,n){const s=performance.now();(function t(now){const k=Math.min((now-s)/1300,1);el.textContent=Math.round(n*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(t)})(s)}
 /* Авторизация */
-const api=async(u,d)=>{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})});const j=await r.json();if(!r.ok)throw new Error(j.error||'Ошибка');return j};
+/* повтор при обрыве соединения (Safari: «Load failed») и при пробуждении Render (502/503/504) */
+const wait=ms=>new Promise(k=>setTimeout(k,ms));
+const api=async(u,d,n=0)=>{let r;
+ try{r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})})}
+ catch{if(n<3){await wait(600*(n+1));return api(u,d,n+1)}throw new Error('Нет связи с сервером, попробуйте ещё раз')}
+ if([502,503,504].includes(r.status)&&n<3){await wait(1500);return api(u,d,n+1)}
+ const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Ошибка сервера ('+r.status+')');return j};
 document.querySelectorAll('.frm>*:not(.x)').forEach((e,i)=>e.style.setProperty('--k',i));
 function openM(m){mode=m;const r=m==='reg';$('ov').classList.add('on');document.body.classList.add('lock');$('me').textContent='';
  $('tabs').classList.toggle('r',r);$('t1').classList.toggle('on',!r);$('t2').classList.toggle('on',r);
@@ -346,7 +382,7 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
   setTimeout(()=>{u.inf?$('dl').textContent='∞':countTo($('dl'),d);$('rg').style.strokeDashoffset=u.inf?0:213.6*(1-Math.min(d/30,1))},300);
   loadDev();loadGifts();loadLg();loadNews();tlist(0);refUI(u);fzUI(u)}
  setTimeout(obs,50)}
-async function init(){try{const r=await fetch('/api/me');user=r.ok?await r.json():null}catch{user=null}render()}
+async function init(){for(let n=0;n<4;n++){try{const r=await fetch('/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render()}
 /* кабинет: заморозка, подарки, устройства, админка */
 const D=864e5,esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fd=t=>new Date(t).toLocaleDateString('ru');
 const cp=t=>navigator.clipboard.writeText(t).then(()=>toast('Скопировано'),()=>toast('Не удалось скопировать',1));
@@ -359,7 +395,7 @@ async function loadDev(){try{const r=await api('/api/devices');$('dvh').textCont
  $('dv').innerHTML=r.list.map(d=>`<div class="it"><div>${esc(d.name||'Устройство')}<small>последний вход: ${fd(d.last_seen)}</small></div><button class="xs" onclick="dd(${d.id})" aria-label="Удалить">×</button></div>`).join('')||'<p>Пусто. Устройство добавится при первом входе в клиент.</p>'}catch{}}
 async function dd(id){try{await api('/api/device/del',{id});loadDev();toast('Устройство удалено')}catch(e){toast(e.message,1)}}
 /* админка */
-function at(i){[0,1,2,3,4,5,6].forEach(k=>{$('ap'+k).style.display=k===i?'':'none';$('seg').children[k].classList.toggle('on',k===i)});[null,lk,ul,pli,()=>tlist(1),nli,stt][i]?.()}
+function at(i){[0,1,2,3,4,5,6].forEach(k=>{$('ap'+k).style.display=k===i?'':'none';$('seg').children[k].classList.toggle('on',k===i)});$('seg').children[i].scrollIntoView({inline:'center',block:'nearest'});[null,lk,ul,pli,()=>tlist(1),nli,stt][i]?.()}
 function pd(n){$('ki').checked=!n;if(n)$('kd').value=n}
 async function mk(){try{const r=await api('/api/admin/genkey',{days:+$('kd').value,devices:+$('kv').value,count:+$('kc').value,inf:$('ki').checked});$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Создано ключей: '+r.keys.length)}catch(e){toast(e.message,1)}}
 async function lk(){try{const r=await api('/api/admin/keys');$('kl').innerHTML=r.keys.map(k=>`<div class="it"><div><code style="cursor:pointer" onclick="cp('${k.code}')">${k.code}</code><small>${k.inf?'бессрочный':k.days+' дн.'} · устр. ${k.devices} · ${k.used?'активировал '+esc(k.used):'свободен'}</small></div>${k.used?'':`<button class="xs" onclick="dk('${k.code}')" aria-label="Удалить">×</button>`}</div>`).join('')||'<p>Ключей пока нет.</p>'}catch{}}
