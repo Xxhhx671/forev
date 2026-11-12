@@ -153,6 +153,45 @@ footer{text-align:center;color:var(--m);padding:36px;font-size:13px;border-top:1
 #toast svg{width:20px;height:20px;stroke:var(--r);fill:none;stroke-width:2.5;stroke-linecap:round;flex:none}
 @media(max-width:760px){.am{grid-template-columns:1fr}.side{display:none}.frm{padding:30px 22px}.steps::before{display:none}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
+
+/* rounded theme */
+:root{--rad:18px}
+.btn,.av{clip-path:none}
+.btn{height:50px;padding:0 30px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;overflow:hidden;font-size:13.5px;font-weight:700;letter-spacing:1.2px;background:linear-gradient(180deg,#ff3b57,var(--r2));box-shadow:0 8px 24px #ff1f3d33,inset 0 1px 0 #ffffff33;transition:color .35s,transform .2s,box-shadow .3s}
+.btn:hover{box-shadow:0 10px 30px #ff1f3d55,inset 0 1px 0 #ffffff33}.btn:active{transform:scale(.97)}
+.btn.ghost{background:#111;box-shadow:inset 0 0 0 1px #2e2e2e}.btn.ghost:hover{box-shadow:inset 0 0 0 1px #fff}
+.btn.sm{height:46px;padding:0 22px}.btn.big{display:flex;height:54px}
+.bg{border-radius:14px}.x{border-radius:11px}.eye{border-radius:10px}
+#menu{border-radius:26px 0 0 26px;border-left:1px solid #ff1f3d88}
+.card{border-radius:var(--rad)}.card::before{border-radius:inherit}.card.w{grid-column:1/-1}.card.w:hover{transform:none}
+.ic{border-radius:14px}
+.cta{border-radius:24px;border-color:#ff1f3d88}.cta::before,.cta::after{display:none}
+.am{border-radius:24px;overflow:hidden;border-top-width:1px;border-top-color:#ff1f3d66}
+.tabs{border-radius:14px}.tabs i,.tabs button{border-radius:11px}
+.fld input{border-radius:12px}.fld input:focus{box-shadow:0 0 0 3px #ff1f3d26}
+.av{border-radius:28px}.dot{border-radius:50%}.dot.fz{background:#7fd6ff}
+.scroll{border-radius:14px}.scroll::after,.pbar,.pbar i{border-radius:2px}
+#toast{border-radius:14px;border-left-width:1px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.bdg{display:inline-block;margin-top:6px;padding:3px 12px;border-radius:99px;background:#ff1f3d22;border:1px solid #ff1f3d66;color:var(--r);font-size:12px;font-weight:800;letter-spacing:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;min-height:4px}.chips span{padding:7px 14px;border-radius:99px;background:#121212;border:1px solid var(--b);cursor:pointer;font-size:13px;transition:.25s}.chips span:hover{border-color:var(--r);color:var(--r)}.chips small{color:var(--m)}
+.lst{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.it{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 14px;background:#0f0f0f;border:1px solid var(--b);border-radius:12px;font-size:14px}.it small{display:block;color:var(--m)}
+.seg{display:inline-flex;gap:4px;padding:4px;background:#111;border-radius:14px;margin:6px 0 18px;flex-wrap:wrap}.seg button{border:0;background:none;padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;color:#999;transition:.3s}.seg button.on{background:var(--r);color:#fff}
+.mi{width:84px;padding:10px;background:#0e0e0e;border:1px solid var(--b);border-radius:10px;color:#fff;font:inherit;font-size:13px}.mi:focus{outline:0;border-color:var(--r)}
+.xs{flex:none;width:32px;height:32px;border:1px solid var(--b);background:none;border-radius:9px;cursor:pointer;color:#bbb;font-size:18px;line-height:1;transition:.25s}.xs:hover{border-color:var(--r);color:var(--r)}
+.chk{display:flex;gap:10px;align-items:center;margin:4px 0 16px;color:var(--m);font-size:14px;cursor:pointer}.chk input{accent-color:var(--r);width:18px;height:18px}
+#kout{white-space:pre-wrap;word-break:break-all;margin:14px 0 0;font:13px/1.7 ui-monospace,Consolas,monospace;color:#ddd}
+.cab-in .fld.n{flex:0 1 130px;min-width:110px}
+
+.fld.ta textarea{width:100%;min-height:92px;padding:18px 16px 12px;background:#0e0e0e;border:1px solid var(--b);border-radius:12px;color:#fff;font:inherit;resize:vertical;transition:border-color .3s,box-shadow .3s}
+.fld.ta textarea:focus{outline:0;border-color:var(--r);box-shadow:0 0 0 3px #ff1f3d26}
+.fld.ta label{left:16px;top:22px;transform:none}
+.fld.ta textarea:focus+label,.fld.ta textarea:not(:placeholder-shown)+label{top:0;left:12px;transform:translateY(-50%);font-size:11px;color:var(--r);background:#0a0a0a;padding:0 8px;letter-spacing:1px;text-transform:uppercase}
+.mg{padding:10px 14px;margin-top:8px;background:#0f0f0f;border:1px solid var(--b);border-radius:12px;white-space:pre-wrap;word-break:break-word;font-size:14px}.mg small{display:block;color:var(--m)}.mg.ad{border-color:#ff1f3d66;background:#1a0509}
+.tv{margin-top:16px;padding-top:12px;border-top:1px solid var(--b)}
+.stg{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.stg div{padding:14px;border:1px solid var(--b);border-radius:12px;background:#0f0f0f}.stg b{display:block;font-size:24px}.stg small{color:var(--m)}
+.cab-in .fld.n{flex:0 1 150px;min-width:130px}
 </style></head><body>
 <canvas id="cv"></canvas><div id="pg"></div>
 <div id="pre"><img src="/logo.webp" alt=""><div class="pbar"><i></i></div></div>
@@ -191,15 +230,40 @@ footer{text-align:center;color:var(--m);padding:36px;font-size:13px;border-top:1
 </div>
 
 <section id="cab">
-<div class="prof rv"><div class="av" id="av"></div><div><h2 id="cu"></h2><p id="ce"></p></div></div>
+<div class="prof rv"><div class="av" id="av"></div><div><h2 id="cu"></h2><p id="ce"></p><span class="bdg" id="adb" style="display:none">ADMIN</span></div></div>
 <div class="grid">
-<div class="card rv"><svg class="ring" viewBox="0 0 80 80"><circle cx="40" cy="40" r="34"/><circle id="rg" cx="40" cy="40" r="34"/></svg><div class="rt"><b id="dl">0</b><small>дн.</small></div>
+<div class="card rv"><svg class="ring" viewBox="0 0 80 80"><circle cx="40" cy="40" r="34"/><circle id="rg" cx="40" cy="40" r="34"/></svg><div class="rt"><b id="dl">0</b><small id="dls">дн.</small></div>
 <div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></svg></div><h3>Подписка</h3>
-<div class="st"><i class="dot" id="dot"></i><span id="cs"></span></div><p id="cs2"></p></div>
+<div class="st"><i class="dot" id="dot"></i><span id="cs"></span></div><p id="cs2"></p>
+<p id="fzh" style="font-size:13px;margin-top:8px"></p><div class="row"><button class="btn sm" id="bfz" onclick="fz(1)" style="display:none">Заморозить</button><button class="btn sm" id="buf" onclick="fz(0)" style="display:none">Разморозить</button></div></div>
 <div class="card rv" style="--d:.08s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="12" cy="8" r="4"/><path class="dr" pathLength="1" d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><h3>Аккаунт</h3>
 <div class="kv"><span>Ник</span><b id="ku"></b></div><div class="kv"><span>E-mail</span><b id="ke2"></b></div><div class="kv"><span>Регистрация</span><b id="cc"></b></div></div>
-<div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="8" cy="15" r="4"/><path class="dr" pathLength="1" d="m11 12 9-9M17 6l3 3"/></svg></div><h3>Активация ключа</h3><p>Введите ключ, чтобы продлить подписку.</p>
-<div class="cab-in"><div class="fld"><input id="key" placeholder=" "><label>Ключ</label><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/></svg></div><button class="btn sm" onclick="redeem()">OK</button></div><div class="err" id="ke" style="margin-top:8px"></div></div>
+<div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="8" cy="15" r="4"/><path class="dr" pathLength="1" d="m11 12 9-9M17 6l3 3"/></svg></div><h3>Ключ / промокод</h3><p>Введите ключ или промокод, чтобы продлить подписку.</p>
+<div class="cab-in"><div class="fld"><input id="key" placeholder=" "><label>Ключ или промокод</label><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/></svg></div><button class="btn sm" onclick="redeem()">OK</button></div><div class="err" id="ke" style="margin-top:8px"></div></div>
+<div class="card rv" style="--d:.24s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M3 8h18v4H3zM12 8v13M5 12v9h14v-9M12 8C9 8 7 7 7 5s3-2 5 3c2-5 5-5 5-3s-2 3-5 3"/></svg></div><h3>Подарить дни</h3><p>Дни спишутся с вашей подписки и уйдут получателю.</p>
+<div class="cab-in"><div class="fld "><input autocomplete="off" oninput="gs()" id="gto"  placeholder=" " ><label>Ник получателя</label><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="fld n"><input id="gd" type="number" min="1" placeholder=" " ><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><button class="btn sm" onclick="gift()">Подарить</button></div>
+<div class="chips" id="sug"></div><div class="err" id="ge"></div><div class="lst" id="gh"></div></div>
+<div class="card rv" style="--d:.32s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr a" pathLength="1" x="3" y="4" width="18" height="12" rx="2"/><path class="dr" pathLength="1" d="M8 20h8M12 16v4"/></svg></div><h3>Устройства <span id="dvh" style="color:var(--r)"></span></h3><p>Привязка по HWID. Лимит задаётся ключом.</p><div class="lst" id="dv"></div></div>
+<div class="card rv"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path class="dr" pathLength="1" d="M9 12h6"/></svg></div><h3>Безопасность</h3>
+<div class="cab-in"><div class="fld "><input id="op"  type="password" autocomplete="current-password" placeholder=" " ><label>Текущий пароль</label><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div class="fld "><input id="np"  type="password" autocomplete="new-password" placeholder=" " ><label>Новый пароль</label><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div></div>
+<div class="row"><button class="btn sm" onclick="chpw()">Сменить пароль</button><button class="btn sm ghost" onclick="outAll()">Выйти везде</button></div><div class="err" id="pe" style="margin-top:8px"></div>
+<p>Последние входы</p><div class="lst" id="lg"></div></div>
+<div class="card rv" style="--d:.08s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg></div><h3>Рефералы</h3><p>Друг регистрируется по вашей ссылке и активирует первый ключ — вы получаете бонусные дни.</p>
+<div class="cab-in"><div class="fld "><input id="rl"  placeholder=" " readonly><label>Ваша ссылка</label><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg></div><button class="btn sm" onclick="cp($('rl').value)">Копировать</button></div><p id="rs" style="margin-top:10px"></p></div>
+<div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg></div><h3>Новости</h3><div class="lst" id="nw"></div></div>
+<div class="card w rv"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M4 5h16v11H8l-4 4z"/></svg></div><h3>Поддержка</h3>
+<div class="fld "><input id="ts"  placeholder=" " ><label>Тема</label><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></div><div class="fld ta"><textarea id="tt" placeholder=" "></textarea><label>Сообщение</label></div><div class="row" style="margin:0 0 6px"><button class="btn sm" onclick="tnew()">Отправить тикет</button></div><div class="err" id="te"></div>
+<div class="lst" id="tl"></div><div id="tv"></div></div>
+<div class="card w" id="adm" style="display:none"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></div><h3>Админ-панель</h3>
+<div class="seg" id="seg"><button class="on" onclick="at(0)">Выдать ключ</button><button onclick="at(1)">Ключи</button><button onclick="at(2)">Пользователи</button><button onclick="at(3)">Промокоды</button><button onclick="at(4)">Тикеты</button><button onclick="at(5)">Новости</button><button onclick="at(6)">Статистика</button></div>
+<div id="ap0"><div class="cab-in"><div class="fld "><input id="kd"  type="number" min="1" placeholder=" " value="30"><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="fld "><input id="kv"  type="number" min="1" placeholder=" " value="1"><label>Устройств</label><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div class="fld "><input id="kc"  type="number" min="1" max="50" placeholder=" " value="1"><label>Кол-во ключей</label><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/></svg></div></div>
+<div class="chips"><span onclick="pd(1)">1 дн</span><span onclick="pd(7)">7 дн</span><span onclick="pd(30)">30 дн</span><span onclick="pd(90)">90 дн</span><span onclick="pd(365)">365 дн</span><span onclick="pd(0)">навсегда</span></div>
+<label class="chk"><input type="checkbox" id="ki"> Бессрочный ключ</label><div class="row" style="margin:0"><button class="btn" onclick="mk()">Создать</button><button class="btn ghost" id="kcp" style="display:none" onclick="cp($('kout').textContent)">Копировать все</button></div><pre id="kout"></pre></div>
+<div id="ap1" style="display:none"><div class="lst" id="kl"></div></div>
+<div id="ap2" style="display:none"><div class="fld "><input oninput="ul()" id="uq"  placeholder=" " ><label>Поиск по нику / e-mail</label><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></div><div class="lst" id="ulst"></div></div><div id="ap3" style="display:none"><div class="cab-in"><div class="fld "><input id="pc"  placeholder=" " ><label>Код (пусто — случайный)</label><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/></svg></div><div class="fld n"><input id="pdays"  type="number" min="1" placeholder=" " value="3"><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="fld n"><input id="pu"  type="number" min="1" placeholder=" " value="100"><label>Использований</label><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="fld n"><input id="pex"  type="number" min="1" placeholder=" " ><label>Срок, дн.</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><button class="btn sm" onclick="padd()">Создать</button></div><div class="lst" id="pls"></div></div>
+<div id="ap4" style="display:none"><div class="lst" id="atl"></div><div id="atv"></div></div>
+<div id="ap5" style="display:none"><div class="fld "><input id="nt"  placeholder=" " ><label>Заголовок</label><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></div><div class="fld ta"><textarea id="nx" placeholder=" "></textarea><label>Текст</label></div><div class="row" style="margin:0 0 6px"><button class="btn sm" onclick="nadd()">Опубликовать</button></div><div class="lst" id="nls"></div></div>
+<div id="ap6" style="display:none"><div class="stg" id="sts"></div></div></div>
 </div></section>
 </main>
 <footer>© 2026 FOREV EXT. Все права защищены.</footer>
@@ -230,7 +294,7 @@ for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const a=P[i],b=P[j],d=M
  if(d<150){cx.strokeStyle=(a.red&&b.red)?`rgba(255,31,61,${(1-d/150)*.5})`:`rgba(255,255,255,${(1-d/150)*.2})`;cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke()}}
 for(const p of P){cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.shadowBlur=8;
  if(p.red){cx.shadowColor='#ff1f3d';cx.strokeStyle='#ff1f3d';cx.fillStyle='rgba(255,31,61,.18)'}else{cx.shadowColor='#fff';cx.strokeStyle='rgba(255,255,255,.8)';cx.fillStyle='rgba(255,255,255,.05)'}
- cx.fillRect(-p.s/2,-p.s/2,p.s,p.s);cx.strokeRect(-p.s/2,-p.s/2,p.s,p.s);cx.restore()}
+ cx.beginPath();cx.roundRect?cx.roundRect(-p.s/2,-p.s/2,p.s,p.s,p.s*.3):cx.rect(-p.s/2,-p.s/2,p.s,p.s);cx.fill();cx.stroke();cx.restore()}
 requestAnimationFrame(loop)})();
 /* Загрузка, прогресс, появление, подсветка карточек */
 function ready(){if(document.body.classList.contains('ready'))return;document.body.classList.add('ready');const p=$('pre');p.classList.add('out');setTimeout(()=>p.remove(),800)}
@@ -244,11 +308,11 @@ function tm(s){const on=s===undefined?!$('menu').classList.contains('on'):!!s;
  $('menu').classList.toggle('on',on);$('mv').classList.toggle('on',on);$('bgr').classList.toggle('on',on);document.body.classList.toggle('lock',on)}
 function go(id){tm(0);if(id==='top'||user)return scrollTo({top:0,behavior:'smooth'});$(id).scrollIntoView({behavior:'smooth'})}
 const arr='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
-function menu(){const L=user?[['01','Личный кабинет',"go('top')"],['02','Выйти','logout()']]:[['01','Главная',"go('top')"],['02','Возможности',"go('feat')"],['03','Как начать',"go('how')"],['04','Вход',"tm(0);openM('log')"],['05','Регистрация',"tm(0);openM('reg')"]];
+function menu(){const L=user?[['01','Личный кабинет',"go('top')"],...(user.is_admin?[['02','Админ-панель',"tm(0);$('adm').scrollIntoView({behavior:'smooth'})"]]:[]),[user.is_admin?'03':'02','Выйти','logout()']]:[['01','Главная',"go('top')"],['02','Возможности',"go('feat')"],['03','Как начать',"go('how')"],['04','Вход',"tm(0);openM('log')"],['05','Регистрация',"tm(0);openM('reg')"]];
  $('ml').innerHTML=L.map((l,i)=>`<div class="ml" style="--i:${i}" onclick="${l[2]}"><em>${l[0]}</em>${l[1]}${arr}</div>`).join('')}
 /* Уведомления */
 const tEl=document.createElement('div');tEl.id='toast';document.body.append(tEl);let tT;
-function toast(m){tEl.innerHTML='<svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg><span></span>';tEl.lastChild.textContent=m;tEl.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>tEl.classList.remove('on'),3000)}
+function toast(m,bad){tEl.innerHTML='<svg viewBox="0 0 24 24"><path d="'+(bad?'m6 6 12 12M18 6 6 18':'m5 12 5 5 9-10')+'"/></svg><span></span>';tEl.lastChild.textContent=m;tEl.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>tEl.classList.remove('on'),3000)}
 function countTo(el,n){const s=performance.now();(function t(now){const k=Math.min((now-s)/1300,1);el.textContent=Math.round(n*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(t)})(s)}
 /* Авторизация */
 const api=async(u,d)=>{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})});const j=await r.json();if(!r.ok)throw new Error(j.error||'Ошибка');return j};
@@ -262,22 +326,71 @@ function openM(m){mode=m;const r=m==='reg';$('ov').classList.add('on');document.
 function closeM(){$('ov').classList.remove('on');document.body.classList.remove('lock')}
 function eye(){const f=$('f3');f.type=f.type==='password'?'text':'password'}
 async function submit(){const b=$('mb');b.classList.add('ld');$('me').textContent='';
- try{if(mode==='reg')await api('/api/register',{username:$('f1').value,email:$('f2').value,password:$('f3').value});
+ try{if(mode==='reg')await api('/api/register',{username:$('f1').value,email:$('f2').value,password:$('f3').value,ref:REF});
   else await api('/api/login',{login:$('f1').value,password:$('f3').value});
   closeM();$('f3').value='';await init();user&&toast('Добро пожаловать, '+user.username+'!')}
  catch(e){$('me').textContent=e.message;const a=$('am');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake')}
  b.classList.remove('ld')}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&$('ov').classList.contains('on'))submit();if(e.key==='Escape'){closeM();tm(0)}});
 async function logout(){tm(0);await api('/api/logout');user=null;render();scrollTo(0,0);toast('Вы вышли из аккаунта')}
-async function redeem(){try{await api('/api/redeem',{key:$('key').value});$('key').value='';$('ke').textContent='';await init();toast('Ключ активирован!')}catch(e){$('ke').textContent=e.message}}
+async function redeem(){try{const r=await api('/api/redeem',{key:$('key').value});$('key').value='';$('ke').textContent='';await init();toast(r.promo?'Промокод: +'+r.days+' дн.':'Ключ активирован!')}catch(e){$('ke').textContent=e.message}}
 function render(){const u=user;menu();$('land').style.display=u?'none':'block';$('cab').style.display=u?'block':'none';
- if(u){const on=u.sub_until>Date.now(),d=Math.max(0,Math.ceil((u.sub_until-Date.now())/864e5));
+ if(u){const left=u.frozen?u.freeze_left:Math.max(0,u.sub_until-Date.now()),d=Math.ceil(left/D);
   $('av').textContent=u.username[0].toUpperCase();$('cu').textContent=u.username;$('ce').textContent=u.email;
-  $('ku').textContent=u.username;$('ke2').textContent=u.email;$('cc').textContent=new Date(u.created).toLocaleDateString('ru');
-  $('dot').className='dot'+(on?' ok':'');$('cs').textContent=on?'Активна':'Не активна';
-  $('cs2').textContent=on?'До '+new Date(u.sub_until).toLocaleDateString('ru'):'Активируйте ключ, чтобы получить доступ.';
-  setTimeout(()=>{countTo($('dl'),d);$('rg').style.strokeDashoffset=213.6*(1-Math.min(d/30,1))},300)}
+  $('ku').textContent=u.username;$('ke2').textContent=u.email;$('cc').textContent=fd(u.created);
+  $('dot').className='dot'+(u.active?' ok':u.frozen?' fz':'');
+  $('cs').textContent=u.inf?'Бессрочная':u.frozen?'Заморожена':u.active?'Активна':'Не активна';
+  $('cs2').textContent=u.inf?'Без ограничения по времени.':u.frozen?'Таймер на паузе, осталось '+d+' дн.':u.active?'До '+fd(u.sub_until):'Активируйте ключ, чтобы получить доступ.';
+  $('bfz').style.display=u.active&&!u.inf?'':'none';$('buf').style.display=u.frozen?'':'none';
+  $('adm').style.display=u.is_admin?'':'none';$('adb').style.display=u.is_admin?'inline-block':'none';$('dls').textContent=u.inf?'навсегда':'дн.';
+  setTimeout(()=>{u.inf?$('dl').textContent='∞':countTo($('dl'),d);$('rg').style.strokeDashoffset=u.inf?0:213.6*(1-Math.min(d/30,1))},300);
+  loadDev();loadGifts();loadLg();loadNews();tlist(0);refUI(u);fzUI(u)}
  setTimeout(obs,50)}
 async function init(){try{const r=await fetch('/api/me');user=r.ok?await r.json():null}catch{user=null}render()}
-init();
+/* кабинет: заморозка, подарки, устройства, админка */
+const D=864e5,esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fd=t=>new Date(t).toLocaleDateString('ru');
+const cp=t=>navigator.clipboard.writeText(t).then(()=>toast('Скопировано'),()=>toast('Не удалось скопировать',1));
+async function fz(on){try{await api(on?'/api/freeze':'/api/unfreeze');await init();toast(on?'Подписка заморожена':'Подписка разморожена')}catch(e){toast(e.message,1)}}
+let gT;function gs(){clearTimeout(gT);const q=$('gto').value.trim();if(q.length<2){$('sug').innerHTML='';return}
+ gT=setTimeout(async()=>{try{const r=await api('/api/users/search',{q});$('sug').innerHTML=r.users.map(n=>`<span onclick="$('gto').value='${n}';$('sug').innerHTML=''">${esc(n)}</span>`).join('')||'<small>никого не найдено</small>'}catch{}},250)}
+async function gift(){$('ge').textContent='';try{const r=await api('/api/gift',{to:$('gto').value,days:+$('gd').value});$('gto').value=$('gd').value='';$('sug').innerHTML='';await init();toast('Подарено '+r.days+' дн. → '+r.to)}catch(e){$('ge').textContent=e.message}}
+async function loadGifts(){try{const r=await api('/api/gifts');$('gh').innerHTML=r.list.map(g=>`<div class="it"><div>${g.out?'→ ':'← '}${esc(g.out?g.tn:g.fn)}<small>${fd(g.ts)}</small></div><b>${g.out?'−':'+'}${g.days} дн.</b></div>`).join('')}catch{}}
+async function loadDev(){try{const r=await api('/api/devices');$('dvh').textContent=r.list.length+' / '+r.max;
+ $('dv').innerHTML=r.list.map(d=>`<div class="it"><div>${esc(d.name||'Устройство')}<small>последний вход: ${fd(d.last_seen)}</small></div><button class="xs" onclick="dd(${d.id})" aria-label="Удалить">×</button></div>`).join('')||'<p>Пусто. Устройство добавится при первом входе в клиент.</p>'}catch{}}
+async function dd(id){try{await api('/api/device/del',{id});loadDev();toast('Устройство удалено')}catch(e){toast(e.message,1)}}
+/* админка */
+function at(i){[0,1,2,3,4,5,6].forEach(k=>{$('ap'+k).style.display=k===i?'':'none';$('seg').children[k].classList.toggle('on',k===i)});[null,lk,ul,pli,()=>tlist(1),nli,stt][i]?.()}
+function pd(n){$('ki').checked=!n;if(n)$('kd').value=n}
+async function mk(){try{const r=await api('/api/admin/genkey',{days:+$('kd').value,devices:+$('kv').value,count:+$('kc').value,inf:$('ki').checked});$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Создано ключей: '+r.keys.length)}catch(e){toast(e.message,1)}}
+async function lk(){try{const r=await api('/api/admin/keys');$('kl').innerHTML=r.keys.map(k=>`<div class="it"><div><code style="cursor:pointer" onclick="cp('${k.code}')">${k.code}</code><small>${k.inf?'бессрочный':k.days+' дн.'} · устр. ${k.devices} · ${k.used?'активировал '+esc(k.used):'свободен'}</small></div>${k.used?'':`<button class="xs" onclick="dk('${k.code}')" aria-label="Удалить">×</button>`}</div>`).join('')||'<p>Ключей пока нет.</p>'}catch{}}
+async function dk(c){try{await api('/api/admin/delkey',{code:c});lk()}catch(e){toast(e.message,1)}}
+let uT;function ul(){clearTimeout(uT);uT=setTimeout(async()=>{try{const r=await api('/api/admin/users',{q:$('uq').value});
+ $('ulst').innerHTML=r.users.map(x=>`<div class="it"><div><b>${esc(x.username)}</b>${x.is_admin?' · admin':''}${x.banned?' · забанен':''}<small>${esc(x.email)} · ${x.inf?'бессрочно':x.frozen?'заморожена':x.active?'до '+fd(x.sub_until):'нет подписки'} · устр. ${x.max_dev}</small></div><div class="row" style="margin:0"><input class="mi" id="gd${x.id}" type="number" placeholder="± дней"><input class="mi" id="gv${x.id}" type="number" placeholder="устр."><button class="btn sm" onclick="gr(${x.id})">OK</button>${x.is_admin?'':`<button class="btn sm ghost" onclick="bn(${x.id},${x.banned?0:1})">${x.banned?'Разбан':'Бан'}</button>`}</div></div>`).join('')||'<p>Никого не найдено.</p>'}catch{}},200)}
+async function gr(id){try{await api('/api/admin/grant',{id,days:$('gd'+id).value,devices:$('gv'+id).value});toast('Готово');ul()}catch(e){toast(e.message,1)}}
+/* безопасность, рефералы, тикеты, новости */
+const REF=(()=>{try{const r=new URLSearchParams(location.search).get('ref');if(r)localStorage.setItem('ref',r);return r||localStorage.getItem('ref')||''}catch{return ''}})();
+const ICO='<svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>',TS={open:'открыт',answered:'есть ответ',closed:'закрыт'},KD={web:'сайт',client:'клиент',reg:'регистрация'};
+function fzUI(u){$('fzh').textContent=u.inf?'':u.frozen?'Авторазморозка через '+Math.max(0,Math.ceil((u.frozen_at+u.fz.max*D-Date.now())/D))+' дн.':'Заморозка до '+u.fz.max+' дн., пауза между заморозками '+u.fz.cool+' дн.'+(u.cool_until>Date.now()?' Доступна с '+fd(u.cool_until)+'.':'')}
+function refUI(u){$('rl').value=location.origin+'/?ref='+u.ref.code;$('rs').textContent='Приглашено: '+u.ref.invited+' · активировали ключ: '+u.ref.paid+' · бонус: +'+u.ref.days+' дн. за каждого'}
+async function loadLg(){try{const r=await api('/api/logins');$('lg').innerHTML=r.list.map(l=>`<div class="it"><div>${esc(l.ip)}<small>${KD[l.kind]||l.kind} · ${new Date(l.ts).toLocaleString('ru')}</small></div><small>${l.ok?'':'неудачно'}</small></div>`).join('')}catch{}}
+async function chpw(){$('pe').textContent='';try{await api('/api/password',{old:$('op').value,new:$('np').value});$('op').value=$('np').value='';toast('Пароль изменён, остальные сессии закрыты')}catch(e){$('pe').textContent=e.message}}
+async function outAll(){if(!confirm('Выйти на всех устройствах?'))return;try{await api('/api/logout_all');user=null;render();scrollTo(0,0);toast('Все сессии закрыты')}catch(e){toast(e.message,1)}}
+async function loadNews(){try{const r=await api('/api/news');$('nw').innerHTML=r.list.map(n=>`<div class="it" style="display:block"><b>${esc(n.title)}</b> <small style="display:inline">· ${fd(n.ts)}</small><div style="color:var(--m);white-space:pre-wrap;margin-top:4px">${esc(n.text)}</div></div>`).join('')||'<p>Пока ничего нет.</p>'}catch{}}
+/* тикеты (a=1 — режим админа) */
+async function tlist(a){try{const r=await api('/api/ticket/list',{all:!!a});$(a?'atl':'tl').innerHTML=r.list.map(t=>`<div class="it" style="cursor:pointer" onclick="tview(${t.id},${a?1:0})"><div>${esc(t.subject)}<small>${a?esc(t.username)+' · ':''}${TS[t.status]} · ${fd(t.updated)}</small></div></div>`).join('')||'<p>Тикетов нет.</p>'}catch{}}
+async function tview(id,a){try{const r=await api('/api/ticket/get',{id}),t=r.ticket;$(a?'atv':'tv').innerHTML=`<div class="tv"><b>${esc(t.subject)}</b> <small>· ${TS[t.status]}</small>${r.msgs.map(m=>`<div class="mg${m.admin?' ad':''}"><small>${m.admin?'поддержка':esc(t.username)} · ${new Date(m.ts).toLocaleString('ru')}</small>${esc(m.text)}</div>`).join('')}${t.status==='closed'?'':`<div class="cab-in"><div class="fld"><input id="tr${a?1:0}" placeholder=" "><label>Ответ</label>${ICO}</div><button class="btn sm" onclick="trep(${id},${a?1:0})">Отправить</button><button class="btn sm ghost" onclick="tcl(${id},${a?1:0})">Закрыть тикет</button></div>`}</div>`}catch(e){toast(e.message,1)}}
+async function trep(id,a){try{await api('/api/ticket/reply',{id,text:$('tr'+a).value});tview(id,a);tlist(a)}catch(e){toast(e.message,1)}}
+async function tcl(id,a){try{await api('/api/ticket/close',{id});$(a?'atv':'tv').innerHTML='';tlist(a)}catch(e){toast(e.message,1)}}
+async function tnew(){$('te').textContent='';try{await api('/api/ticket/new',{subject:$('ts').value,text:$('tt').value});$('ts').value=$('tt').value='';tlist(0);toast('Тикет создан')}catch(e){$('te').textContent=e.message}}
+/* админка: бан, промокоды, новости, статистика */
+async function bn(id,on){try{let reason='';if(on){reason=prompt('Причина бана (необязательно)');if(reason===null)return}await api(on?'/api/admin/ban':'/api/admin/unban',{id,reason});toast(on?'Забанен':'Разбанен');ul()}catch(e){toast(e.message,1)}}
+async function pli(){try{const r=await api('/api/admin/promos');$('pls').innerHTML=r.list.map(x=>`<div class="it"><div><code style="cursor:pointer" onclick="cp('${esc(x.code)}')">${esc(x.code)}</code><small>+${x.days} дн. · ${x.uses}/${x.max_uses}${x.expires?' · до '+fd(x.expires):''}</small></div><button class="xs" onclick="pdl('${esc(x.code)}')" aria-label="Удалить">×</button></div>`).join('')||'<p>Промокодов нет.</p>'}catch{}}
+async function padd(){try{const r=await api('/api/admin/promo/add',{code:$('pc').value,days:+$('pdays').value,uses:+$('pu').value,exp:+$('pex').value});$('pc').value='';toast('Создан: '+r.code);pli()}catch(e){toast(e.message,1)}}
+async function pdl(c){try{await api('/api/admin/promo/del',{code:c});pli()}catch(e){toast(e.message,1)}}
+async function nli(){try{const r=await api('/api/news');$('nls').innerHTML=r.list.map(n=>`<div class="it"><div>${esc(n.title)}<small>${fd(n.ts)}</small></div><button class="xs" onclick="ndl(${n.id})" aria-label="Удалить">×</button></div>`).join('')}catch{}}
+async function nadd(){try{await api('/api/admin/news/add',{title:$('nt').value,text:$('nx').value});$('nt').value=$('nx').value='';toast('Опубликовано');nli();loadNews()}catch(e){toast(e.message,1)}}
+async function ndl(id){try{await api('/api/admin/news/del',{id});nli();loadNews()}catch(e){toast(e.message,1)}}
+async function stt(){try{const r=await api('/api/admin/stats'),L={users:'Пользователей',new7:'Новых за 7 дн.',active:'С активной подпиской',frozen:'Заморожено',banned:'Забанено',keys:'Ключей создано',keys_used:'Ключей использовано',devices:'Устройств',tickets:'Открытых тикетов',gifts:'Подарков',promo_uses:'Промокодов применено',logins24:'Входов за 24 ч'};
+ $('sts').innerHTML=Object.keys(L).map(k=>`<div><b>${r.stats[k]}</b><small>${L[k]}</small></div>`).join('')}catch{}}
+init().then(()=>{if(!user&&new URLSearchParams(location.search).get('ref'))openM('reg')});
 </script></body></html>
