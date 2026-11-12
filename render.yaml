@@ -13,6 +13,8 @@ services:
         value: production
       - key: ADMIN_TOKEN
         generateValue: true
+      - key: MASTER_KEY
+        sync: false          # мастер-ключ (админ + бессрочная подписка), Render спросит при создании
       - key: PING_URL
         sync: false          # Render спросит значение при создании: https://ВАШ-САЙТ.onrender.com
       - key: PING_INTERVAL_MIN
