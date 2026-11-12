@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: forev-ext
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: PING_URL
+        sync: false          # Render спросит значение при создании: https://ВАШ-САЙТ.onrender.com
+      - key: PING_INTERVAL_MIN
+        value: "10"
