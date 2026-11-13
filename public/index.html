@@ -263,7 +263,10 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <div id="pre"><img src="/logo.webp" alt=""><div class="pbar"><i></i></div></div>
 <header>
 <div class="logo" onclick="go('top')"><img src="/crown.webp" alt="">FOREV<b>EXT</b></div>
+<div style="display:flex;align-items:center;gap:10px">
+<button id="langBtn" onclick="toggleLang()" style="background:#0a0a0a;border:1px solid var(--b);color:#fff;padding:8px 12px;font-weight:800;font-size:12px;letter-spacing:1px;cursor:pointer">EN</button>
 <button class="bg" id="bgr" aria-label="Меню" onclick="tm()"><i></i><i></i><i></i></button>
+</div>
 </header>
 <div class="mv" id="mv" onclick="tm(0)"></div>
 <aside id="menu"><div id="ml"></div><div class="mf">FOREV EXT © 2026<br>Софт для Counter-Strike 2</div></aside>
@@ -357,16 +360,40 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <div class="fld "><input id="ts"  placeholder=" " ><label>Тема</label><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></div><div class="fld ta"><textarea id="tt" placeholder=" "></textarea><label>Сообщение</label></div><div class="row" style="margin:0 0 6px"><button class="btn sm" onclick="tnew()">Отправить тикет</button></div><div class="err" id="te"></div>
 <div class="lst" id="tl"></div><div id="tv"></div></div>
 <div class="card w" id="adm" style="display:none"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></div><h3>Админ-панель</h3>
-<div class="seg" id="seg"><button class="on" onclick="at(0)">Выдать ключ</button><button onclick="at(1)">Ключи</button><button onclick="at(2)">Пользователи</button><button onclick="at(3)">Промокоды</button><button onclick="at(4)">Тикеты</button><button onclick="at(5)">Новости</button><button onclick="at(6)">Статистика</button><button onclick="at(7)">Настройки</button><button onclick="at(8)">Аудит</button><button onclick="at(9)">Графики</button><button onclick="at(10)">Купоны</button><button onclick="at(11)">Топ реф</button><button onclick="at(12)">IP списки</button><button onclick="at(13)">Экспорт</button><button onclick="at(14)">Поиск HWID/IP</button><button onclick="at(15)">HWID лог</button></div>
+<div class="seg" id="seg"><button class="on" onclick="at(0)">Выдать ключ</button><button onclick="at(1)">Ключи</button><button onclick="at(2)">Пользователи</button><button onclick="at(3)">Промокоды</button><button onclick="at(4)">Тикеты</button><button onclick="at(5)">Новости</button><button onclick="at(6)">Статистика</button><button onclick="at(7)">Настройки</button><button onclick="at(8)">Аудит</button><button onclick="at(9)">Графики</button><button onclick="at(10)">Купоны</button><button onclick="at(11)">Топ реф</button><button onclick="at(12)">IP списки</button><button onclick="at(13)">Экспорт</button><button onclick="at(14)">Поиск HWID/IP</button><button onclick="at(15)">HWID лог</button><button onclick="at(16)">Конфиги</button></div>
 <div id="ap14" style="display:none">
 <div class="search-box"><input id="advQ" placeholder="HWID / IP / ник / email" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><button class="btn sm" onclick="advSearch()">Найти</button></div>
 <div id="advRes"></div>
+</div>
+
+<div id="ap16" style="display:none">
+  <div class="cab-in">
+    <button class="btn sm" onclick="toggleConfigsOpen()">Вкл/Выкл раздел конфигов</button>
+    <span id="cfgOpenState" style="margin-left:10px;font-size:13px;color:var(--m)"></span>
+  </div>
+  <div class="cab-in" style="margin-top:12px">
+    <div class="fld"><input id="cfgTitle" placeholder=" "><label>Заголовок</label></div>
+    <div class="fld"><input id="cfgDesc" placeholder=" "><label>Описание</label></div>
+    <div class="fld"><input id="cfgPhoto" placeholder=" "><label>Фото (URL, необяз.)</label></div>
+    <div class="fld ta"><textarea id="cfgContent" placeholder="Текст конфига или содержимое файла"></textarea><label>Контент</label></div>
+    <label class="chk"><input type="checkbox" id="cfgIsFile"> Это файл (скачивание)</label>
+    <div class="fld"><input id="cfgFname" placeholder=" "><label>Имя файла (если файл)</label></div>
+    <button class="btn sm" onclick="cfgAdd()">Добавить конфиг</button>
+  </div>
+  <div class="lst" id="cfgAdmList" style="margin-top:12px"></div>
 </div>
 <div id="ap15" style="display:none">
 <button class="btn sm" onclick="loadHwidLog()">Обновить</button>
 <div id="hwidLogList" style="margin-top:10px;max-height:400px;overflow:auto"></div>
 </div>
-<div id="ap0"><div class="cab-in"><div class="fld "><input id="kd"  type="number" min="1" placeholder=" " value="30"><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="fld "><input id="kv"  type="number" min="1" placeholder=" " value="1"><label>Устройств</label><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div class="fld "><input id="kc"  type="number" min="1" max="50" placeholder=" " value="1"><label>Кол-во ключей</label><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/></svg></div><div class="fld "><input id="kpre" placeholder=" " value="FOREV"><label>Префикс</label></div><div class="fld "><input id="knote" placeholder=" "><label>Заметка к ключу</label></div></div>
+<div id="ap0"><div class="cab-in"><div class="fld "><input id="kd"  type="number" min="1" placeholder=" " value="30"><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="fld "><input id="kv"  type="number" min="1" placeholder=" " value="1"><label>Устройств</label><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div class="fld "><input id="kc"  type="number" min="1" max="50" placeholder=" " value="1"><label>Кол-во ключей</label><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/></svg></div><div class="fld "><input id="kpre" placeholder=" " value="FOREV"><label>Префикс</label></div><div class="fld "><input id="knote" placeholder=" "><label>Заметка к ключу</label></div>
+<div class="fld "><input id="kprod" placeholder=" "><label>Продукт</label></div>
+<div class="fld "><input id="ktar" placeholder=" "><label>Тариф</label></div></div>
+<div style="margin:12px 0;padding:12px;border:1px solid var(--b);border-radius:8px">
+<p style="margin:0 0 8px;font-size:13px;color:var(--m)">Импорт ключей списком (по одному на строку или через пробел/запятую)</p>
+<textarea id="klist" rows="4" style="width:100%;background:#0a0a0a;border:1px solid var(--b);color:#fff;padding:10px;font-family:monospace;font-size:12px" placeholder="FOREV-XXXX-XXXX-XXXX&#10;FOREV-YYYY-YYYY-YYYY"></textarea>
+<button class="btn sm" style="margin-top:8px" onclick="impKeys()">Импортировать список</button>
+</div>
 <div class="chips"><span onclick="pd(1)">1 дн</span><span onclick="pd(7)">7 дн</span><span onclick="pd(30)">30 дн</span><span onclick="pd(90)">90 дн</span><span onclick="pd(365)">365 дн</span><span onclick="pd(0)">навсегда</span></div>
 <label class="chk"><input type="checkbox" id="ki"> Бессрочный ключ</label><div class="row" style="margin:0"><button class="btn" onclick="mk()">Создать</button><button class="btn ghost" id="kcp" style="display:none" onclick="cp($('kout').textContent)">Копировать все</button></div><pre id="kout"></pre></div>
 <div id="ap1" style="display:none"><div class="lst" id="kl"></div></div>
@@ -452,7 +479,12 @@ function tm(s){const on=s===undefined?!$('menu').classList.contains('on'):!!s;
  $('menu').classList.toggle('on',on);$('mv').classList.toggle('on',on);$('bgr').classList.toggle('on',on);document.body.classList.toggle('lock',on)}
 function go(id){tm(0);if(id==='top'||user)return scrollTo({top:0,behavior:'smooth'});$(id).scrollIntoView({behavior:'smooth'})}
 const arr='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
-function menu(){const L=user?[['01','Личный кабинет',"go('top')"],...(user.is_admin?[['02','Админ-панель',"tm(0);$('adm').scrollIntoView({behavior:'smooth'})"]]:[]),[user.is_admin?'03':'02','Выйти','logout()']]:[['01','Главная',"go('top')"],['02','Возможности',"go('feat')"],['03','Как начать',"go('how')"],['04','Вход',"tm(0);openM('log')"],['05','Регистрация',"tm(0);openM('reg')"]];
+let lang=localStorage.getItem('forev_lang')||'ru';
+const T={ru:{cab:'Личный кабинет',admin:'Админ-панель',logout:'Выйти',home:'Главная',feat:'Возможности',how:'Как начать',login:'Вход',reg:'Регистрация',cfg:'Конфиги'},en:{cab:'Personal cabinet',admin:'Admin panel',logout:'Log out',home:'Home',feat:'Features',how:'How to start',login:'Login',reg:'Sign up',cfg:'Configs'}};
+function t(k){return (T[lang]&&T[lang][k])||k}
+function toggleLang(){lang=lang==='ru'?'en':'ru';localStorage.setItem('forev_lang',lang);const b=$('langBtn');if(b)b.textContent=lang==='ru'?'EN':'RU';document.documentElement.lang=lang;menu();toast(lang==='ru'?'Язык: Русский':'Language: English')}
+
+function menu(){const L=user?[['01',t('cab'),"go('top')"],['02',t('cfg'),"tm(0);showConfigs()"],...(user.is_admin?[['03',t('admin'),"tm(0);$('adm').scrollIntoView({behavior:'smooth'})"]]:[]),[user.is_admin?'04':'03',t('logout'),'logout()']]:[['01',t('home'),"go('top')"],['02',t('feat'),"go('feat')"],['03',t('how'),"go('how')"],['04',t('cfg'),"tm(0);showConfigs()"],['05',t('login'),"tm(0);openM('log')"],['06',t('reg'),"tm(0);openM('reg')"]];
  $('ml').innerHTML=L.map((l,i)=>`<div class="ml" style="--i:${i}" onclick="${l[2]}"><em>${l[0]}</em>${l[1]}${arr}</div>`).join('')}
 /* Уведомления */
 const tEl=document.createElement('div');tEl.id='toast';document.body.append(tEl);let tT;
@@ -488,28 +520,43 @@ function renderCaptcha(){loadCaptcha()}
 async function submit(){const b=$('mb');b.classList.add('ld');$('me').textContent='';
  try{
   let r;
-  const payload={code:$('codein')?.value,captcha_id:captchaId,captcha:$('capA')?.value};
+  const payload={captcha_id:captchaId,captcha:$('capA')?.value};
   if(mode==='reg')r=await api('/api/register',{username:$('f1').value,email:$('f2').value,password:$('f3').value,ref:REF,...payload});
   else r=await api('/api/login',{login:$('f1').value,password:$('f3').value,...payload});
-  if(r.need_code){
-    $('me').textContent=r.debug_code
-      ? 'Почта не отправилась. Код для теста: '+r.debug_code
-      : 'Код отправлен на почту. Введите его в поле ниже и нажмите кнопку ещё раз.';
-    if(!$('codein')){
-      const inp=document.createElement('input');inp.id='codein';inp.placeholder='Код из письма (6 цифр)';inp.style.cssText='width:100%;margin-top:10px;padding:12px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)';inp.maxLength=6;
-      $('mb').before(inp);inp.focus();
-    }
-    if(r.debug_code)$('codein').value=r.debug_code;
-    loadCaptcha();
-    return;
-  }
-  closeM();$('f3').value='';$('codein')?.remove();await init();user&&toast('Добро пожаловать, '+user.username+'!');
+  closeM();$('f3').value='';await init();user&&toast('Добро пожаловать, '+user.username+'!');
  }
  catch(e){$('me').textContent=e.message;const a=$('am');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake');loadCaptcha()}
  b.classList.remove('ld')}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&$('ov').classList.contains('on'))submit();if(e.key==='Escape'){closeM();tm(0)}});
 async function logout(){tm(0);await api('/api/logout');user=null;render();scrollTo(0,0);toast('Вы вышли из аккаунта')}
 async function redeem(){try{const r=await api('/api/redeem',{key:$('key').value});$('key').value='';$('ke').textContent='';await init();toast(r.promo?'Промокод: +'+r.days+' дн.':'Ключ активирован!')}catch(e){$('ke').textContent=e.message}}
+async function showConfigs(){
+  let box=$('cfgBox');
+  if(!box){
+    box=document.createElement('div');box.id='cfgBox';box.style.cssText='position:fixed;inset:0;z-index:50;background:#000c;display:flex;align-items:center;justify-content:center;padding:20px';
+    box.innerHTML='<div style="background:#0a0a0a;border:1px solid var(--b);max-width:720px;width:100%;max-height:85vh;overflow:auto;padding:24px;border-radius:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="margin:0">Конфиги</h2><button class="btn sm ghost" onclick="$(\'cfgBox\').style.display=\'none\'">Закрыть</button></div><div id="cfgList">Загрузка...</div></div>';
+    document.body.append(box);
+  }
+  box.style.display='flex';
+  try{
+    const r=await fetch('/api/configs').then(x=>x.json());
+    if(!r.open){$('cfgList').innerHTML='<p style="color:var(--m)">'+esc(r.message||'Раздел временно закрыт')+'</p>';return}
+    if(!r.list.length){$('cfgList').innerHTML='<p>Конфигов пока нет.</p>';return}
+    $('cfgList').innerHTML=r.list.map(c=>`<div class="it" style="cursor:pointer" onclick="openCfg(${c.id})"><div><b>${esc(c.title)}</b><small>${esc(c.description||'')}</small></div>${c.photo?`<img src="${esc(c.photo)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px">`:''}</div>`).join('');
+  }catch(e){$('cfgList').innerHTML='<p>Ошибка загрузки</p>'}
+}
+async function openCfg(id){
+  try{
+    const c=await fetch('/api/config/'+id).then(x=>x.json());
+    if(c.error)return toast(c.error,1);
+    let html=`<h3>${esc(c.title)}</h3><p>${esc(c.description||'')}</p>`;
+    if(c.photo)html+=`<img src="${esc(c.photo)}" style="max-width:100%;border-radius:8px;margin:12px 0">`;
+    if(c.is_file&&c.filename)html+=`<p><a class="btn sm" download="${esc(c.filename)}" href="data:application/octet-stream;base64,${btoa(c.content)}">Скачать ${esc(c.filename)}</a></p>`;
+    else html+=`<pre style="background:#111;padding:12px;overflow:auto;max-height:300px;font-size:12px;white-space:pre-wrap">${esc(c.content)}</pre><button class="btn sm" onclick="cp(this.dataset.t)" data-t="${esc(c.content).replace(/"/g,'&quot;')}">Копировать</button>`;
+    $('cfgList').innerHTML=html+'<br><button class="btn sm ghost" onclick="showConfigs()">← Назад</button>';
+  }catch(e){toast('Ошибка',1)}
+}
+
 function render(){const u=user;menu();$('land').style.display=u?'none':'block';$('cab').style.display=u?'block':'none';
  if(u){const left=u.frozen?u.freeze_left:Math.max(0,u.sub_until-Date.now()),d=Math.ceil(left/D);
   $('av').textContent=u.username[0].toUpperCase();$('cu').textContent=u.username;$('ce').textContent=u.email;
@@ -542,10 +589,11 @@ async function loadDev(){try{const r=await api('/api/devices');$('dvh').textCont
  $('dv').innerHTML=r.list.map(d=>`<div class="it"><div>${esc(d.name||'Устройство')}<small>последний вход: ${fd(d.last_seen)}</small></div><button class="xs" onclick="dd(${d.id})" aria-label="Удалить">×</button></div>`).join('')||'<p>Пусто. Устройство добавится при первом входе в клиент.</p>'}catch{}}
 async function dd(id){try{await api('/api/device/del',{id});loadDev();toast('Устройство удалено')}catch(e){toast(e.message,1)}}
 /* админка */
-function at(i){[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].forEach(k=>{const el=$('ap'+k);if(el)el.style.display=k===i?'':'none';if($('seg').children[k])$('seg').children[k].classList.toggle('on',k===i)});$('seg').children[i]?.scrollIntoView({inline:'center',block:'nearest'});[null,lk,ul,pli,()=>tlist(1),nli,stt,loadSet,loadAud,loadChart,loadCoup,loadTop,loadIp,null,()=>{},loadHwidLog][i]?.()}
+function at(i){[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].forEach(k=>{const el=$('ap'+k);if(el)el.style.display=k===i?'':'none';if($('seg').children[k])$('seg').children[k].classList.toggle('on',k===i)});$('seg').children[i]?.scrollIntoView({inline:'center',block:'nearest'});[null,lk,ul,pli,()=>tlist(1),nli,stt,loadSet,loadAud,loadChart,loadCoup,loadTop,loadIp,null,()=>{},loadHwidLog,loadCfgAdm][i]?.()}
 function pd(n){$('ki').checked=!n;if(n)$('kd').value=n}
-async function mk(){try{const r=await api('/api/admin/genkey',{days:+$('kd').value,devices:+$('kv').value,count:+$('kc').value,inf:$('ki').checked,prefix:$('kpre').value,note:$('knote').value});$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Создано ключей: '+r.keys.length)}catch(e){toast(e.message,1)}}
-async function lk(){try{const r=await api('/api/admin/keys');$('kl').innerHTML=r.keys.map(k=>`<div class="it"><div><code style="cursor:pointer" onclick="cp('${k.code}')">${k.code}</code><small>${k.inf?'бессрочный':k.days+' дн.'} · устр. ${k.devices} · ${k.used?'активировал '+esc(k.used):'свободен'}</small></div>${k.used?'':`<button class="xs" onclick="dk('${k.code}')" aria-label="Удалить">×</button>`}</div>`).join('')||'<p>Ключей пока нет.</p>'}catch{}}
+async function mk(){try{const r=await api('/api/admin/genkey',{days:+$('kd').value,devices:+$('kv').value,count:+$('kc').value,inf:$('ki').checked,prefix:$('kpre').value,note:$('knote').value,product:$('kprod')?.value||'',tariff:$('ktar')?.value||''});$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Создано ключей: '+r.keys.length)}catch(e){toast(e.message,1)}}
+async function impKeys(){try{const r=await api('/api/admin/importkeys',{list:$('klist').value,days:+$('kd').value,devices:+$('kv').value,inf:$('ki').checked,product:$('kprod')?.value||'',tariff:$('ktar')?.value||'',note:$('knote').value||'import'});$('klist').value='';$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Импортировано: '+r.added+' из '+r.total);lk()}catch(e){toast(e.message,1)}}
+async function lk(){try{const r=await api('/api/admin/keys');$('kl').innerHTML=r.keys.map(k=>`<div class="it"><div><code style="cursor:pointer" onclick="cp('${k.code}')">${k.code}</code><small>${k.inf?'бессрочный':k.days+' дн.'} · устр. ${k.devices}${k.product?' · '+esc(k.product):''}${k.tariff?' · '+esc(k.tariff):''} · ${k.used?'активировал '+esc(k.used):'свободен'}</small></div>${k.used?'':`<button class="xs" onclick="dk('${k.code}')" aria-label="Удалить">×</button>`}</div>`).join('')||'<p>Ключей пока нет.</p>'}catch{}}
 async function dk(c){try{await api('/api/admin/delkey',{code:c});lk()}catch(e){toast(e.message,1)}}
 let uT;function ul(){clearTimeout(uT);uT=setTimeout(async()=>{try{const r=await api('/api/admin/users',{q:$('uq').value});
  $('ulst').innerHTML=r.users.map(x=>`<div class="it"><div><b>${esc(x.username)}</b>${x.is_admin?' · admin':''}${x.is_reseller?' · reseller':''}${x.banned?' · забанен':''}${x.suspicious?' <span class="badge-s">suspicious</span>':''}<small>${esc(x.email)} · ${x.inf?'бессрочно':x.frozen?'заморожена':x.active?'до '+fd(x.sub_until):'нет подписки'} · устр. ${x.max_dev} · сбросов ${x.reset_count||0}/${x.max_resets||3}</small>${x.note?'<br><small>Заметка: '+esc(x.note)+'</small>':''}</div><div class="row" style="margin:0"><input class="mi" id="gd${x.id}" type="number" placeholder="± дней"><input class="mi" id="gv${x.id}" type="number" placeholder="устр."><button class="btn sm" onclick="gr(${x.id})">OK</button>${x.is_admin?'':`<button class="btn sm ghost" onclick="bn(${x.id},${x.banned?0:1})">${x.banned?'Разбан':'Бан'}</button>`}<button class="btn sm ghost" onclick="setNote(${x.id})">Заметка</button><button class="btn sm ghost" onclick="toggleRes(${x.id},${x.is_reseller?0:1})">${x.is_reseller?'Убрать рес.':'Реселлер'}</button><button class="btn sm ghost" onclick="resetDev(${x.id})">Сброс HWID</button><button class="btn sm ghost" onclick="showWl(${x.id})">Whitelist</button><button class="btn sm ghost" onclick="showHist(${x.id})">История</button></div></div>`).join('')||'<p>Никого не найдено.</p>'}catch{}},200)}
@@ -604,6 +652,12 @@ async function loadChart(){try{const r=await api('/api/admin/chart',{days:30});
   ]},options:{plugins:{legend:{labels:{color:fg}}},scales:{x:{ticks:{color:muted}},y:{ticks:{color:muted}}}}});
 }catch(e){toast(e.message,1)}}
 async function loadCoup(){try{const r=await api('/api/admin/coupons');$('clst').innerHTML=r.list.map(x=>`<div class="it"><div><code>${esc(x.code)}</code><small>${x.discount}% · ${x.uses}/${x.max_uses}</small></div><button class="xs" onclick="cdl('${esc(x.code)}')">×</button></div>`).join('')||'<p>Нет купонов</p>'}catch{}}
+async function loadCfgAdm(){try{const r=await api('/api/admin/configs');$('cfgOpenState').textContent=r.open==='1'||r.open===true?'Раздел ОТКРЫТ':'Раздел ЗАКРЫТ';$('cfgAdmList').innerHTML=r.list.map(c=>`<div class="it"><div><b>${esc(c.title)}</b><small>${esc(c.description||'')} · ${c.enabled?'вкл':'выкл'}</small></div><div class="row" style="margin:0"><button class="btn sm ghost" onclick="cfgTog(${c.id})">Вкл/Выкл</button><button class="xs" onclick="cfgDel(${c.id})">×</button></div></div>`).join('')||'<p>Нет конфигов</p>'}catch(e){toast(e.message,1)}}
+async function cfgAdd(){try{await api('/api/admin/config/add',{title:$('cfgTitle').value,description:$('cfgDesc').value,content:$('cfgContent').value,photo:$('cfgPhoto').value,is_file:$('cfgIsFile').checked,filename:$('cfgFname').value});$('cfgTitle').value=$('cfgDesc').value=$('cfgContent').value=$('cfgPhoto').value=$('cfgFname').value='';toast('Добавлено');loadCfgAdm()}catch(e){toast(e.message,1)}}
+async function cfgDel(id){try{await api('/api/admin/config/del',{id});loadCfgAdm()}catch(e){toast(e.message,1)}}
+async function cfgTog(id){try{await api('/api/admin/config/toggle',{id});loadCfgAdm()}catch(e){toast(e.message,1)}}
+async function toggleConfigsOpen(){try{const r=await api('/api/admin/configs');const now=!(r.open==='1'||r.open===true);await api('/api/admin/configs/open',{open:now});loadCfgAdm();toast(now?'Раздел открыт':'Раздел закрыт')}catch(e){toast(e.message,1)}}
+
 async function cadd(){try{const r=await api('/api/admin/coupon/add',{code:$('ccode').value,discount:+$('cdisc').value,uses:+$('cuses').value});toast('Создан: '+r.code);$('ccode').value='';loadCoup()}catch(e){toast(e.message,1)}}
 async function cdl(c){try{await api('/api/admin/coupon/del',{code:c});loadCoup()}catch(e){toast(e.message,1)}}
 async function loadIp(){try{const r=await api('/api/admin/iplist');$('iplst').innerHTML=r.list.map(x=>`<div class="it"><div>${esc(x.ip)} <small>${x.type} · ${esc(x.reason||'')}</small></div><button class="xs" onclick="delIp('${esc(x.ip)}')">×</button></div>`).join('')||'<p>Пусто</p>'}catch{}}
