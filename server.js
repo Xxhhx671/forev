@@ -103,7 +103,10 @@ ${bodyHtml}
 </table></td></tr></table></body></html>`;
 }
 function sendMail(to,subject,html,text){
-  if(!process.env.SMTP_USER||!process.env.SMTP_PASS){console.warn('SMTP not configured, skip mail to',to);return Promise.resolve();}
+  if(!process.env.SMTP_USER||!process.env.SMTP_PASS){
+    console.warn('SMTP not configured, skip mail to',to);
+    return Promise.reject(new Error('SMTP not configured'));
+  }
   return transporter.sendMail({from:`FOREV EXT <${MAIL_FROM}>`,to,subject,html,text:text||subject})
     .then(()=>console.log('Mail sent to',to)).catch(e=>{console.error('Mail error:',e.message);throw e});
 }
@@ -570,9 +573,8 @@ const srv=http.createServer(async(req,res)=>{
         db.prepare('INSERT OR REPLACE INTO verify_codes(email,code,type,expires,data) VALUES(?,?,?,?,?)').run(email,c,'reg',Date.now()+600000,JSON.stringify({username,password,ref:b.ref,hwid:b.hwid}));
         try{await sendCode(email,c,'reg')}catch(e){
           console.error('SMTP FAIL:', e.message);
-          // временный режим отладки — код возвращается в ответе, если почта не ушла
-          if(process.env.DEBUG_CODES==='1')return send(res,200,{need_code:true,debug_code:c,error:'Почта не отправилась, но код: '+c});
-          return bad('Не удалось отправить код на почту. Проверьте SMTP или попробуйте позже',500);
+          // если почта не ушла — отдаём код в ответе, чтобы регистрация не ломалась
+          return send(res,200,{need_code:true,debug_code:c,error:'Почта не отправилась, используйте код: '+c});
         }
         return send(res,200,{need_code:true});
       }
@@ -602,7 +604,10 @@ const srv=http.createServer(async(req,res)=>{
         if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
         const c=genCode();
         db.prepare('INSERT OR REPLACE INTO verify_codes(email,code,type,expires) VALUES(?,?,?,?,?)').run(f.email,c,'login',Date.now()+600000);
-        try{await sendCode(f.email,c,'login')}catch(e){return bad('Не удалось отправить код на почту',500)}
+        try{await sendCode(f.email,c,'login')}catch(e){
+          console.error('SMTP FAIL login:', e.message);
+          return send(res,200,{need_code:true,email:f.email,debug_code:c,error:'Почта не отправилась, используйте код: '+c});
+        }
         return send(res,200,{need_code:true,email:f.email});
       }
       const v=db.prepare('SELECT * FROM verify_codes WHERE email=? AND type="login" AND expires>?').get(f.email,Date.now());
