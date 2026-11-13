@@ -299,8 +299,7 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 .stg{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:380px){.btns .btn{width:100%}}
-</style><script src="" async defer>
-async function loadSessions(){try{const r=await api('/api/sessions');const el=$('sessList');if(!el)return;
+</style>async function loadSessions(){try{const r=await api('/api/sessions');const el=$('sessList');if(!el)return;
   el.innerHTML=(r.list||[]).map(s=>{
     const ua=(s.ua||'').slice(0,60);
     const when=s.created?new Date(s.created).toLocaleString('ru'):'—';
@@ -591,7 +590,7 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
   if(u.reseller){$('resellerCard').style.display='';$('rslLim').textContent=u.reseller.limit;$('rslUsed').textContent=u.reseller.keys;$('rslLeft').textContent=u.reseller.left;loadRslKeys()}else{$('resellerCard').style.display='none'}
  }
  setTimeout(obs,50)}
-async async function loadStatus(){try{const r=await fetch('/api/status');const s=await r.json();const el=$('prodstatus');if(el)el.innerHTML=`Статус: <b>${esc(s.status||'online')}</b> — ${esc(s.text||'')}${s.maintenance?' <span style="color:var(--r)">(техработы)</span>':''}${s.killswitch?' <span style="color:red">(отключён)</span>':''}`;}catch{}}
+async function loadStatus(){try{const r=await fetch('/api/status');const s=await r.json();const el=$('prodstatus');if(el)el.innerHTML=`Статус: <b>${esc(s.status||'online')}</b> — ${esc(s.text||'')}${s.maintenance?' <span style="color:var(--r)">(техработы)</span>':''}${s.killswitch?' <span style="color:red">(отключён)</span>':''}`;}catch{}}
 async function init(){for(let n=0;n<4;n++){try{const r=await fetch('/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render();loadStatus()}
 /* кабинет: заморозка, подарки, устройства, админка */
 const D=864e5,esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fd=t=>new Date(t).toLocaleDateString('ru');
@@ -644,15 +643,15 @@ async function pdl(c){try{await api('/api/admin/promo/del',{code:c});pli()}catch
 async function nli(){try{const r=await api('/api/news');$('nls').innerHTML=r.list.map(n=>`<div class="it"><div>${esc(n.title)}<small>${fd(n.ts)}</small></div><button class="xs" onclick="ndl(${n.id})" aria-label="Удалить">×</button></div>`).join('')}catch{}}
 async function nadd(){try{await api('/api/admin/news/add',{title:$('nt').value,text:$('nx').value});$('nt').value=$('nx').value='';toast('Опубликовано');nli();loadNews()}catch(e){toast(e.message,1)}}
 async function ndl(id){try{await api('/api/admin/news/del',{id});nli();loadNews()}catch(e){toast(e.message,1)}}
-async async function stt(){try{const r=await api('/api/admin/stats'),L={users:'Пользователей',new1:'Новых за 24 ч',new7:'Новых за 7 дн.',active:'Активных подписок',frozen:'Заморожено',banned:'Забанено',suspicious:'Подозрительных',keys:'Ключей создано',keys_used:'Ключей активировано',keys_free:'Свободных ключей',devices:'Устройств',tickets:'Открытых тикетов',gifts:'Подарков',promo_uses:'Промо применено',logins24:'Входов за 24 ч',logins_fail24:'Неудачных входов',proxy24:'VPN/Proxy входов',resellers:'Реселлеров',hwid_events24:'HWID событий за 24 ч'};
+async function stt(){try{const r=await api('/api/admin/stats'),L={users:'Пользователей',new1:'Новых за 24 ч',new7:'Новых за 7 дн.',active:'Активных подписок',frozen:'Заморожено',banned:'Забанено',suspicious:'Подозрительных',keys:'Ключей создано',keys_used:'Ключей активировано',keys_free:'Свободных ключей',devices:'Устройств',tickets:'Открытых тикетов',gifts:'Подарков',promo_uses:'Промо применено',logins24:'Входов за 24 ч',logins_fail24:'Неудачных входов',proxy24:'VPN/Proxy входов',resellers:'Реселлеров',hwid_events24:'HWID событий за 24 ч'};
  $('sts').innerHTML='<div class="stat-grid">'+Object.keys(L).map(k=>`<div class="stat-card"><b>${r.stats[k]??0}</b><span>${L[k]}</span></div>`).join('')+'</div>'}catch(e){toast(e.message,1)}}
-async async function loadSet(){try{const r=await api('/api/admin/settings',{action:'get'});$('setinfo').innerHTML=`Kill-switch: ${r.killswitch==='1'?'ВКЛ':'выкл'} · Техработы: ${r.maintenance==='1'?'ВКЛ':'выкл'} · Блок VPN: ${r.block_vpn==='1'?'ВКЛ':'выкл'} · Статус: ${esc(r.status)} — ${esc(r.status_text)}`;}catch(e){toast(e.message,1)}}
+async function loadSet(){try{const r=await api('/api/admin/settings',{action:'get'});$('setinfo').innerHTML=`Kill-switch: ${r.killswitch==='1'?'ВКЛ':'выкл'} · Техработы: ${r.maintenance==='1'?'ВКЛ':'выкл'} · Блок VPN: ${r.block_vpn==='1'?'ВКЛ':'выкл'} · Статус: ${esc(r.status)} — ${esc(r.status_text)}`;}catch(e){toast(e.message,1)}}
 async function toggleSet(k){try{const cur=await api('/api/admin/settings',{action:'get'});await api('/api/admin/settings',{[k]:cur[k]!=='1'});loadSet();toast('Обновлено')}catch(e){toast(e.message,1)}}
 async function setStatus(){try{await api('/api/admin/settings',{status:'custom',status_text:$('sttxt').value});loadSet();toast('Статус обновлён')}catch(e){toast(e.message,1)}}
 async function doBackup(){try{const r=await fetch('/api/admin/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='forev-backup.db';a.click();toast('Бэкап скачан')}catch(e){toast('Ошибка бэкапа',1)}}
-async async function loadAud(){try{const r=await api('/api/admin/audit');$('audl').innerHTML=r.list.map(x=>`<div class="it"><div><b>${esc(x.action)}</b> → ${esc(x.target||'')} <small>${esc(x.username||'system')} · ${new Date(x.ts).toLocaleString('ru')} · ${esc(x.details||'')} ${x.ip?'· IP '+esc(x.ip):''}</small></div></div>`).join('')||'<p>Пусто</p>'}catch(e){toast(e.message,1)}}
+async function loadAud(){try{const r=await api('/api/admin/audit');$('audl').innerHTML=r.list.map(x=>`<div class="it"><div><b>${esc(x.action)}</b> → ${esc(x.target||'')} <small>${esc(x.username||'system')} · ${new Date(x.ts).toLocaleString('ru')} · ${esc(x.details||'')} ${x.ip?'· IP '+esc(x.ip):''}</small></div></div>`).join('')||'<p>Пусто</p>'}catch(e){toast(e.message,1)}}
 let chartInst;
-async async function loadChart(){try{const r=await api('/api/admin/chart',{days:30});
+async function loadChart(){try{const r=await api('/api/admin/chart',{days:30});
   const labels=[...new Set([...(r.regs||[]).map(x=>x.d),...(r.acts||[]).map(x=>x.d),...(r.logins||[]).map(x=>x.d),...(r.bans||[]).map(x=>x.d)])].sort();
   const regMap=Object.fromEntries((r.regs||[]).map(x=>[x.d,x.c])),actMap=Object.fromEntries((r.acts||[]).map(x=>[x.d,x.c]));
   const logMap=Object.fromEntries((r.logins||[]).map(x=>[x.d,x.c])),banMap=Object.fromEntries((r.bans||[]).map(x=>[x.d,x.c]));
