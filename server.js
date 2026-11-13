@@ -49,8 +49,8 @@ function sendCode(email,code,type){
     from:'FOREV EXT <meaisloe@gmail.com>',
     to:email,
     subject,
-    text:`Ваш код: ${code}\nКод действителен 10 минут.`
-  }).catch(e=>console.error('Mail error',e));
+    text:`Ваш код: ${code}\nКод действителен 10 минут.\n\nЕсли вы не запрашивали код — проигнорируйте это письмо.`
+  }).then(()=>console.log('Code sent to',email)).catch(e=>{console.error('Mail error:',e.message);throw e});
 }
 function genCode(){return String(Math.floor(100000+Math.random()*900000))}
 const MIME={'.html':'text/html; charset=utf-8','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon'};
@@ -306,7 +306,7 @@ const srv=http.createServer(async(req,res)=>{
       if(!code){
         const c=genCode();
         db.prepare('INSERT OR REPLACE INTO verify_codes(email,code,type,expires,data) VALUES(?,?,?,?,?)').run(email,c,'reg',Date.now()+600000,JSON.stringify({username,password,ref:b.ref,hwid:b.hwid}));
-        await sendCode(email,c,'reg');
+        try{await sendCode(email,c,'reg')}catch(e){return bad('Не удалось отправить код на почту. Проверьте адрес или попробуйте позже',500)}
         return send(res,200,{need_code:true});
       }
       const v=db.prepare('SELECT * FROM verify_codes WHERE email=? AND type="reg" AND expires>?').get(email,Date.now());
@@ -335,7 +335,7 @@ const srv=http.createServer(async(req,res)=>{
       if(!code){
         const c=genCode();
         db.prepare('INSERT OR REPLACE INTO verify_codes(email,code,type,expires) VALUES(?,?,?,?,?)').run(f.email,c,'login',Date.now()+600000);
-        await sendCode(f.email,c,'login');
+        try{await sendCode(f.email,c,'login')}catch(e){return bad('Не удалось отправить код на почту',500)}
         return send(res,200,{need_code:true,email:f.email});
       }
       const v=db.prepare('SELECT * FROM verify_codes WHERE email=? AND type="login" AND expires>?').get(f.email,Date.now());
