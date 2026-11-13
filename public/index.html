@@ -400,10 +400,10 @@ async function submit(){const b=$('mb');b.classList.add('ld');$('me').textConten
   if(mode==='reg')r=await api('/api/register',{username:$('f1').value,email:$('f2').value,password:$('f3').value,ref:REF,code:$('codein')?.value});
   else r=await api('/api/login',{login:$('f1').value,password:$('f3').value,code:$('codein')?.value});
   if(r.need_code){
-    $('me').textContent='Код отправлен на почту. Введите его ниже.';
+    $('me').textContent='Код отправлен на почту. Введите его в поле ниже и нажмите кнопку ещё раз.';
     if(!$('codein')){
-      const inp=document.createElement('input');inp.id='codein';inp.placeholder='Код из письма';inp.className='fld';inp.style.marginTop='10px';
-      $('mb').before(inp);
+      const inp=document.createElement('input');inp.id='codein';inp.placeholder='Код из письма (6 цифр)';inp.className='fld';inp.style.marginTop='10px';inp.maxLength=6;
+      $('mb').before(inp);inp.focus();
     }
     return;
   }
