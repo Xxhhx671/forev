@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS ticket_msgs(id INTEGER PRIMARY KEY,ticket_id INTEGER,
 CREATE TABLE IF NOT EXISTS news(id INTEGER PRIMARY KEY,title TEXT,text TEXT,ts INTEGER);`);
 // миграции для баз старой версии
 for(const s of ['ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN frozen INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN freeze_left INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_dev INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN devices INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN admin INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN ref_code TEXT','ALTER TABLE users ADD COLUMN referred_by INTEGER','ALTER TABLE users ADD COLUMN ref_paid INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reg_ip TEXT','ALTER TABLE users ADD COLUMN frozen_at INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_unfreeze INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN is_reseller INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reset_count INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_resets INTEGER DEFAULT 3','ALTER TABLE keys ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN reseller_keys INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reseller_limit INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN trial_hwid TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN theme TEXT DEFAULT \'dark\'','ALTER TABLE users ADD COLUMN suspicious INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_hwid_change INTEGER DEFAULT 0','ALTER TABLE audit ADD COLUMN ip TEXT','ALTER TABLE keys ADD COLUMN created_by INTEGER DEFAULT 0','ALTER TABLE logins ADD COLUMN proxy INTEGER DEFAULT 0','ALTER TABLE logins ADD COLUMN country TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN ip TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN ua TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN notify_3d INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN notify_1d INTEGER DEFAULT 0'])try{db.exec(s)}catch{}
+for(const s of ['ALTER TABLE keys ADD COLUMN product TEXT DEFAULT \'\'','ALTER TABLE keys ADD COLUMN tariff TEXT DEFAULT \'\''])try{db.exec(s)}catch{}
+
 db.exec(`CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,admin_id INTEGER,action TEXT,target TEXT,details TEXT,ts INTEGER,ip TEXT);
 CREATE TABLE IF NOT EXISTS coupons(code TEXT PRIMARY KEY,discount INTEGER,max_uses INTEGER,uses INTEGER DEFAULT 0,expires INTEGER DEFAULT 0,created INTEGER);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT);
@@ -30,7 +32,33 @@ CREATE TABLE IF NOT EXISTS reseller_keys(id INTEGER PRIMARY KEY,reseller_id INTE
 CREATE TABLE IF NOT EXISTS failed_auth(ip TEXT,user_id INTEGER,ts INTEGER);
 CREATE TABLE IF NOT EXISTS hwid_whitelist(id INTEGER PRIMARY KEY,user_id INTEGER,hwid TEXT,note TEXT,created INTEGER,UNIQUE(user_id,hwid));
 CREATE TABLE IF NOT EXISTS sub_notices(user_id INTEGER,kind TEXT,ts INTEGER,PRIMARY KEY(user_id,kind));
-INSERT OR IGNORE INTO settings(key,value) VALUES('killswitch','0'),('maintenance','0'),('status','online'),('status_text','Сервис работает');`);
+INSERT OR IGNORE INTO settings(key,value) VALUES('killswitch','0'),('maintenance','0'),('status','online'),('status_text','Сервис работает'),('configs_open','1');`);
+db.exec(`CREATE TABLE IF NOT EXISTS configs(
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  content TEXT DEFAULT '',
+  photo TEXT DEFAULT '',
+  is_file INTEGER DEFAULT 0,
+  filename TEXT DEFAULT '',
+  enabled INTEGER DEFAULT 1,
+  created INTEGER
+);
+CREATE TABLE IF NOT EXISTS products(
+  id INTEGER PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  description TEXT DEFAULT '',
+  created INTEGER
+);
+CREATE TABLE IF NOT EXISTS tariffs(
+  id INTEGER PRIMARY KEY,
+  product_id INTEGER,
+  name TEXT NOT NULL,
+  days INTEGER NOT NULL,
+  devices INTEGER DEFAULT 1,
+  price_note TEXT DEFAULT '',
+  created INTEGER
+);`);
 db.exec("UPDATE users SET ref_code=lower(hex(randomblob(4))) WHERE ref_code IS NULL OR ref_code=''");
 db.prepare('UPDATE users SET frozen_at=? WHERE frozen=1 AND frozen_at=0').run(Date.now());
 
@@ -107,7 +135,7 @@ const makeKey=()=>'FOREV-'+crypto.randomBytes(8).toString('hex').toUpperCase().m
 const hashPw=(pw,salt)=>crypto.scryptSync(pw,salt,64).toString('hex');
 const clamp=(v,a,b,d)=>Math.min(Math.max(Math.floor(+v)||d,a),b);
 const active=u=>!u.frozen&&!!(u.inf||u.sub_until>Date.now());
-function addKeys(days,devices,n,inf,note='',prefix='FOREV'){const keys=[],st=db.prepare('INSERT INTO keys(code,days,devices,inf,created,note) VALUES(?,?,?,?,?,?)');for(let i=0;i<n;i++){const c=prefix+'-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');st.run(c,days,devices,inf?1:0,Date.now(),note);keys.push(c)}return keys}
+function addKeys(days,devices,n,inf,note='',prefix='FOREV',product='',tariff=''){const keys=[],st=db.prepare('INSERT INTO keys(code,days,devices,inf,created,note,product,tariff) VALUES(?,?,?,?,?,?,?,?)');for(let i=0;i<n;i++){const c=prefix+'-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');st.run(c,days,devices,inf?1:0,Date.now(),note,product,tariff);keys.push(c)}return keys}
 function addSubHistory(uid,days,source,details=''){db.prepare('INSERT INTO sub_history(user_id,days,source,details,ts) VALUES(?,?,?,?,?)').run(uid,days,source,details,Date.now())}
 function addNotif(uid,text){db.prepare('INSERT INTO notifications(user_id,text,ts) VALUES(?,?,?)').run(uid,text.slice(0,300),Date.now())}
 function isIpBanned(ip){return !!db.prepare("SELECT 1 FROM ip_list WHERE ip=? AND type='black'").get(ip)}
@@ -202,7 +230,19 @@ const srv=http.createServer(async(req,res)=>{
     if(req.url.startsWith('/api/'))thaw();
     if(req.url==='/api/status'&&req.method==='GET'){
       scanExpiryNotices(); // throttled
-      return send(res,200,{status:getSetting('status'),text:getSetting('status_text'),maintenance:getSetting('maintenance')==='1',killswitch:getSetting('killswitch')==='1',captcha:true});
+      return send(res,200,{status:getSetting('status'),text:getSetting('status_text'),maintenance:getSetting('maintenance')==='1',killswitch:getSetting('killswitch')==='1',captcha:true,configs_open:getSetting('configs_open','1')==='1'});
+    }
+    if(req.url==='/api/configs'&&req.method==='GET'){
+      if(getSetting('configs_open','1')!=='1')return send(res,200,{open:false,list:[],message:'Раздел конфигов временно закрыт (техработы / обновление / разработка)'});
+      const list=db.prepare('SELECT id,title,description,photo,is_file,filename,created FROM configs WHERE enabled=1 ORDER BY created DESC LIMIT 50').all();
+      return send(res,200,{open:true,list});
+    }
+    if(req.url.startsWith('/api/config/')&&req.method==='GET'){
+      if(getSetting('configs_open','1')!=='1')return send(res,403,{error:'Раздел закрыт'});
+      const id=+req.url.split('/').pop();
+      const c=db.prepare('SELECT * FROM configs WHERE id=? AND enabled=1').get(id);
+      if(!c)return send(res,404,{error:'Не найдено'});
+      return send(res,200,c);
     }
     if(req.url==='/api/captcha'&&req.method==='GET'){
       if(rl('cap'+ip,30,6e4))return send(res,429,{error:'Слишком много запросов капчи'});
@@ -231,13 +271,33 @@ const srv=http.createServer(async(req,res)=>{
       if(url==='/api/admin/genkey'){
         const inf=!!b.inf,days=inf?0:clamp(b.days,1,3650,30),dev=clamp(b.devices,1,99,1),n=clamp(b.count,1,50,1);
         const note=String(b.note||'').slice(0,200),prefix=String(b.prefix||'FOREV').replace(/[^A-Z0-9]/g,'').slice(0,12)||'FOREV';
-        const keys=addKeys(days,dev,n,inf,note,prefix);
-        logAudit(a?.id||0,'genkey',n,prefix+' '+days+'d');
-        return send(res,200,{days,devices:dev,inf,keys});
+        const product=String(b.product||'').slice(0,80),tariff=String(b.tariff||'').slice(0,80);
+        const keys=addKeys(days,dev,n,inf,note,prefix,product,tariff);
+        logAudit(a?.id||0,'genkey',n,prefix+' '+days+'d '+(product||'')+' '+(tariff||''));
+        return send(res,200,{days,devices:dev,inf,product,tariff,keys});
       }
       if(url==='/api/admin/keys'){
-        const keys=db.prepare('SELECT k.code,k.days,k.devices,k.inf,k.created,u.username used FROM keys k LEFT JOIN users u ON u.id=k.used_by WHERE k.admin=0 ORDER BY k.created DESC LIMIT 100').all();
+        const keys=db.prepare('SELECT k.code,k.days,k.devices,k.inf,k.created,k.product,k.tariff,k.note,u.username used FROM keys k LEFT JOIN users u ON u.id=k.used_by WHERE k.admin=0 ORDER BY k.created DESC LIMIT 100').all();
         return send(res,200,{keys});
+      }
+      if(url==='/api/admin/importkeys'){
+        const raw=String(b.list||'').trim();
+        const days=clamp(b.days,1,3650,30),dev=clamp(b.devices,1,99,1),inf=!!b.inf;
+        const product=String(b.product||'').slice(0,80),tariff=String(b.tariff||'').slice(0,80),note=String(b.note||'import').slice(0,200);
+        const lines=raw.split(/[\n,;\s]+/).map(x=>x.trim().toUpperCase()).filter(x=>x.length>=8 && x.length<=64);
+        if(!lines.length)return bad('Нет валидных ключей в списке');
+        const st=db.prepare('INSERT OR IGNORE INTO keys(code,days,devices,inf,created,note,product,tariff) VALUES(?,?,?,?,?,?,?,?)');
+        let added=0;const keys=[];
+        for(const c of lines){
+          try{
+            const before=db.prepare('SELECT 1 FROM keys WHERE code=?').get(c);
+            if(before)continue;
+            st.run(c,days,dev,inf?1:0,Date.now(),note,product,tariff);
+            added++;keys.push(c);
+          }catch{}
+        }
+        logAudit(a.id,'importkeys',added,product+' '+tariff);
+        return send(res,200,{added,keys,total:lines.length});
       }
       if(url==='/api/admin/delkey'){
         const r=db.prepare('DELETE FROM keys WHERE code=? AND used_by IS NULL AND admin=0').run(String(b.code||''));
@@ -377,6 +437,35 @@ const srv=http.createServer(async(req,res)=>{
       }
       if(url==='/api/admin/coupons')return send(res,200,{list:db.prepare('SELECT * FROM coupons ORDER BY created DESC LIMIT 50').all()});
       if(url==='/api/admin/coupon/del'){db.prepare('DELETE FROM coupons WHERE code=?').run(String(b.code||''));return send(res,200,{ok:true})}
+      // ---- configs ----
+      if(url==='/api/admin/configs'){
+        return send(res,200,{list:db.prepare('SELECT * FROM configs ORDER BY created DESC LIMIT 100').all(),open:getSetting('configs_open','1')});
+      }
+      if(url==='/api/admin/config/add'){
+        const title=String(b.title||'').trim().slice(0,120);
+        if(!title)return bad('Нужен заголовок');
+        const description=String(b.description||'').slice(0,500);
+        const content=String(b.content||'').slice(0,100000);
+        const photo=String(b.photo||'').slice(0,500);
+        const is_file=b.is_file?1:0;
+        const filename=String(b.filename||'').slice(0,120);
+        db.prepare('INSERT INTO configs(title,description,content,photo,is_file,filename,enabled,created) VALUES(?,?,?,?,?,?,1,?)').run(title,description,content,photo,is_file,filename,Date.now());
+        logAudit(a.id,'config_add',title,'');
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/config/del'){
+        db.prepare('DELETE FROM configs WHERE id=?').run(+b.id||0);
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/config/toggle'){
+        db.prepare('UPDATE configs SET enabled=1-enabled WHERE id=?').run(+b.id||0);
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/configs/open'){
+        setSetting('configs_open', b.open?'1':'0');
+        logAudit(a.id,'configs_open',b.open?'1':'0','');
+        return send(res,200,{ok:true,open:getSetting('configs_open')});
+      }
       if(url==='/api/admin/resetdevices'){
         const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Пользователь не найден',404);
         const n=db.prepare('DELETE FROM devices WHERE user_id=?').run(t.id).changes;
