@@ -2,51 +2,8 @@
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>FOREV EXT — CS2</title><link rel="icon" href="/favicon.png">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
-// --- Theme / Profile / Activity / Reseller / Admin search ---
-function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);$('themeBtn').textContent=t==='light'?'🌙':'☀️'}
-function toggleTheme(){const t=document.documentElement.classList.contains('light')?'dark':'light';applyTheme(t);if(user)saveProfile()}
-async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),theme=$('themeSel').value;await api('/api/profile',{avatar,theme});if(user){user.avatar=avatar;user.theme=theme}applyTheme(theme);if(avatar){$('avimg').src=avatar;$('avimg').style.display='block'}toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
-function renderCal(list){
-  const map={};(list||[]).forEach(x=>map[x.d]=x.c);
-  const days=[];const now=new Date();
-  for(let i=29;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);const key=d.toISOString().slice(0,10);days.push({d:key,c:map[key]||0,label:d.getDate()})}
-  $('actCal').innerHTML=days.map(x=>`<div class="d ${x.c>2?'on':x.c>0?'mid':''}" title="${x.d}: ${x.c} вх.">${x.label}</div>`).join('');
-}
-async function rslGen(){try{const r=await api('/api/reseller/genkey',{days:+$('rslDays').value,devices:+$('rslDev').value,count:+$('rslCnt').value});$('rslOut').textContent=r.keys.join('\n');$('rslLeft').textContent=r.left;toast('Ключи созданы');loadRslKeys();if(user&&user.reseller){user.reseller.left=r.left;user.reseller.keys=(user.reseller.limit||0)-r.left;$('rslUsed').textContent=user.reseller.keys}}catch(e){toast(e.message,1)}}
-async function loadRslKeys(){try{const r=await api('/api/reseller/keys');$('rslList').innerHTML=(r.list||[]).map(k=>`<div class="hwid-row"><code>${esc(k.code)}</code><span>${k.days}д · ${k.devices}у · ${k.used?esc(k.used):'свободен'}</span></div>`).join('')||'<p style="color:var(--m)">Пока нет ключей</p>'}catch{}}
-async function advSearch(){try{const q=$('advQ').value.trim();if(q.length<3)return toast('Минимум 3 символа',1);const r=await api('/api/admin/search',{q});
-  let h='';
-  if(r.users?.length){h+='<h4>Пользователи</h4>'+r.users.map(u=>`<div class="hwid-row"><b>${esc(u.username)}</b> ${esc(u.email)} ${u.banned?'🚫':''}${u.suspicious?'<span class="badge-s">suspicious</span>':''}</div>`).join('')}
-  if(r.devices?.length){h+='<h4>HWID</h4>'+r.devices.map(d=>`<div class="hwid-row"><code>${esc(d.hwid)}</code><span>${esc(d.username)} · ${esc(d.name||'')}</span></div>`).join('')}
-  if(r.logins?.length){h+='<h4>IP / логины</h4>'+r.logins.map(l=>`<div class="hwid-row"><code>${esc(l.ip)}</code><span>${esc(l.username)} · ${l.ok?'✓':'✗'} · ${l.proxy?'VPN ':''}${esc(l.country||'')} · ${new Date(l.ts).toLocaleString('ru')}</span></div>`).join('')}
-  $('advRes').innerHTML=h||'<p>Ничего не найдено</p>'}catch(e){toast(e.message,1)}}
-async function loadHwidLog(){try{const r=await api('/api/admin/hwidlog',{});$('hwidLogList').innerHTML=(r.list||[]).map(x=>`<div class="hwid-row"><span><b>${esc(x.username||x.user_id)}</b> · ${esc(x.action)} · <code>${esc(x.hwid)}</code></span><span>${esc(x.ip||'')} · ${new Date(x.ts).toLocaleString('ru')}</span></div>`).join('')||'<p>Пусто</p>'}catch(e){toast(e.message,1)}}
-// init theme from localStorage
-(function(){const t=localStorage.getItem('forev_theme')||'dark';applyTheme(t)})();
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-
-async function loadSessions(){try{const r=await api('/api/sessions');const el=$('sessList');if(!el)return;
-  el.innerHTML=(r.list||[]).map(s=>{
-    const ua=(s.ua||'').slice(0,60);
-    const when=s.created?new Date(s.created).toLocaleString('ru'):'—';
-    return `<div class="hwid-row"><span>${s.current?'<b style="color:var(--r)">текущая</b> · ':''}${esc(s.ip||'?')}<br><small style="color:var(--m)">${esc(ua)}</small></span><span><small>${when}</small>${s.current?'':` <button class="btn sm ghost" style="padding:2px 8px" onclick="killSess('${esc(s.id)}')">×</button>`}</span></div>`;
-  }).join('')||'<p style="color:var(--m)">Нет других сессий</p>';
-}catch{}}
-async function killSess(id){try{await api('/api/session/del',{id});toast('Сессия завершена');loadSessions()}catch(e){toast(e.message,1)}}
-async function showWl(uid){
-  try{const r=await api('/api/admin/whitelist',{id:uid,action:'list'});
-    const hw=prompt('Добавить HWID в whitelist (пусто = только просмотр списка):\n\nТекущие:\n'+(r.list||[]).map(x=>x.hwid+(x.note?' — '+x.note:'')).join('\n'));
-    if(hw===null)return;
-    if(hw.trim()){await api('/api/admin/whitelist',{id:uid,action:'add',hwid:hw.trim()});toast('HWID добавлен');}
-    else if((r.list||[]).length){
-      const del=prompt('Введите id записи для удаления (или отмена):\n'+(r.list||[]).map(x=>x.id+': '+x.hwid).join('\n'));
-      if(del){await api('/api/admin/whitelist',{id:uid,action:'del',wid:+del});toast('Удалено');}
-    }
-  }catch(e){toast(e.message,1)}
-}
-
-</script>
 <style>
 :root{--r:#ff1f3d;--r2:#b0001b;--b:#262626;--m:#9b9b9b;--bg:#000;--fg:#fff;--card:#111;--card2:#1a1a1a;--bd:#222;--c:14px;--ch:polygon(var(--c) 0,100% 0,100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,0 100%,0 var(--c))}
 html.light{--bg:#f4f4f5;--fg:#111;--card:#fff;--card2:#f0f0f2;--bd:#e0e0e4;--b:#e8e8ec;--m:#666}
@@ -299,27 +256,8 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 .stg{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:380px){.btns .btn{width:100%}}
-</style>async function loadSessions(){try{const r=await api('/api/sessions');const el=$('sessList');if(!el)return;
-  el.innerHTML=(r.list||[]).map(s=>{
-    const ua=(s.ua||'').slice(0,60);
-    const when=s.created?new Date(s.created).toLocaleString('ru'):'—';
-    return `<div class="hwid-row"><span>${s.current?'<b style="color:var(--r)">текущая</b> · ':''}${esc(s.ip||'?')}<br><small style="color:var(--m)">${esc(ua)}</small></span><span><small>${when}</small>${s.current?'':` <button class="btn sm ghost" style="padding:2px 8px" onclick="killSess('${esc(s.id)}')">×</button>`}</span></div>`;
-  }).join('')||'<p style="color:var(--m)">Нет других сессий</p>';
-}catch{}}
-async function killSess(id){try{await api('/api/session/del',{id});toast('Сессия завершена');loadSessions()}catch(e){toast(e.message,1)}}
-async function showWl(uid){
-  try{const r=await api('/api/admin/whitelist',{id:uid,action:'list'});
-    const hw=prompt('Добавить HWID в whitelist (пусто = только просмотр списка):\n\nТекущие:\n'+(r.list||[]).map(x=>x.hwid+(x.note?' — '+x.note:'')).join('\n'));
-    if(hw===null)return;
-    if(hw.trim()){await api('/api/admin/whitelist',{id:uid,action:'add',hwid:hw.trim()});toast('HWID добавлен');}
-    else if((r.list||[]).length){
-      const del=prompt('Введите id записи для удаления (или отмена):\n'+(r.list||[]).map(x=>x.id+': '+x.hwid).join('\n'));
-      if(del){await api('/api/admin/whitelist',{id:uid,action:'del',wid:+del});toast('Удалено');}
-    }
-  }catch(e){toast(e.message,1)}
-}
+</style>
 
-</script>
 </head><body>
 <canvas id="cv"></canvas><div id="pg"></div>
 <div id="pre"><img src="/logo.webp" alt=""><div class="pbar"><i></i></div></div>
@@ -491,7 +429,7 @@ async function showWl(uid){
 const $=id=>document.getElementById(id);let mode='log',user=null;
 /* Фон: квадраты соединяются линиями */
 const cv=$('cv'),cx=cv.getContext('2d');let W,H,P=[],mx=-1e3,my=-1e3;
-function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;P=Array.from({length:Math.min(100,W*H/13000|0)},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6,s:4+Math.random()*11,r:Math.random()*6,vr:(Math.random()-.5)*.02,red:Math.random()<.55}))}
+function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;const n=Math.min(window.matchMedia('(prefers-reduced-motion: reduce)').matches?12:36,W*H/20000|0);P=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45,s:3+Math.random()*8,r:Math.random()*6,vr:(Math.random()-.5)*.015,red:Math.random()<.5}))}
 addEventListener('resize',rs);rs();addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
 (function loop(){cx.clearRect(0,0,W,H);
 for(const p of P){p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;if(p.x<-20)p.x=W+20;if(p.x>W+20)p.x=-20;if(p.y<-20)p.y=H+20;if(p.y>H+20)p.y=-20;
@@ -674,7 +612,6 @@ async function delIp(ip){try{await api('/api/admin/iplist',{action:'del',ip});lo
 async function doExport(){try{const r=await fetch('/api/admin/export',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='users.csv';a.click()}catch(e){toast('Ошибка',1)}}
 async function resetDev(id){if(!confirm('Сбросить все устройства пользователя?'))return;try{await api('/api/admin/resetdevices',{id});toast('Устройства сброшены');ul()}catch(e){toast(e.message,1)}}
 async function showHist(id){try{const r=await api('/api/admin/history',{id});alert(r.list.map(h=>`${new Date(h.ts).toLocaleString('ru')}: ${h.days}д (${h.source})`).join('\n')||'Пусто')}catch(e){toast(e.message,1)}}
-init().then(()=>{if(!user&&new URLSearchParams(location.search).get('ref'))openM('reg')});
 
 // --- Theme / Profile / Activity / Reseller / Admin search ---
 function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);$('themeBtn').textContent=t==='light'?'🌙':'☀️'}
