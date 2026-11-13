@@ -2,7 +2,6 @@
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>FOREV EXT — CS2</title><link rel="icon" href="/favicon.png">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{--r:#ff1f3d;--r2:#b0001b;--b:#262626;--m:#9b9b9b;--c:14px;--ch:polygon(var(--c) 0,100% 0,100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,0 100%,0 var(--c))}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
@@ -238,7 +237,6 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <section class="hero" id="top">
 <div class="hw"><img src="/logo.webp" alt="FOREV EXT"></div>
 <p class="tagl">Софт для Counter-Strike 2. Стабильная работа, быстрые обновления и живая поддержка. Всё управление — в личном кабинете.</p>
-<div id="prodstatus" style="margin:10px 0;font-size:14px;color:var(--m)">Загрузка статуса...</div>
 <div class="btns"><button class="btn" onclick="openM('reg')">Создать аккаунт</button><button class="btn ghost" onclick="openM('log')">Войти</button></div>
 <div class="scroll"></div>
 </section>
@@ -263,7 +261,6 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 
 <section id="cab">
 <div class="prof rv"><div class="av" id="av"></div><div><h2 id="cu"></h2><p id="ce"></p><span class="bdg" id="adb" style="display:none">ADMIN</span></div></div>
-<div id="notifbox" class="lst" style="margin-bottom:16px"></div>
 <div class="grid">
 <div class="card rv"><svg class="ring" viewBox="0 0 80 80"><circle cx="40" cy="40" r="34"/><circle id="rg" cx="40" cy="40" r="34"/></svg><div class="rt"><b id="dl">0</b><small id="dls">дн.</small></div>
 <div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></svg></div><h3>Подписка</h3>
@@ -279,54 +276,24 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <div class="card rv" style="--d:.32s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr a" pathLength="1" x="3" y="4" width="18" height="12" rx="2"/><path class="dr" pathLength="1" d="M8 20h8M12 16v4"/></svg></div><h3>Устройства <span id="dvh" style="color:var(--r)"></span></h3><p>Привязка по HWID. Лимит задаётся ключом.</p><div class="lst" id="dv"></div></div>
 <div class="card rv"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path class="dr" pathLength="1" d="M9 12h6"/></svg></div><h3>Безопасность</h3>
 <div class="cab-in"><div class="fld "><input id="op"  type="password" autocomplete="current-password" placeholder=" " ><label>Текущий пароль</label><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div class="fld "><input id="np"  type="password" autocomplete="new-password" placeholder=" " ><label>Новый пароль</label><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div></div>
-<div class="row"><button class="btn sm" onclick="chpw()">Сменить пароль</button><button class="btn sm ghost" onclick="outAll()">Выйти везде</button><button class="btn sm ghost" onclick="changeNick()">Сменить ник</button><button class="btn sm ghost" onclick="delAcc()">Удалить аккаунт</button></div><div class="err" id="pe" style="margin-top:8px"></div>
+<div class="row"><button class="btn sm" onclick="chpw()">Сменить пароль</button><button class="btn sm ghost" onclick="outAll()">Выйти везде</button></div><div class="err" id="pe" style="margin-top:8px"></div>
 <p>Последние входы</p><div class="lst" id="lg"></div></div>
 <div class="card rv" style="--d:.08s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg></div><h3>Рефералы</h3><p>Друг регистрируется по вашей ссылке и активирует первый ключ — вы получаете бонусные дни.</p>
-<div class="cab-in"><div class="fld "><input id="rl"  placeholder=" " readonly><label>Ваша ссылка</label><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg></div><button class="btn sm" onclick="cp($('rl').value)">Копировать</button></div><p id="rs" style="margin-top:10px"></p><div class="lst" id="topr"></div></div>
-<div class="card rv"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M12 2v20M2 12h20"/></svg></div><h3>Обменять дни на ключ</h3><p>Создать ключ, списав дни с подписки.</p>
-<div class="cab-in"><div class="fld n"><input id="exd" type="number" min="1" value="30"><label>Дней</label></div><button class="btn sm" onclick="doExchange()">Создать ключ</button></div><div id="exout"></div></div>
+<div class="cab-in"><div class="fld "><input id="rl"  placeholder=" " readonly><label>Ваша ссылка</label><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg></div><button class="btn sm" onclick="cp($('rl').value)">Копировать</button></div><p id="rs" style="margin-top:10px"></p></div>
 <div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg></div><h3>Новости</h3><div class="lst" id="nw"></div></div>
 <div class="card w rv"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M4 5h16v11H8l-4 4z"/></svg></div><h3>Поддержка</h3>
 <div class="fld "><input id="ts"  placeholder=" " ><label>Тема</label><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></div><div class="fld ta"><textarea id="tt" placeholder=" "></textarea><label>Сообщение</label></div><div class="row" style="margin:0 0 6px"><button class="btn sm" onclick="tnew()">Отправить тикет</button></div><div class="err" id="te"></div>
 <div class="lst" id="tl"></div><div id="tv"></div></div>
 <div class="card w" id="adm" style="display:none"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></div><h3>Админ-панель</h3>
-<div class="seg" id="seg"><button class="on" onclick="at(0)">Выдать ключ</button><button onclick="at(1)">Ключи</button><button onclick="at(2)">Пользователи</button><button onclick="at(3)">Промокоды</button><button onclick="at(4)">Тикеты</button><button onclick="at(5)">Новости</button><button onclick="at(6)">Статистика</button><button onclick="at(7)">Настройки</button><button onclick="at(8)">Аудит</button><button onclick="at(9)">Графики</button><button onclick="at(10)">Купоны</button><button onclick="at(11)">Топ реф</button><button onclick="at(12)">IP списки</button><button onclick="at(13)">Экспорт</button></div>
-<div id="ap0"><div class="cab-in"><div class="fld "><input id="kd"  type="number" min="1" placeholder=" " value="30"><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="fld "><input id="kv"  type="number" min="1" placeholder=" " value="1"><label>Устройств</label><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div class="fld "><input id="kc"  type="number" min="1" max="50" placeholder=" " value="1"><label>Кол-во ключей</label><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/></svg></div><div class="fld "><input id="kpre" placeholder=" " value="FOREV"><label>Префикс</label></div><div class="fld "><input id="knote" placeholder=" "><label>Заметка к ключу</label></div></div>
+<div class="seg" id="seg"><button class="on" onclick="at(0)">Выдать ключ</button><button onclick="at(1)">Ключи</button><button onclick="at(2)">Пользователи</button><button onclick="at(3)">Промокоды</button><button onclick="at(4)">Тикеты</button><button onclick="at(5)">Новости</button><button onclick="at(6)">Статистика</button></div>
+<div id="ap0"><div class="cab-in"><div class="fld "><input id="kd"  type="number" min="1" placeholder=" " value="30"><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="fld "><input id="kv"  type="number" min="1" placeholder=" " value="1"><label>Устройств</label><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div class="fld "><input id="kc"  type="number" min="1" max="50" placeholder=" " value="1"><label>Кол-во ключей</label><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/></svg></div></div>
 <div class="chips"><span onclick="pd(1)">1 дн</span><span onclick="pd(7)">7 дн</span><span onclick="pd(30)">30 дн</span><span onclick="pd(90)">90 дн</span><span onclick="pd(365)">365 дн</span><span onclick="pd(0)">навсегда</span></div>
 <label class="chk"><input type="checkbox" id="ki"> Бессрочный ключ</label><div class="row" style="margin:0"><button class="btn" onclick="mk()">Создать</button><button class="btn ghost" id="kcp" style="display:none" onclick="cp($('kout').textContent)">Копировать все</button></div><pre id="kout"></pre></div>
 <div id="ap1" style="display:none"><div class="lst" id="kl"></div></div>
 <div id="ap2" style="display:none"><div class="fld "><input oninput="ul()" id="uq"  placeholder=" " ><label>Поиск по нику / e-mail</label><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></div><div class="lst" id="ulst"></div></div><div id="ap3" style="display:none"><div class="cab-in"><div class="fld "><input id="pc"  placeholder=" " ><label>Код (пусто — случайный)</label><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16"/></svg></div><div class="fld n"><input id="pdays"  type="number" min="1" placeholder=" " value="3"><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="fld n"><input id="pu"  type="number" min="1" placeholder=" " value="100"><label>Использований</label><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="fld n"><input id="pex"  type="number" min="1" placeholder=" " ><label>Срок, дн.</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><button class="btn sm" onclick="padd()">Создать</button></div><div class="lst" id="pls"></div></div>
 <div id="ap4" style="display:none"><div class="lst" id="atl"></div><div id="atv"></div></div>
 <div id="ap5" style="display:none"><div class="fld "><input id="nt"  placeholder=" " ><label>Заголовок</label><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></div><div class="fld ta"><textarea id="nx" placeholder=" "></textarea><label>Текст</label></div><div class="row" style="margin:0 0 6px"><button class="btn sm" onclick="nadd()">Опубликовать</button></div><div class="lst" id="nls"></div></div>
-<div id="ap6" style="display:none"><div class="stg" id="sts"></div></div>
-<div id="ap7" style="display:none">
-  <div class="cab-in">
-    <button class="btn sm" onclick="toggleSet('killswitch')">Kill-switch</button>
-    <button class="btn sm" onclick="toggleSet('maintenance')">Техработы</button>
-    <div class="fld"><input id="sttxt" placeholder=" "><label>Текст статуса</label></div>
-    <button class="btn sm" onclick="setStatus()">Обновить статус</button>
-    <button class="btn sm ghost" onclick="doBackup()">Бэкап базы</button>
-  </div>
-  <div id="setinfo"></div>
-</div>
-<div id="ap8" style="display:none"><div class="lst" id="audl"></div></div>
-<div id="ap9" style="display:none"><canvas id="chart" height="120"></canvas><button class="btn sm" onclick="loadChart()">Обновить</button></div>
-<div id="ap10" style="display:none">
-  <div class="cab-in">
-    <div class="fld"><input id="ccode" placeholder=" "><label>Код купона</label></div>
-    <div class="fld n"><input id="cdisc" type="number" min="1" max="100" value="10"><label>Скидка %</label></div>
-    <div class="fld n"><input id="cuses" type="number" value="100"><label>Использований</label></div>
-    <button class="btn sm" onclick="cadd()">Создать купон</button>
-  </div>
-  <div class="lst" id="clst"></div>
-</div>
-<div id="ap11" style="display:none"><div class="lst" id="trfl"></div></div>
-<div id="ap12" style="display:none">
-  <div class="cab-in"><div class="fld"><input id="ipadd" placeholder=" "><label>IP</label></div><select id="iptype"><option value="black">Чёрный</option><option value="white">Белый</option></select><button class="btn sm" onclick="addIp()">Добавить</button></div>
-  <div class="lst" id="iplst"></div>
-</div>
-<div id="ap13" style="display:none"><button class="btn sm" onclick="doExport()">Скачать CSV пользователей</button></div>
-</div>
+<div id="ap6" style="display:none"><div class="stg" id="sts"></div></div></div>
 </div></section>
 </main>
 <footer>© 2026 FOREV EXT. Все права защищены.</footer>
@@ -395,20 +362,9 @@ function openM(m){mode=m;const r=m==='reg';$('ov').classList.add('on');document.
 function closeM(){$('ov').classList.remove('on');document.body.classList.remove('lock')}
 function eye(){const f=$('f3');f.type=f.type==='password'?'text':'password'}
 async function submit(){const b=$('mb');b.classList.add('ld');$('me').textContent='';
- try{
-  let r;
-  if(mode==='reg')r=await api('/api/register',{username:$('f1').value,email:$('f2').value,password:$('f3').value,ref:REF,code:$('codein')?.value});
-  else r=await api('/api/login',{login:$('f1').value,password:$('f3').value,code:$('codein')?.value});
-  if(r.need_code){
-    $('me').textContent='Код отправлен на почту. Введите его в поле ниже и нажмите кнопку ещё раз.';
-    if(!$('codein')){
-      const inp=document.createElement('input');inp.id='codein';inp.placeholder='Код из письма (6 цифр)';inp.className='fld';inp.style.marginTop='10px';inp.maxLength=6;
-      $('mb').before(inp);inp.focus();
-    }
-    return;
-  }
-  closeM();$('f3').value='';$('codein')?.remove();await init();user&&toast('Добро пожаловать, '+user.username+'!');
- }
+ try{if(mode==='reg')await api('/api/register',{username:$('f1').value,email:$('f2').value,password:$('f3').value,ref:REF});
+  else await api('/api/login',{login:$('f1').value,password:$('f3').value});
+  closeM();$('f3').value='';await init();user&&toast('Добро пожаловать, '+user.username+'!')}
  catch(e){$('me').textContent=e.message;const a=$('am');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake')}
  b.classList.remove('ld')}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&$('ov').classList.contains('on'))submit();if(e.key==='Escape'){closeM();tm(0)}});
@@ -424,10 +380,9 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
   $('bfz').style.display=u.active&&!u.inf?'':'none';$('buf').style.display=u.frozen?'':'none';
   $('adm').style.display=u.is_admin?'':'none';$('adb').style.display=u.is_admin?'inline-block':'none';$('dls').textContent=u.inf?'навсегда':'дн.';
   setTimeout(()=>{u.inf?$('dl').textContent='∞':countTo($('dl'),d);$('rg').style.strokeDashoffset=u.inf?0:213.6*(1-Math.min(d/30,1))},300);
-  loadDev();loadGifts();loadLg();loadNews();tlist(0);refUI(u);fzUI(u);loadUserTop();loadNotifs()}
+  loadDev();loadGifts();loadLg();loadNews();tlist(0);refUI(u);fzUI(u)}
  setTimeout(obs,50)}
-async function loadStatus(){try{const r=await fetch('/api/status');const s=await r.json();const el=$('prodstatus');el.innerHTML=`Статус: <b>${esc(s.status||'online')}</b> — ${esc(s.text||'')}${s.maintenance?' <span style="color:var(--r)">(техработы)</span>':''}${s.killswitch?' <span style="color:red">(отключён)</span>':''}`;}catch{}}
-async function init(){for(let n=0;n<4;n++){try{const r=await fetch('/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render();loadStatus()}
+async function init(){for(let n=0;n<4;n++){try{const r=await fetch('/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render()}
 /* кабинет: заморозка, подарки, устройства, админка */
 const D=864e5,esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fd=t=>new Date(t).toLocaleDateString('ru');
 const cp=t=>navigator.clipboard.writeText(t).then(()=>toast('Скопировано'),()=>toast('Не удалось скопировать',1));
@@ -440,15 +395,13 @@ async function loadDev(){try{const r=await api('/api/devices');$('dvh').textCont
  $('dv').innerHTML=r.list.map(d=>`<div class="it"><div>${esc(d.name||'Устройство')}<small>последний вход: ${fd(d.last_seen)}</small></div><button class="xs" onclick="dd(${d.id})" aria-label="Удалить">×</button></div>`).join('')||'<p>Пусто. Устройство добавится при первом входе в клиент.</p>'}catch{}}
 async function dd(id){try{await api('/api/device/del',{id});loadDev();toast('Устройство удалено')}catch(e){toast(e.message,1)}}
 /* админка */
-function at(i){[0,1,2,3,4,5,6,7,8,9,10,11,12,13].forEach(k=>{$('ap'+k).style.display=k===i?'':'none';$('seg').children[k].classList.toggle('on',k===i)});$('seg').children[i].scrollIntoView({inline:'center',block:'nearest'});[null,lk,ul,pli,()=>tlist(1),nli,stt,loadSet,loadAud,loadChart,loadCoup,loadTop,loadIp,null][i]?.()}
+function at(i){[0,1,2,3,4,5,6].forEach(k=>{$('ap'+k).style.display=k===i?'':'none';$('seg').children[k].classList.toggle('on',k===i)});$('seg').children[i].scrollIntoView({inline:'center',block:'nearest'});[null,lk,ul,pli,()=>tlist(1),nli,stt][i]?.()}
 function pd(n){$('ki').checked=!n;if(n)$('kd').value=n}
-async function mk(){try{const r=await api('/api/admin/genkey',{days:+$('kd').value,devices:+$('kv').value,count:+$('kc').value,inf:$('ki').checked,prefix:$('kpre').value,note:$('knote').value});$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Создано ключей: '+r.keys.length)}catch(e){toast(e.message,1)}}
+async function mk(){try{const r=await api('/api/admin/genkey',{days:+$('kd').value,devices:+$('kv').value,count:+$('kc').value,inf:$('ki').checked});$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Создано ключей: '+r.keys.length)}catch(e){toast(e.message,1)}}
 async function lk(){try{const r=await api('/api/admin/keys');$('kl').innerHTML=r.keys.map(k=>`<div class="it"><div><code style="cursor:pointer" onclick="cp('${k.code}')">${k.code}</code><small>${k.inf?'бессрочный':k.days+' дн.'} · устр. ${k.devices} · ${k.used?'активировал '+esc(k.used):'свободен'}</small></div>${k.used?'':`<button class="xs" onclick="dk('${k.code}')" aria-label="Удалить">×</button>`}</div>`).join('')||'<p>Ключей пока нет.</p>'}catch{}}
 async function dk(c){try{await api('/api/admin/delkey',{code:c});lk()}catch(e){toast(e.message,1)}}
 let uT;function ul(){clearTimeout(uT);uT=setTimeout(async()=>{try{const r=await api('/api/admin/users',{q:$('uq').value});
- $('ulst').innerHTML=r.users.map(x=>`<div class="it"><div><b>${esc(x.username)}</b>${x.is_admin?' · admin':''}${x.is_reseller?' · reseller':''}${x.banned?' · забанен':''}<small>${esc(x.email)} · ${x.inf?'бессрочно':x.frozen?'заморожена':x.active?'до '+fd(x.sub_until):'нет подписки'} · устр. ${x.max_dev} · сбросов ${x.reset_count||0}/${x.max_resets||3}</small>${x.note?'<br><small>Заметка: '+esc(x.note)+'</small>':''}</div><div class="row" style="margin:0"><input class="mi" id="gd${x.id}" type="number" placeholder="± дней"><input class="mi" id="gv${x.id}" type="number" placeholder="устр."><button class="btn sm" onclick="gr(${x.id})">OK</button>${x.is_admin?'':`<button class="btn sm ghost" onclick="bn(${x.id},${x.banned?0:1})">${x.banned?'Разбан':'Бан'}</button>`}<button class="btn sm ghost" onclick="setNote(${x.id})">Заметка</button><button class="btn sm ghost" onclick="toggleRes(${x.id},${x.is_reseller?0:1})">${x.is_reseller?'Убрать рес.':'Реселлер'}</button><button class="btn sm ghost" onclick="resetDev(${x.id})">Сброс HWID</button><button class="btn sm ghost" onclick="showHist(${x.id})">История</button></div></div>`).join('')||'<p>Никого не найдено.</p>'}catch{}},200)}
-async function setNote(id){const n=prompt('Заметка к пользователю');if(n===null)return;try{await api('/api/admin/note',{id,note:n});toast('Заметка сохранена');ul()}catch(e){toast(e.message,1)}}
-async function toggleRes(id,on){try{await api('/api/admin/reseller',{id,enable:!!on});toast(on?'Реселлер включён':'Выключен');ul()}catch(e){toast(e.message,1)}}
+ $('ulst').innerHTML=r.users.map(x=>`<div class="it"><div><b>${esc(x.username)}</b>${x.is_admin?' · admin':''}${x.banned?' · забанен':''}<small>${esc(x.email)} · ${x.inf?'бессрочно':x.frozen?'заморожена':x.active?'до '+fd(x.sub_until):'нет подписки'} · устр. ${x.max_dev}</small></div><div class="row" style="margin:0"><input class="mi" id="gd${x.id}" type="number" placeholder="± дней"><input class="mi" id="gv${x.id}" type="number" placeholder="устр."><button class="btn sm" onclick="gr(${x.id})">OK</button>${x.is_admin?'':`<button class="btn sm ghost" onclick="bn(${x.id},${x.banned?0:1})">${x.banned?'Разбан':'Бан'}</button>`}</div></div>`).join('')||'<p>Никого не найдено.</p>'}catch{}},200)}
 async function gr(id){try{await api('/api/admin/grant',{id,days:$('gd'+id).value,devices:$('gv'+id).value});toast('Готово');ul()}catch(e){toast(e.message,1)}}
 /* безопасность, рефералы, тикеты, новости */
 const REF=(()=>{try{const r=new URLSearchParams(location.search).get('ref');if(r)localStorage.setItem('ref',r);return r||localStorage.getItem('ref')||''}catch{return ''}})();
@@ -458,12 +411,6 @@ function refUI(u){$('rl').value=location.origin+'/?ref='+u.ref.code;$('rs').text
 async function loadLg(){try{const r=await api('/api/logins');$('lg').innerHTML=r.list.map(l=>`<div class="it"><div>${esc(l.ip)}<small>${KD[l.kind]||l.kind} · ${new Date(l.ts).toLocaleString('ru')}</small></div><small>${l.ok?'':'неудачно'}</small></div>`).join('')}catch{}}
 async function chpw(){$('pe').textContent='';try{await api('/api/password',{old:$('op').value,new:$('np').value});$('op').value=$('np').value='';toast('Пароль изменён, остальные сессии закрыты')}catch(e){$('pe').textContent=e.message}}
 async function outAll(){if(!confirm('Выйти на всех устройствах?'))return;try{await api('/api/logout_all');user=null;render();scrollTo(0,0);toast('Все сессии закрыты')}catch(e){toast(e.message,1)}}
-async function changeNick(){const n=prompt('Новый ник (3-20 символов, латиница/цифры/_)');if(!n)return;try{const r=await api('/api/nick',{username:n});toast('Ник изменён на '+r.username);init()}catch(e){toast(e.message,1)}}
-async function delAcc(){if(!confirm('Удалить аккаунт безвозвратно? Все данные будут потеряны.'))return;try{await api('/api/delete');user=null;render();toast('Аккаунт удалён')}catch(e){toast(e.message,1)}}
-async function doExchange(){try{const r=await api('/api/exchange',{days:+$('exd').value});$('exout').innerHTML='<b>Ключ создан:</b> <code onclick="cp(\''+r.key+'\')">'+r.key+'</code> ('+r.days+' дн.)';toast('Ключ создан');init()}catch(e){toast(e.message,1)}}
-async function loadUserTop(){try{const r=await api('/api/toprefs');$('topr').innerHTML='<b>Топ рефералов:</b>'+r.list.map(x=>`<div class="it"><div>${esc(x.username)} <small>${x.invited} пригл. / ${x.paid} оплач.</small></div></div>`).join('')}catch{}}
-async function loadNotifs(){try{const r=await api('/api/notifs');if(r.list.length)$('notifbox').innerHTML='<b>Уведомления:</b>'+r.list.map(n=>`<div class="it"><div>${esc(n.text)}<small>${new Date(n.ts).toLocaleString('ru')}</small></div></div>`).join('')}catch{}}
-init().then(()=>{if(!user&&new URLSearchParams(location.search).get('ref'))openM('reg')});
 async function loadNews(){try{const r=await api('/api/news');$('nw').innerHTML=r.list.map(n=>`<div class="it" style="display:block"><b>${esc(n.title)}</b> <small style="display:inline">· ${fd(n.ts)}</small><div style="color:var(--m);white-space:pre-wrap;margin-top:4px">${esc(n.text)}</div></div>`).join('')||'<p>Пока ничего нет.</p>'}catch{}}
 /* тикеты (a=1 — режим админа) */
 async function tlist(a){try{const r=await api('/api/ticket/list',{all:!!a});$(a?'atl':'tl').innerHTML=r.list.map(t=>`<div class="it" style="cursor:pointer" onclick="tview(${t.id},${a?1:0})"><div>${esc(t.subject)}<small>${a?esc(t.username)+' · ':''}${TS[t.status]} · ${fd(t.updated)}</small></div></div>`).join('')||'<p>Тикетов нет.</p>'}catch{}}
@@ -481,26 +428,5 @@ async function nadd(){try{await api('/api/admin/news/add',{title:$('nt').value,t
 async function ndl(id){try{await api('/api/admin/news/del',{id});nli();loadNews()}catch(e){toast(e.message,1)}}
 async function stt(){try{const r=await api('/api/admin/stats'),L={users:'Пользователей',new7:'Новых за 7 дн.',active:'С активной подпиской',frozen:'Заморожено',banned:'Забанено',keys:'Ключей создано',keys_used:'Ключей использовано',devices:'Устройств',tickets:'Открытых тикетов',gifts:'Подарков',promo_uses:'Промокодов применено',logins24:'Входов за 24 ч'};
  $('sts').innerHTML=Object.keys(L).map(k=>`<div><b>${r.stats[k]}</b><small>${L[k]}</small></div>`).join('')}catch{}}
-async function loadSet(){try{const r=await api('/api/admin/settings',{action:'get'});$('setinfo').innerHTML=`Kill-switch: ${r.killswitch==='1'?'ВКЛ':'выкл'} · Техработы: ${r.maintenance==='1'?'ВКЛ':'выкл'} · Статус: ${esc(r.status)} — ${esc(r.status_text)}`;}catch(e){toast(e.message,1)}}
-async function toggleSet(k){try{const cur=await api('/api/admin/settings',{action:'get'});await api('/api/admin/settings',{[k]:cur[k]!=='1'});loadSet();toast('Обновлено')}catch(e){toast(e.message,1)}}
-async function setStatus(){try{await api('/api/admin/settings',{status:'custom',status_text:$('sttxt').value});loadSet();toast('Статус обновлён')}catch(e){toast(e.message,1)}}
-async function doBackup(){try{const r=await fetch('/api/admin/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='forev-backup.db';a.click();toast('Бэкап скачан')}catch(e){toast('Ошибка бэкапа',1)}}
-async function loadAud(){try{const r=await api('/api/admin/audit');$('audl').innerHTML=r.list.map(x=>`<div class="it"><div>${esc(x.action)} → ${esc(x.target||'')} <small>${esc(x.username||'system')} · ${new Date(x.ts).toLocaleString('ru')} · ${esc(x.details||'')}</small></div></div>`).join('')||'<p>Пусто</p>'}catch{}}
-let chartInst;
-async function loadChart(){try{const r=await api('/api/admin/chart',{days:30});
-  const labels=[...new Set([...r.regs.map(x=>x.d),...r.acts.map(x=>x.d)])].sort();
-  const regMap=Object.fromEntries(r.regs.map(x=>[x.d,x.c])),actMap=Object.fromEntries(r.acts.map(x=>[x.d,x.c]));
-  if(chartInst)chartInst.destroy();
-  chartInst=new Chart($('chart'),{type:'line',data:{labels,datasets:[{label:'Регистрации',data:labels.map(d=>regMap[d]||0),borderColor:'#ff1f3d',tension:.3},{label:'Активации',data:labels.map(d=>actMap[d]||0),borderColor:'#4ade80',tension:.3}]},options:{plugins:{legend:{labels:{color:'#fff'}}},scales:{x:{ticks:{color:'#999'}},y:{ticks:{color:'#999'}}}}});
-}catch(e){toast(e.message,1)}}
-async function loadCoup(){try{const r=await api('/api/admin/coupons');$('clst').innerHTML=r.list.map(x=>`<div class="it"><div><code>${esc(x.code)}</code><small>${x.discount}% · ${x.uses}/${x.max_uses}</small></div><button class="xs" onclick="cdl('${esc(x.code)}')">×</button></div>`).join('')||'<p>Нет купонов</p>'}catch{}}
-async function cadd(){try{const r=await api('/api/admin/coupon/add',{code:$('ccode').value,discount:+$('cdisc').value,uses:+$('cuses').value});toast('Создан: '+r.code);$('ccode').value='';loadCoup()}catch(e){toast(e.message,1)}}
-async function cdl(c){try{await api('/api/admin/coupon/del',{code:c});loadCoup()}catch(e){toast(e.message,1)}}
-async function loadIp(){try{const r=await api('/api/admin/iplist');$('iplst').innerHTML=r.list.map(x=>`<div class="it"><div>${esc(x.ip)} <small>${x.type} · ${esc(x.reason||'')}</small></div><button class="xs" onclick="delIp('${esc(x.ip)}')">×</button></div>`).join('')||'<p>Пусто</p>'}catch{}}
-async function addIp(){try{await api('/api/admin/iplist',{action:'add',ip:$('ipadd').value,type:$('iptype').value});$('ipadd').value='';loadIp()}catch(e){toast(e.message,1)}}
-async function delIp(ip){try{await api('/api/admin/iplist',{action:'del',ip});loadIp()}catch(e){toast(e.message,1)}}
-async function doExport(){try{const r=await fetch('/api/admin/export',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='users.csv';a.click()}catch(e){toast('Ошибка',1)}}
-async function resetDev(id){if(!confirm('Сбросить все устройства пользователя?'))return;try{await api('/api/admin/resetdevices',{id});toast('Устройства сброшены');ul()}catch(e){toast(e.message,1)}}
-async function showHist(id){try{const r=await api('/api/admin/history',{id});alert(r.list.map(h=>`${new Date(h.ts).toLocaleString('ru')}: ${h.days}д (${h.source})`).join('\n')||'Пусто')}catch(e){toast(e.message,1)}}
 init().then(()=>{if(!user&&new URLSearchParams(location.search).get('ref'))openM('reg')});
 </script></body></html>
