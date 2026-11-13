@@ -135,6 +135,28 @@ function recordFail(ip,uid=0){
   return false;
 }
 function clearFails(ip){db.prepare('DELETE FROM failed_auth WHERE ip=?').run(ip);}
+// ---------- своя капча: математический пример, одноразовая, TTL 5 минут ----------
+const captchas=new Map();
+function makeCaptcha(ip){
+  const now=Date.now();
+  for(const [k,v] of captchas)if(v.exp<now)captchas.delete(k);
+  if(captchas.size>5000)captchas.clear();
+  const a=crypto.randomInt(2,20),b=crypto.randomInt(2,20),op=['+','-','*'][crypto.randomInt(0,3)];
+  let ans,q;
+  if(op==='+'){ans=a+b;q=a+' + '+b}
+  else if(op==='-'){const x=Math.max(a,b),y=Math.min(a,b);ans=x-y;q=x+' − '+y}
+  else{const x=crypto.randomInt(2,10),y=crypto.randomInt(2,10);ans=x*y;q=x+' × '+y}
+  const id=crypto.randomBytes(12).toString('hex');
+  captchas.set(id,{ans:String(ans),exp:now+3e5,ip});
+  return {id,question:q+' = ?'};
+}
+function verifyCaptcha(id,answer,ip){
+  const c=captchas.get(String(id||''));
+  if(!c)return false;
+  captchas.delete(String(id)); // одноразовая
+  if(c.exp<Date.now())return false;
+  return String(answer??'').trim()===c.ans;
+}
 const send=(res,code,obj,h={})=>{res.writeHead(code,{'Content-Type':'application/json','X-Content-Type-Options':'nosniff',...h});res.end(JSON.stringify(obj))};
 const body=req=>new Promise((ok,no)=>{let d='';req.on('data',c=>{d+=c;if(d.length>1e4){no();req.destroy()}});req.on('end',()=>{try{ok(JSON.parse(d||'{}'))}catch{no()}})});
 const cookie=req=>Object.fromEntries((req.headers.cookie||'').split(/;\s*/).map(c=>c.split('=')));
@@ -494,21 +516,22 @@ const srv=http.createServer(async(req,res)=>{
 
     if(url==='/api/register'){
       const {username,email,password}=b;
+      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
       if(!/^[A-Za-z0-9_]{3,20}$/.test(username||''))return bad('Ник: 3–20 символов (латиница, цифры, _)');
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email||''))return bad('Некорректный e-mail');
       if(typeof password!=='string'||password.length<8)return bad('Пароль минимум 8 символов');
       if(db.prepare('SELECT 1 FROM users WHERE username=? OR email=?').get(username,email))return bad('Ник или e-mail уже занят',409);
-      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
       const salt=crypto.randomBytes(16).toString('hex');
       const rf=db.prepare('SELECT id FROM users WHERE ref_code=? AND banned=0').get(String(b.ref||'').slice(0,16));
       const hwid=String(b.hwid||'').slice(0,128);
       const trial=TRIAL>0&&!db.prepare('SELECT 1 FROM users WHERE reg_ip=? OR trial_hwid=?').get(ip,hwid)?Date.now()+TRIAL*DAY:0;
       const r=db.prepare('INSERT INTO users(username,email,hash,salt,created,sub_until,ref_code,referred_by,reg_ip,trial_hwid) VALUES(?,?,?,?,?,?,?,?,?,?)').run(username,email,hashPw(password,salt),salt,Date.now(),trial,crypto.randomBytes(4).toString('hex'),rf?rf.id:null,ip,hwid);
       logLogin(Number(r.lastInsertRowid),ip,'reg',1);
-      return send(res,200,{ok:true},login(res,Number(r.lastInsertRowid,req)));
+      return send(res,200,{ok:true},login(res,Number(r.lastInsertRowid),req));
     }
     if(url==='/api/login'){
       if(isIpBanned(ip))return bad('IP заблокирован',403);
+      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
       const {login:loginName,password}=b;
       const f=findU(loginName);
       if(!f||!pwOk(f,password)){
@@ -517,7 +540,6 @@ const srv=http.createServer(async(req,res)=>{
         return bad('Неверный логин или пароль',401);
       }
       if(f.banned)return bad('Аккаунт заблокирован'+(f.ban_reason?': '+f.ban_reason:''),403);
-      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
       logLogin(f.id,ip,'web',1);clearFails(ip);
       return send(res,200,{ok:true},login(res,f.id,req));
     }
