@@ -15,10 +15,6 @@ services:
         generateValue: true
       - key: MASTER_KEY
         sync: false          # мастер-ключ (админ + бессрочная подписка), Render спросит при создании
-      - key: SMTP_USER
-        value: "meaisloe@gmail.com"
-      - key: SMTP_PASS
-        sync: false          # пароль приложения Gmail
       - key: PING_URL
         sync: false          # Render спросит значение при создании: https://ВАШ-САЙТ.onrender.com
       - key: PING_INTERVAL_MIN

@@ -1,7 +1,6 @@
 // FOREV EXT — сервер без зависимостей. Нужен Node.js 22.5+  (запуск: node server.js)
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
 const {DatabaseSync}=require('node:sqlite');
-const nodemailer=require('nodemailer');
 const DBP=process.env.DB_PATH||path.join(__dirname,'forev.db');
 fs.mkdirSync(path.dirname(DBP),{recursive:true});
 const db=new DatabaseSync(DBP);
@@ -83,73 +82,6 @@ function checkSuspiciousHwid(uid){
 }
 function getSetting(k,d=''){const r=db.prepare('SELECT value FROM settings WHERE key=?').get(k);return r?r.value:d;}
 function setSetting(k,v){db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run(k,String(v));}
-const transporter=nodemailer.createTransport({
-  service:'gmail',
-  auth:{user:process.env.SMTP_USER||'',pass:process.env.SMTP_PASS||''}
-});
-const MAIL_FROM=process.env.SMTP_FROM||process.env.SMTP_USER||'noreply@forev.ext';
-function mailHtml(title,bodyHtml){
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:Segoe UI,Arial,sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:32px 12px"><tr><td align="center">
-<table width="100%" style="max-width:480px;background:#141414;border-radius:16px;border:1px solid #222;overflow:hidden">
-<tr><td style="background:linear-gradient(135deg,#ff1f3d,#b0001b);padding:20px 24px"><h1 style="margin:0;color:#fff;font-size:20px;letter-spacing:1px">FOREV EXT</h1></td></tr>
-<tr><td style="padding:28px 24px;color:#e8e8e8">
-<h2 style="margin:0 0 12px;color:#fff;font-size:18px">${title}</h2>
-${bodyHtml}
-<p style="margin:24px 0 0;font-size:12px;color:#777">Если вы не запрашивали это письмо — просто проигнорируйте его.</p>
-</td></tr>
-<tr><td style="padding:14px 24px;border-top:1px solid #222;font-size:11px;color:#555;text-align:center">© FOREV EXT</td></tr>
-</table></td></tr></table></body></html>`;
-}
-function sendMail(to,subject,html,text){
-  if(!process.env.SMTP_USER||!process.env.SMTP_PASS){
-    console.warn('SMTP not configured, skip mail to',to);
-    return Promise.reject(new Error('SMTP not configured'));
-  }
-  return transporter.sendMail({from:`FOREV EXT <${MAIL_FROM}>`,to,subject,html,text:text||subject})
-    .then(()=>console.log('Mail sent to',to)).catch(e=>{console.error('Mail error:',e.message);throw e});
-}
-function sendCode(email,code,type){
-  const subject=type==='reg'?'Код подтверждения регистрации — FOREV EXT':'Код для входа — FOREV EXT';
-  const title=type==='reg'?'Подтверждение регистрации':'Код для входа';
-  const html=mailHtml(title,`<p style="margin:0 0 16px;line-height:1.5;color:#bbb">Ваш код подтверждения:</p>
-<div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:18px;text-align:center;letter-spacing:8px;font-size:28px;font-weight:700;color:#ff1f3d">${code}</div>
-<p style="margin:16px 0 0;font-size:13px;color:#888">Код действителен <b style="color:#ccc">10 минут</b>.</p>`);
-  return sendMail(email,subject,html,`Ваш код: ${code}\nДействителен 10 минут.`);
-}
-function sendExpiryMail(email,username,daysLeft,untilTs){
-  const subject=daysLeft<=1?'Подписка истекает завтра — FOREV EXT':`Подписка истекает через ${daysLeft} дн. — FOREV EXT`;
-  const when=untilTs?new Date(untilTs).toLocaleString('ru-RU'):'скоро';
-  const html=mailHtml('Подписка заканчивается',`<p style="margin:0 0 12px;color:#bbb">Привет, <b style="color:#fff">${username}</b>!</p>
-<p style="margin:0 0 16px;line-height:1.5;color:#bbb">Ваша подписка FOREV EXT истекает <b style="color:#ff1f3d">${daysLeft<=1?'завтра':`через ${daysLeft} дн.`}</b> (${when}).</p>
-<p style="margin:0;font-size:13px;color:#888">Активируйте новый ключ в личном кабинете, чтобы не потерять доступ.</p>`);
-  return sendMail(email,subject,html);
-}
-// Cloudflare Turnstile (optional)
-// Своя капча (без Cloudflare): пример a±b, TTL 5 мин
-const captchaStore=new Map(); // id -> {ans, exp, ip}
-function makeCaptcha(ip){
-  // чистим просроченные
-  const now=Date.now();
-  for(const [k,v] of captchaStore)if(v.exp<now)captchaStore.delete(k);
-  const a=1+Math.floor(Math.random()*9), b=1+Math.floor(Math.random()*9);
-  const op=Math.random()<0.5?'+':'-';
-  const ans=op==='+'?a+b:a-b;
-  const id=crypto.randomBytes(16).toString('hex');
-  captchaStore.set(id,{ans:String(ans),exp:now+5*60*1000,ip:ip||''});
-  // не больше 5к записей
-  if(captchaStore.size>5000){const first=captchaStore.keys().next().value;captchaStore.delete(first)}
-  return {id, question:`${a} ${op} ${b} = ?`};
-}
-function verifyCaptcha(id,answer,ip){
-  if(!id||answer===undefined||answer===null)return false;
-  const row=captchaStore.get(String(id));
-  captchaStore.delete(String(id)); // one-time
-  if(!row||row.exp<Date.now())return false;
-  // мягкая привязка к IP (не жёсткая — мобильный/прокси могут менять)
-  return String(answer).trim()===row.ans;
-}
 // expiry notices — run on traffic (throttled)
 let lastNoticeScan=0;
 async function scanExpiryNotices(){
@@ -160,16 +92,15 @@ async function scanExpiryNotices(){
     // 3 days window: sub ends in 2.5–3.5 days
     const u3=db.prepare('SELECT id,username,email,sub_until FROM users WHERE banned=0 AND inf=0 AND frozen=0 AND sub_until>? AND sub_until<? AND id NOT IN (SELECT user_id FROM sub_notices WHERE kind=?)').all(now+2.5*DAY,now+3.5*DAY,'3d');
     for(const u of u3){
-      try{await sendExpiryMail(u.email,u.username,3,u.sub_until);db.prepare('INSERT OR REPLACE INTO sub_notices(user_id,kind,ts) VALUES(?,?,?)').run(u.id,'3d',now);addNotif(u.id,'Подписка истекает через ~3 дня');}catch(e){console.error('notice3',e.message)}
+      try{db.prepare('INSERT OR REPLACE INTO sub_notices(user_id,kind,ts) VALUES(?,?,?)').run(u.id,'3d',now);addNotif(u.id,'Подписка истекает через ~3 дня');}catch(e){console.error('notice3',e.message)}
     }
     const u1=db.prepare('SELECT id,username,email,sub_until FROM users WHERE banned=0 AND inf=0 AND frozen=0 AND sub_until>? AND sub_until<? AND id NOT IN (SELECT user_id FROM sub_notices WHERE kind=?)').all(now,now+1.5*DAY,'1d');
     for(const u of u1){
-      try{await sendExpiryMail(u.email,u.username,1,u.sub_until);db.prepare('INSERT OR REPLACE INTO sub_notices(user_id,kind,ts) VALUES(?,?,?)').run(u.id,'1d',now);addNotif(u.id,'Подписка истекает завтра');}catch(e){console.error('notice1',e.message)}
+      try{db.prepare('INSERT OR REPLACE INTO sub_notices(user_id,kind,ts) VALUES(?,?,?)').run(u.id,'1d',now);addNotif(u.id,'Подписка истекает завтра');}catch(e){console.error('notice1',e.message)}
     }
   }catch(e){console.error('scanExpiry',e.message)}
 }
 
-function genCode(){return String(Math.floor(100000+Math.random()*900000))}
 const MIME={'.html':'text/html; charset=utf-8','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon'};
 const SEC=process.env.NODE_ENV==='production'?'; Secure':'';
 const makeKey=()=>'FOREV-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');
@@ -562,37 +493,23 @@ const srv=http.createServer(async(req,res)=>{
     }
 
     if(url==='/api/register'){
-      const {username,email,password,code}=b;
+      const {username,email,password}=b;
       if(!/^[A-Za-z0-9_]{3,20}$/.test(username||''))return bad('Ник: 3–20 символов (латиница, цифры, _)');
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email||''))return bad('Некорректный e-mail');
       if(typeof password!=='string'||password.length<8)return bad('Пароль минимум 8 символов');
       if(db.prepare('SELECT 1 FROM users WHERE username=? OR email=?').get(username,email))return bad('Ник или e-mail уже занят',409);
-      if(!code){
-        if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
-        const c=genCode();
-        db.prepare('INSERT OR REPLACE INTO verify_codes(email,code,type,expires,data) VALUES(?,?,?,?,?)').run(email,c,'reg',Date.now()+600000,JSON.stringify({username,password,ref:b.ref,hwid:b.hwid}));
-        try{await sendCode(email,c,'reg')}catch(e){
-          console.error('SMTP FAIL:', e.message);
-          // если почта не ушла — отдаём код в ответе, чтобы регистрация не ломалась
-          return send(res,200,{need_code:true,debug_code:c,error:'Почта не отправилась, используйте код: '+c});
-        }
-        return send(res,200,{need_code:true});
-      }
-      const v=db.prepare('SELECT * FROM verify_codes WHERE email=? AND type="reg" AND expires>?').get(email,Date.now());
-      if(!v||v.code!==String(code))return bad('Неверный или истёкший код');
-      const data=JSON.parse(v.data||'{}');
+      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
       const salt=crypto.randomBytes(16).toString('hex');
-      const rf=db.prepare('SELECT id FROM users WHERE ref_code=? AND banned=0').get(String(data.ref||'').slice(0,16));
-      const hwid=String(data.hwid||'').slice(0,128);
+      const rf=db.prepare('SELECT id FROM users WHERE ref_code=? AND banned=0').get(String(b.ref||'').slice(0,16));
+      const hwid=String(b.hwid||'').slice(0,128);
       const trial=TRIAL>0&&!db.prepare('SELECT 1 FROM users WHERE reg_ip=? OR trial_hwid=?').get(ip,hwid)?Date.now()+TRIAL*DAY:0;
-      const r=db.prepare('INSERT INTO users(username,email,hash,salt,created,sub_until,ref_code,referred_by,reg_ip,trial_hwid) VALUES(?,?,?,?,?,?,?,?,?,?)').run(data.username,email,hashPw(data.password,salt),salt,Date.now(),trial,crypto.randomBytes(4).toString('hex'),rf?rf.id:null,ip,hwid);
-      db.prepare('DELETE FROM verify_codes WHERE email=?').run(email);
+      const r=db.prepare('INSERT INTO users(username,email,hash,salt,created,sub_until,ref_code,referred_by,reg_ip,trial_hwid) VALUES(?,?,?,?,?,?,?,?,?,?)').run(username,email,hashPw(password,salt),salt,Date.now(),trial,crypto.randomBytes(4).toString('hex'),rf?rf.id:null,ip,hwid);
       logLogin(Number(r.lastInsertRowid),ip,'reg',1);
       return send(res,200,{ok:true},login(res,Number(r.lastInsertRowid,req)));
     }
     if(url==='/api/login'){
       if(isIpBanned(ip))return bad('IP заблокирован',403);
-      const {login:loginName,password,code}=b;
+      const {login:loginName,password}=b;
       const f=findU(loginName);
       if(!f||!pwOk(f,password)){
         if(f)logLogin(f.id,ip,'web',0);
@@ -600,19 +517,7 @@ const srv=http.createServer(async(req,res)=>{
         return bad('Неверный логин или пароль',401);
       }
       if(f.banned)return bad('Аккаунт заблокирован'+(f.ban_reason?': '+f.ban_reason:''),403);
-      if(!code){
-        if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
-        const c=genCode();
-        db.prepare('INSERT OR REPLACE INTO verify_codes(email,code,type,expires) VALUES(?,?,?,?,?)').run(f.email,c,'login',Date.now()+600000);
-        try{await sendCode(f.email,c,'login')}catch(e){
-          console.error('SMTP FAIL login:', e.message);
-          return send(res,200,{need_code:true,email:f.email,debug_code:c,error:'Почта не отправилась, используйте код: '+c});
-        }
-        return send(res,200,{need_code:true,email:f.email});
-      }
-      const v=db.prepare('SELECT * FROM verify_codes WHERE email=? AND type="login" AND expires>?').get(f.email,Date.now());
-      if(!v||v.code!==String(code))return bad('Неверный или истёкший код');
-      db.prepare('DELETE FROM verify_codes WHERE email=?').run(f.email);
+      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
       logLogin(f.id,ip,'web',1);clearFails(ip);
       return send(res,200,{ok:true},login(res,f.id,req));
     }

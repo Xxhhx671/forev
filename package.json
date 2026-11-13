@@ -1,1 +1,1 @@
-{"name":"forev-ext","version":"1.0.0","scripts":{"start":"node server.js"},"engines":{"node":">=22.5"},"dependencies":{"nodemailer":"^6.9.16"}}
+{"name":"forev-ext","version":"1.0.0","scripts":{"start":"node server.js"},"engines":{"node":">=22.5"},"dependencies":{}}
