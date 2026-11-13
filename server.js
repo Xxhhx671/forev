@@ -1,6 +1,7 @@
 // FOREV EXT — сервер без зависимостей. Нужен Node.js 22.5+  (запуск: node server.js)
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
 const {DatabaseSync}=require('node:sqlite');
+const nodemailer=require('nodemailer');
 const DBP=process.env.DB_PATH||path.join(__dirname,'forev.db');
 fs.mkdirSync(path.dirname(DBP),{recursive:true});
 const db=new DatabaseSync(DBP);
@@ -16,7 +17,15 @@ CREATE TABLE IF NOT EXISTS tickets(id INTEGER PRIMARY KEY,user_id INTEGER,subjec
 CREATE TABLE IF NOT EXISTS ticket_msgs(id INTEGER PRIMARY KEY,ticket_id INTEGER,admin INTEGER,text TEXT,ts INTEGER);
 CREATE TABLE IF NOT EXISTS news(id INTEGER PRIMARY KEY,title TEXT,text TEXT,ts INTEGER);`);
 // миграции для баз старой версии
-for(const s of ['ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN frozen INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN freeze_left INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_dev INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN devices INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN admin INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN ref_code TEXT','ALTER TABLE users ADD COLUMN referred_by INTEGER','ALTER TABLE users ADD COLUMN ref_paid INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reg_ip TEXT','ALTER TABLE users ADD COLUMN frozen_at INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_unfreeze INTEGER DEFAULT 0'])try{db.exec(s)}catch{}
+for(const s of ['ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN frozen INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN freeze_left INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_dev INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN devices INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN admin INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN ref_code TEXT','ALTER TABLE users ADD COLUMN referred_by INTEGER','ALTER TABLE users ADD COLUMN ref_paid INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reg_ip TEXT','ALTER TABLE users ADD COLUMN frozen_at INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_unfreeze INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN is_reseller INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reset_count INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_resets INTEGER DEFAULT 3','ALTER TABLE keys ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN reseller_keys INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reseller_limit INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN trial_hwid TEXT DEFAULT \'\''])try{db.exec(s)}catch{}
+db.exec(`CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,admin_id INTEGER,action TEXT,target TEXT,details TEXT,ts INTEGER);
+CREATE TABLE IF NOT EXISTS coupons(code TEXT PRIMARY KEY,discount INTEGER,max_uses INTEGER,uses INTEGER DEFAULT 0,expires INTEGER DEFAULT 0,created INTEGER);
+CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT);
+CREATE TABLE IF NOT EXISTS sub_history(id INTEGER PRIMARY KEY,user_id INTEGER,days INTEGER,source TEXT,details TEXT,ts INTEGER);
+CREATE TABLE IF NOT EXISTS notifications(id INTEGER PRIMARY KEY,user_id INTEGER,text TEXT,read INTEGER DEFAULT 0,ts INTEGER);
+CREATE TABLE IF NOT EXISTS ip_list(ip TEXT PRIMARY KEY,type TEXT,reason TEXT,ts INTEGER);
+CREATE TABLE IF NOT EXISTS verify_codes(email TEXT PRIMARY KEY,code TEXT,type TEXT,expires INTEGER,data TEXT);
+INSERT OR IGNORE INTO settings(key,value) VALUES('killswitch','0'),('maintenance','0'),('status','online'),('status_text','Сервис работает');`);
 db.exec("UPDATE users SET ref_code=lower(hex(randomblob(4))) WHERE ref_code IS NULL OR ref_code=''");
 db.prepare('UPDATE users SET frozen_at=? WHERE frozen=1 AND frozen_at=0').run(Date.now());
 
@@ -29,14 +38,32 @@ const DAY=864e5,PUB=path.join(__dirname,'public');
 const TRIAL=Number(process.env.TRIAL_DAYS??1),REF=Number(process.env.REF_DAYS??3),FZ_MAX=Number(process.env.FREEZE_MAX_DAYS??14),FZ_COOL=Number(process.env.FREEZE_COOLDOWN_DAYS??7),FZMS=FZ_MAX*DAY;
 // авторазморозка: время паузы не больше FZ_MAX
 const thaw=()=>db.prepare('UPDATE users SET sub_until=frozen_at+?+freeze_left,last_unfreeze=frozen_at+?,frozen=0,freeze_left=0 WHERE frozen=1 AND frozen_at>0 AND frozen_at<?').run(FZMS,FZMS,Date.now()-FZMS);
-const logLogin=(uid,ip,kind,ok)=>db.prepare('INSERT INTO logins(user_id,ip,kind,ok,ts) VALUES(?,?,?,?,?)').run(uid,String(ip||'').slice(0,45),kind,ok?1:0,Date.now());
+const logAudit=(adminId,action,target,details)=>db.prepare('INSERT INTO audit(admin_id,action,target,details,ts) VALUES(?,?,?,?,?)').run(adminId||0,action,String(target||'').slice(0,100),String(details||'').slice(0,500),Date.now());
+const transporter=nodemailer.createTransport({
+  service:'gmail',
+  auth:{user:process.env.SMTP_USER||'meaisloe@gmail.com',pass:process.env.SMTP_PASS||'jwrs zbrg lmbn ntjw'}
+});
+function sendCode(email,code,type){
+  const subject=type==='reg'?'Код подтверждения регистрации':'Код для входа';
+  return transporter.sendMail({
+    from:'FOREV EXT <meaisloe@gmail.com>',
+    to:email,
+    subject,
+    text:`Ваш код: ${code}\nКод действителен 10 минут.`
+  }).catch(e=>console.error('Mail error',e));
+}
+function genCode(){return String(Math.floor(100000+Math.random()*900000))}
 const MIME={'.html':'text/html; charset=utf-8','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon'};
 const SEC=process.env.NODE_ENV==='production'?'; Secure':'';
 const makeKey=()=>'FOREV-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');
 const hashPw=(pw,salt)=>crypto.scryptSync(pw,salt,64).toString('hex');
 const clamp=(v,a,b,d)=>Math.min(Math.max(Math.floor(+v)||d,a),b);
 const active=u=>!u.frozen&&!!(u.inf||u.sub_until>Date.now());
-function addKeys(days,devices,n,inf){const keys=[],st=db.prepare('INSERT INTO keys(code,days,devices,inf,created) VALUES(?,?,?,?,?)');for(let i=0;i<n;i++){const c=makeKey();st.run(c,days,devices,inf?1:0,Date.now());keys.push(c)}return keys}
+function addKeys(days,devices,n,inf,note='',prefix='FOREV'){const keys=[],st=db.prepare('INSERT INTO keys(code,days,devices,inf,created,note) VALUES(?,?,?,?,?,?)');for(let i=0;i<n;i++){const c=prefix+'-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');st.run(c,days,devices,inf?1:0,Date.now(),note);keys.push(c)}return keys}
+function addSubHistory(uid,days,source,details=''){db.prepare('INSERT INTO sub_history(user_id,days,source,details,ts) VALUES(?,?,?,?,?)').run(uid,days,source,details,Date.now())}
+function addNotif(uid,text){db.prepare('INSERT INTO notifications(user_id,text,ts) VALUES(?,?,?)').run(uid,text.slice(0,300),Date.now())}
+function isIpBanned(ip){return !!db.prepare("SELECT 1 FROM ip_list WHERE ip=? AND type='black'").get(ip)}
+function isIpAllowed(ip){const white=db.prepare("SELECT 1 FROM ip_list WHERE type='white'").all();if(!white.length)return true;return !!db.prepare("SELECT 1 FROM ip_list WHERE ip=? AND type='white'").get(ip)}
 
 // CLI: node server.js genkey 30 2   (дней, устройств)
 if(process.argv[2]==='genkey'){
@@ -65,9 +92,12 @@ const pwOk=(u,pw)=>typeof pw==='string'&&crypto.timingSafeEqual(Buffer.from(hash
 const checkPw=(l,pw)=>{const u=findU(l);return u&&pwOk(u,pw)?u:null};
 const tx=fn=>{db.exec('BEGIN');try{const r=fn();db.exec('COMMIT');return r}catch(e){db.exec('ROLLBACK');throw e}};
 // прибавить/убавить время: на заморозке двигается остаток, иначе дата окончания
-const addTime=(u,ms)=>u.frozen
-  ?db.prepare('UPDATE users SET freeze_left=MAX(0,freeze_left+?) WHERE id=?').run(ms,u.id)
-  :db.prepare('UPDATE users SET sub_until=? WHERE id=?').run(Math.max(u.sub_until,Date.now())+ms,u.id);
+const addTime=(u,ms,source='admin',details='')=>{
+  const days=Math.round(ms/DAY);
+  if(u.frozen)db.prepare('UPDATE users SET freeze_left=MAX(0,freeze_left+?) WHERE id=?').run(ms,u.id);
+  else db.prepare('UPDATE users SET sub_until=? WHERE id=?').run(Math.max(u.sub_until,Date.now())+ms,u.id);
+  if(days){addSubHistory(u.id,days,source,details);addNotif(u.id,days>0?`+${days} дней (${source})`:`${days} дней (${source})`);}
+};
 
 const srv=http.createServer(async(req,res)=>{
   try{
@@ -83,6 +113,9 @@ const srv=http.createServer(async(req,res)=>{
       res.writeHead(404);return res.end('Not found');
     }
     if(req.url.startsWith('/api/'))thaw();
+    if(req.url==='/api/status'&&req.method==='GET'){
+      return send(res,200,{status:getSetting('status'),text:getSetting('status_text'),maintenance:getSetting('maintenance')==='1',killswitch:getSetting('killswitch')==='1'});
+    }
     if(req.url==='/api/me'&&req.method==='GET'){
       const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'});
       const c=q=>db.prepare(q).get(u.id).c,{ref_code,referred_by,ref_paid,...pu}=u;
@@ -102,7 +135,10 @@ const srv=http.createServer(async(req,res)=>{
       if(!(a&&a.is_admin)&&!(url==='/api/admin/genkey'&&tokOk()))return bad('Нет доступа',403);
       if(url==='/api/admin/genkey'){
         const inf=!!b.inf,days=inf?0:clamp(b.days,1,3650,30),dev=clamp(b.devices,1,99,1),n=clamp(b.count,1,50,1);
-        return send(res,200,{days,devices:dev,inf,keys:addKeys(days,dev,n,inf)});
+        const note=String(b.note||'').slice(0,200),prefix=String(b.prefix||'FOREV').replace(/[^A-Z0-9]/g,'').slice(0,12)||'FOREV';
+        const keys=addKeys(days,dev,n,inf,note,prefix);
+        logAudit(a?.id||0,'genkey',n,prefix+' '+days+'d');
+        return send(res,200,{days,devices:dev,inf,keys});
       }
       if(url==='/api/admin/keys'){
         const keys=db.prepare('SELECT k.code,k.days,k.devices,k.inf,k.created,u.username used FROM keys k LEFT JOIN users u ON u.id=k.used_by WHERE k.admin=0 ORDER BY k.created DESC LIMIT 100').all();
@@ -114,7 +150,7 @@ const srv=http.createServer(async(req,res)=>{
       }
       if(url==='/api/admin/users'){
         const q='%'+String(b.q||'').replace(/[%_]/g,'')+'%';
-        const users=db.prepare('SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned FROM users WHERE username LIKE ? OR email LIKE ? ORDER BY id DESC LIMIT 30').all(q,q).map(u=>({...u,active:active(u)}));
+        const users=db.prepare('SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,reset_count,max_resets FROM users WHERE username LIKE ? OR email LIKE ? ORDER BY id DESC LIMIT 30').all(q,q).map(u=>({...u,active:active(u)}));
         return send(res,200,{users});
       }
       if(url==='/api/admin/grant'){
@@ -153,11 +189,99 @@ const srv=http.createServer(async(req,res)=>{
           frozen:c('SELECT COUNT(*) c FROM users WHERE frozen=1'),banned:c('SELECT COUNT(*) c FROM users WHERE banned=1'),keys:c('SELECT COUNT(*) c FROM keys WHERE admin=0'),keys_used:c('SELECT COUNT(*) c FROM keys WHERE admin=0 AND used_by IS NOT NULL'),
           devices:c('SELECT COUNT(*) c FROM devices'),tickets:c("SELECT COUNT(*) c FROM tickets WHERE status!='closed'"),gifts:c('SELECT COUNT(*) c FROM gifts'),promo_uses:c('SELECT COUNT(*) c FROM promo_uses'),logins24:c('SELECT COUNT(*) c FROM logins WHERE ts>?',n-DAY)}});
       }
+      if(url==='/api/admin/backup'){
+        logAudit(a.id,'backup','db','');
+        res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="forev-backup-'+Date.now()+'.db"'});
+        return res.end(fs.readFileSync(DBP));
+      }
+      if(url==='/api/admin/audit'){
+        const list=db.prepare('SELECT a.*,u.username FROM audit a LEFT JOIN users u ON u.id=a.admin_id ORDER BY a.ts DESC LIMIT 100').all();
+        return send(res,200,{list});
+      }
+      if(url==='/api/admin/settings'){
+        if(b.action==='get')return send(res,200,{killswitch:getSetting('killswitch'),maintenance:getSetting('maintenance'),status:getSetting('status'),status_text:getSetting('status_text')});
+        if(b.killswitch!=null){setSetting('killswitch',b.killswitch?'1':'0');logAudit(a.id,'killswitch','',b.killswitch?'on':'off');}
+        if(b.maintenance!=null){setSetting('maintenance',b.maintenance?'1':'0');logAudit(a.id,'maintenance','',b.maintenance?'on':'off');}
+        if(b.status){setSetting('status',b.status);setSetting('status_text',b.status_text||'');logAudit(a.id,'status','',b.status);}
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/note'){
+        db.prepare('UPDATE users SET note=? WHERE id=?').run(String(b.note||'').slice(0,500),+b.id);
+        logAudit(a.id,'note',b.id,b.note);
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/reseller'){
+        db.prepare('UPDATE users SET is_reseller=? WHERE id=?').run(b.enable?1:0,+b.id);
+        logAudit(a.id,'reseller',b.id,b.enable?'on':'off');
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/mass'){
+        const ids=(b.ids||[]).map(Number).filter(Boolean);
+        if(!ids.length)return bad('Нет пользователей');
+        tx(()=>{
+          if(b.action==='ban')db.prepare(`UPDATE users SET banned=1,ban_reason=? WHERE id IN (${ids.map(()=>'?').join(',')}) AND is_admin=0`).run(String(b.reason||'').slice(0,100),...ids);
+          if(b.action==='grant'){const d=Math.trunc(+b.days)||0;if(Math.abs(d)>3650)throw new Error('too much');for(const id of ids){const t=db.prepare('SELECT * FROM users WHERE id=?').get(id);if(t)addTime(t,d*DAY);}}
+          if(b.action==='unban')db.prepare(`UPDATE users SET banned=0,ban_reason='' WHERE id IN (${ids.map(()=>'?').join(',')})`).run(...ids);
+        });
+        logAudit(a.id,'mass',b.action,ids.join(','));
+        return send(res,200,{ok:true,count:ids.length});
+      }
+      if(url==='/api/admin/chart'){
+        const days=clamp(b.days,7,90,30);
+        const from=Date.now()-days*DAY;
+        const regs=db.prepare(`SELECT strftime('%Y-%m-%d',created/1000,'unixepoch') d,COUNT(*) c FROM users WHERE created>? GROUP BY d ORDER BY d`).all(from);
+        const acts=db.prepare(`SELECT strftime('%Y-%m-%d',created/1000,'unixepoch') d,COUNT(*) c FROM keys WHERE created>? AND used_by IS NOT NULL GROUP BY d ORDER BY d`).all(from);
+        return send(res,200,{regs,acts,days});
+      }
+      if(url==='/api/admin/toprefs'){
+        const list=db.prepare('SELECT u.username,COUNT(r.id) invited,SUM(CASE WHEN r.ref_paid=1 THEN 1 ELSE 0 END) paid FROM users u JOIN users r ON r.referred_by=u.id GROUP BY u.id ORDER BY paid DESC,invited DESC LIMIT 20').all();
+        return send(res,200,{list});
+      }
+      if(url==='/api/admin/coupon/add'){
+        const code=String(b.code||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,24)||('C'+crypto.randomBytes(3).toString('hex').toUpperCase());
+        const disc=clamp(b.discount,1,100,10),uses=clamp(b.uses,1,1e6,100),exp=+b.exp>0?Date.now()+clamp(b.exp,1,3650,30)*DAY:0;
+        db.prepare('INSERT INTO coupons(code,discount,max_uses,expires,created) VALUES(?,?,?,?,?)').run(code,disc,uses,exp,Date.now());
+        logAudit(a.id,'coupon',code,disc+'%');
+        return send(res,200,{ok:true,code});
+      }
+      if(url==='/api/admin/coupons')return send(res,200,{list:db.prepare('SELECT * FROM coupons ORDER BY created DESC LIMIT 50').all()});
+      if(url==='/api/admin/coupon/del'){db.prepare('DELETE FROM coupons WHERE code=?').run(String(b.code||''));return send(res,200,{ok:true})}
+      if(url==='/api/admin/resetdevices'){
+        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Пользователь не найден',404);
+        const n=db.prepare('DELETE FROM devices WHERE user_id=?').run(t.id).changes;
+        db.prepare('UPDATE users SET reset_count=0 WHERE id=?').run(t.id);
+        logAudit(a.id,'resetdevices',t.id,n+' devices');
+        return send(res,200,{ok:true,removed:n});
+      }
+      if(url==='/api/admin/history'){
+        const list=db.prepare('SELECT * FROM sub_history WHERE user_id=? ORDER BY ts DESC LIMIT 50').all(+b.id);
+        return send(res,200,{list});
+      }
+      if(url==='/api/admin/export'){
+        const users=db.prepare('SELECT id,username,email,created,sub_until,inf,banned,is_reseller,ref_code FROM users ORDER BY id').all();
+        const csv='id,username,email,created,sub_until,inf,banned,reseller\n'+users.map(u=>[u.id,u.username,u.email,u.created,u.sub_until,u.inf,u.banned,u.is_reseller].join(',')).join('\n');
+        res.writeHead(200,{'Content-Type':'text/csv','Content-Disposition':'attachment; filename="users.csv"'});
+        return res.end(csv);
+      }
+      if(url==='/api/admin/iplist'){
+        if(b.action==='add'){db.prepare('INSERT OR REPLACE INTO ip_list(ip,type,reason,ts) VALUES(?,?,?,?)').run(String(b.ip||'').slice(0,45),b.type==='white'?'white':'black',String(b.reason||'').slice(0,100),Date.now());logAudit(a.id,'iplist',b.ip,b.type);}
+        if(b.action==='del')db.prepare('DELETE FROM ip_list WHERE ip=?').run(String(b.ip||''));
+        return send(res,200,{list:db.prepare('SELECT * FROM ip_list ORDER BY ts DESC LIMIT 100').all()});
+      }
+      if(url==='/api/admin/resellerlimit'){
+        db.prepare('UPDATE users SET reseller_limit=? WHERE id=?').run(clamp(b.limit,0,10000,0),+b.id);
+        logAudit(a.id,'resellerlimit',b.id,b.limit);
+        return send(res,200,{ok:true});
+      }
       return bad('Не найдено',404);
     }
 
     // ---------- клиент (лоадер): логин + пароль + HWID ----------
     if(url==='/api/client/auth'){
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
+      if(isIpBanned(ip))return bad('IP заблокирован',403);
+      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
       const u=checkPw(b.login,b.password);if(!u)return bad('Неверный логин или пароль',401);
       if(u.banned)return bad('Аккаунт заблокирован',403);
       logLogin(u.id,ip,'client',1);
@@ -174,24 +298,51 @@ const srv=http.createServer(async(req,res)=>{
     }
 
     if(url==='/api/register'){
-      const {username,email,password}=b;
+      const {username,email,password,code}=b;
       if(!/^[A-Za-z0-9_]{3,20}$/.test(username||''))return bad('Ник: 3–20 символов (латиница, цифры, _)');
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email||''))return bad('Некорректный e-mail');
       if(typeof password!=='string'||password.length<8)return bad('Пароль минимум 8 символов');
       if(db.prepare('SELECT 1 FROM users WHERE username=? OR email=?').get(username,email))return bad('Ник или e-mail уже занят',409);
+      if(!code){
+        const c=genCode();
+        db.prepare('INSERT OR REPLACE INTO verify_codes(email,code,type,expires,data) VALUES(?,?,?,?,?)').run(email,c,'reg',Date.now()+600000,JSON.stringify({username,password,ref:b.ref,hwid:b.hwid}));
+        await sendCode(email,c,'reg');
+        return send(res,200,{need_code:true});
+      }
+      const v=db.prepare('SELECT * FROM verify_codes WHERE email=? AND type="reg" AND expires>?').get(email,Date.now());
+      if(!v||v.code!==String(code))return bad('Неверный или истёкший код');
+      const data=JSON.parse(v.data||'{}');
       const salt=crypto.randomBytes(16).toString('hex');
-      const rf=db.prepare('SELECT id FROM users WHERE ref_code=? AND banned=0').get(String(b.ref||'').slice(0,16));
-      const trial=TRIAL>0&&!db.prepare('SELECT 1 FROM users WHERE reg_ip=?').get(ip)?Date.now()+TRIAL*DAY:0; // пробный период — один раз на IP
-      const r=db.prepare('INSERT INTO users(username,email,hash,salt,created,sub_until,ref_code,referred_by,reg_ip) VALUES(?,?,?,?,?,?,?,?,?)').run(username,email,hashPw(password,salt),salt,Date.now(),trial,crypto.randomBytes(4).toString('hex'),rf?rf.id:null,ip);
+      const rf=db.prepare('SELECT id FROM users WHERE ref_code=? AND banned=0').get(String(data.ref||'').slice(0,16));
+      const hwid=String(data.hwid||'').slice(0,128);
+      const trial=TRIAL>0&&!db.prepare('SELECT 1 FROM users WHERE reg_ip=? OR trial_hwid=?').get(ip,hwid)?Date.now()+TRIAL*DAY:0;
+      const r=db.prepare('INSERT INTO users(username,email,hash,salt,created,sub_until,ref_code,referred_by,reg_ip,trial_hwid) VALUES(?,?,?,?,?,?,?,?,?,?)').run(data.username,email,hashPw(data.password,salt),salt,Date.now(),trial,crypto.randomBytes(4).toString('hex'),rf?rf.id:null,ip,hwid);
+      db.prepare('DELETE FROM verify_codes WHERE email=?').run(email);
       logLogin(Number(r.lastInsertRowid),ip,'reg',1);
       return send(res,200,{ok:true},login(res,Number(r.lastInsertRowid)));
     }
     if(url==='/api/login'){
-      const f=findU(b.login),u=f&&pwOk(f,b.password)?f:null;
-      if(f)logLogin(f.id,ip,'web',!!u);
-      if(!u)return bad('Неверный логин или пароль',401);
-      if(u.banned)return bad('Аккаунт заблокирован'+(u.ban_reason?': '+u.ban_reason:''),403);
-      return send(res,200,{ok:true},login(res,u.id));
+      if(isIpBanned(ip))return bad('IP заблокирован',403);
+      const {login:loginName,password,code}=b;
+      const f=findU(loginName);
+      if(!f||!pwOk(f,password)){
+        if(f)logLogin(f.id,ip,'web',0);
+        const fails=db.prepare('SELECT COUNT(*) c FROM logins WHERE ip=? AND ok=0 AND ts>?').get(ip,Date.now()-10*60*1000).c;
+        if(fails>=8){db.prepare('INSERT OR REPLACE INTO ip_list(ip,type,reason,ts) VALUES(?,?,?,?)').run(ip,'black','auto ban',Date.now());return bad('Слишком много попыток, IP заблокирован',429);}
+        return bad('Неверный логин или пароль',401);
+      }
+      if(f.banned)return bad('Аккаунт заблокирован'+(f.ban_reason?': '+f.ban_reason:''),403);
+      if(!code){
+        const c=genCode();
+        db.prepare('INSERT OR REPLACE INTO verify_codes(email,code,type,expires) VALUES(?,?,?,?,?)').run(f.email,c,'login',Date.now()+600000);
+        await sendCode(f.email,c,'login');
+        return send(res,200,{need_code:true,email:f.email});
+      }
+      const v=db.prepare('SELECT * FROM verify_codes WHERE email=? AND type="login" AND expires>?').get(f.email,Date.now());
+      if(!v||v.code!==String(code))return bad('Неверный или истёкший код');
+      db.prepare('DELETE FROM verify_codes WHERE email=?').run(f.email);
+      logLogin(f.id,ip,'web',1);
+      return send(res,200,{ok:true},login(res,f.id));
     }
     if(url==='/api/logout'){
       db.prepare('DELETE FROM sessions WHERE token=?').run(cookie(req).sid||'');
@@ -317,8 +468,56 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{max:u.max_dev,list:db.prepare('SELECT id,name,first_seen,last_seen FROM devices WHERE user_id=? ORDER BY last_seen DESC').all(u.id)});
     }
     if(url==='/api/device/del'){
-      db.prepare('DELETE FROM devices WHERE id=? AND user_id=?').run(+b.id,u.id);
+      const usr=db.prepare('SELECT reset_count,max_resets FROM users WHERE id=?').get(u.id);
+      if((usr.reset_count||0)>=(usr.max_resets||3))return bad('Достигнут лимит сбросов устройств ('+(usr.max_resets||3)+')');
+      const r=db.prepare('DELETE FROM devices WHERE id=? AND user_id=?').run(+b.id,u.id);
+      if(r.changes)db.prepare('UPDATE users SET reset_count=reset_count+1 WHERE id=?').run(u.id);
+      return send(res,200,{ok:true,resets: (usr.reset_count||0)+1, max:(usr.max_resets||3)});
+    }
+    if(url==='/api/nick'){
+      const nick=String(b.username||'').trim();
+      if(!/^[A-Za-z0-9_]{3,20}$/.test(nick))return bad('Ник: 3–20 символов (латиница, цифры, _)');
+      if(db.prepare('SELECT 1 FROM users WHERE username=? AND id!=?').get(nick,u.id))return bad('Ник занят');
+      db.prepare('UPDATE users SET username=? WHERE id=?').run(nick,u.id);
+      return send(res,200,{ok:true,username:nick});
+    }
+    if(url==='/api/delete'){
+      if(u.is_admin)return bad('Админа удалить нельзя');
+      tx(()=>{
+        db.prepare('DELETE FROM sessions WHERE user_id=?').run(u.id);
+        db.prepare('DELETE FROM devices WHERE user_id=?').run(u.id);
+        db.prepare('DELETE FROM users WHERE id=?').run(u.id);
+      });
+      return send(res,200,{ok:true},{'Set-Cookie':'sid=; Max-Age=0; Path=/'});
+    }
+    if(url==='/api/exchange'){
+      const days=clamp(b.days,1,365,30);
+      if(u.inf)return bad('Бессрочная подписка');
+      if(u.frozen)return bad('Подписка заморожена');
+      const left=Math.max(0,u.sub_until-Date.now());
+      if(left<days*DAY)return bad('Недостаточно дней');
+      const key=makeKey();
+      tx(()=>{
+        db.prepare('UPDATE users SET sub_until=sub_until-? WHERE id=?').run(days*DAY,u.id);
+        db.prepare('INSERT INTO keys(code,days,devices,created) VALUES(?,?,?,?)').run(key,days,1,Date.now());
+      });
+      return send(res,200,{ok:true,key,days});
+    }
+    if(url==='/api/toprefs'){
+      const list=db.prepare('SELECT u.username,COUNT(r.id) invited,SUM(CASE WHEN r.ref_paid=1 THEN 1 ELSE 0 END) paid FROM users u JOIN users r ON r.referred_by=u.id GROUP BY u.id ORDER BY paid DESC,invited DESC LIMIT 10').all();
+      return send(res,200,{list});
+    }
+    if(url==='/api/notifs'){
+      const list=db.prepare('SELECT id,text,read,ts FROM notifications WHERE user_id=? ORDER BY ts DESC LIMIT 20').all(u.id);
+      return send(res,200,{list});
+    }
+    if(url==='/api/notifs/read'){
+      db.prepare('UPDATE notifications SET read=1 WHERE user_id=? AND id=?').run(u.id,+b.id);
       return send(res,200,{ok:true});
+    }
+    if(url==='/api/history'){
+      const list=db.prepare('SELECT * FROM sub_history WHERE user_id=? ORDER BY ts DESC LIMIT 30').all(u.id);
+      return send(res,200,{list});
     }
     bad('Не найдено',404);
   }catch(e){send(res,400,{error:'Ошибка запроса'})}
