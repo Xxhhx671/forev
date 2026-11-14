@@ -826,12 +826,16 @@ const srv=http.createServer(async(req,res)=>{
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
       if(isIpBanned(ip))return bad('IP заблокирован',403);
       if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
-      const ipInfo=await checkIp(ip);
+      // Fast path: use cached IP info if available, avoid blocking login on external IP lookup
+      let ipInfo = ipCache.get(ip) || db.prepare('SELECT * FROM ip_cache WHERE ip=? AND checked>?').get(ip,Date.now()-7*DAY) || null;
       const blockVpn=getSetting('block_vpn')==='1';
-      if(blockVpn&&(ipInfo.proxy||ipInfo.hosting))return bad('VPN/Proxy/Hosting запрещён',403);
+      if(blockVpn && ipInfo && (ipInfo.proxy||ipInfo.hosting)) return bad('VPN/Proxy/Hosting запрещён',403);
+      // Refresh IP info in background (non-blocking)
+      if(!ipInfo){ checkIp(ip).catch(()=>{}); ipInfo={proxy:0,hosting:0,country:'',isp:''}; }
       const u=checkPw(b.login,b.password);
       if(!u){
         recordFail(ip);
+        try{ logLogin(null,ip,'loader',0,ipInfo); }catch{}
         return bad('Неверный логин или пароль',401);
       }
       logLogin(u.id,ip,'loader',1,ipInfo);
