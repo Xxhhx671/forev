@@ -139,6 +139,21 @@ function getLoaderUser(token, hwid){
   return u;
 }
 
+db.exec(`CREATE TABLE IF NOT EXISTS loader_download_tokens(
+  token TEXT PRIMARY KEY,
+  user_id INTEGER,
+  created INTEGER,
+  expires INTEGER,
+  used INTEGER DEFAULT 0,
+  used_at INTEGER DEFAULT 0,
+  used_hwid TEXT DEFAULT ''
+);`);
+
+function makeDlToken(){
+  return 'DLBOOT_' + crypto.randomBytes(24).toString('hex');
+}
+
+
 
 function makeLicenseKey(prefix='FOREV'){
   const p=String(prefix||'FOREV').replace(/[^A-Z0-9]/g,'').slice(0,12)||'FOREV';
@@ -364,6 +379,20 @@ const addTime=(u,ms,source='admin',details='')=>{
   if(days){addSubHistory(u.id,days,source,details);addNotif(u.id,days>0?`+${days} дней (${source})`:`${days} дней (${source})`);}
 };
 
+
+
+function findLoaderExe(){
+  const cands=[
+    process.env.LOADER_EXE_PATH,
+    path.join(__dirname,'files','ForevLoader.exe'),
+    path.join(__dirname,'ForevLoader.exe'),
+    path.join(__dirname,'public','ForevLoader.exe'),
+  ].filter(Boolean);
+  for(const pth of cands){ try{ if(fs.existsSync(pth) && fs.statSync(pth).isFile()) return pth; }catch(e){} }
+  return null;
+}
+const DL_PLACEHOLDER = 'DLBOOT________________________________________________________________________________________'; // 94 chars
+
 const srv=http.createServer(async(req,res)=>{
   try{
     const ip=String(req.headers['x-forwarded-for']||'').split(',')[0].trim()||req.socket.remoteAddress;
@@ -378,6 +407,35 @@ const srv=http.createServer(async(req,res)=>{
       res.writeHead(404);return res.end('Not found');
     }
     if(req.url.startsWith('/api/'))thaw();
+
+    if(url.startsWith('/api/loader/download') && req.method==='GET'){
+      const full = new URL(req.url, 'http://x');
+      const token = String(full.searchParams.get('token')||'').trim();
+      if(!token) { res.writeHead(400,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Нет токена'})); }
+      const dt=db.prepare('SELECT * FROM loader_download_tokens WHERE token=?').get(token);
+      if(!dt || dt.used || dt.expires < Date.now()){ res.writeHead(410,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Ссылка недействительна или истекла. Скачайте лоадер заново из личного кабинета.'})); }
+      const exePath=findLoaderExe();
+      if(!exePath){ res.writeHead(503,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Файл лоадера временно недоступен'})); }
+      try{
+        let buf=fs.readFileSync(exePath);
+        const idx=buf.indexOf(Buffer.from(DL_PLACEHOLDER,'ascii'));
+        if(idx!==-1){
+          const repl=Buffer.alloc(DL_PLACEHOLDER.length, 0);
+          Buffer.from(token,'ascii').copy(repl);
+          repl.copy(buf, idx);
+        }
+        res.writeHead(200,{
+          'Content-Type':'application/octet-stream',
+          'Content-Disposition':'attachment; filename="ForevLoader.exe"',
+          'Content-Length': buf.length,
+          'Cache-Control':'no-store'
+        });
+        return res.end(buf);
+      }catch(e){
+        res.writeHead(500,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Ошибка выдачи файла'}));
+      }
+    }
+
     if(req.url==='/api/status'&&req.method==='GET'){
       scanExpiryNotices(); // throttled
       return send(res,200,{status:getSetting('status'),text:getSetting('status_text'),maintenance:getSetting('maintenance')==='1',killswitch:getSetting('killswitch')==='1',captcha:true,configs_open:getSetting('configs_open','1')==='1'});
@@ -987,6 +1045,45 @@ const srv=http.createServer(async(req,res)=>{
       });
     }
 
+    // Bootstrap login from download token embedded in personalized loader
+    if(url==='/api/loader/bootstrap'){
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
+      if(isIpBanned(ip))return bad('IP заблокирован',403);
+      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
+      const token=String(b.token||'').trim();
+      const hw=String(b.hwid||'').trim().slice(0,128);
+      if(!token || hw.length<8) return bad('Неверный запрос',400);
+      const dt=db.prepare('SELECT * FROM loader_download_tokens WHERE token=?').get(token);
+      if(!dt) return bad('Ссылка недействительна. Войдите вручную.',401);
+      if(dt.expires < Date.now()) return bad('Ссылка истекла. Войдите вручную.',401);
+      const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit FROM users WHERE id=?').get(dt.user_id);
+      if(!u) return bad('Пользователь не найден',404);
+      if(u.banned) return send(res,200,{ok:false,reason:'banned',banned:true,ban_reason:u.ban_reason||'',username:u.username,active:false,inf:!!u.inf,until:u.inf?0:u.sub_until,frozen:!!u.frozen});
+      // consume if fresh; allow re-use from same HWID shortly (retry safety) but keep one-time semantics generally
+      if(!dt.used){
+        db.prepare('UPDATE loader_download_tokens SET used=1,used_at=?,used_hwid=? WHERE token=? AND used=0').run(Date.now(), hw, token);
+      } else if(dt.used_hwid && dt.used_hwid !== hw){
+        return bad('Ссылка уже использована. Войдите вручную.',401);
+      }
+      try{ logLogin(u.id,ip,'loader_bootstrap',1,null); }catch{}
+      const subActive = active(u);
+      const sess = createLoaderSession(u.id, hw);
+      return send(res,200,{
+        ok:true,
+        username:u.username,
+        email:u.email||'',
+        active:subActive,
+        inf:!!u.inf,
+        until:u.inf?0:(u.sub_until||0),
+        frozen:!!u.frozen,
+        banned:false,
+        reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive'),
+        session_token: sess.token,
+        session_expires: sess.expires
+      });
+    }
+
     if(url==='/api/client/auth'){
       if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
@@ -1088,6 +1185,15 @@ const srv=http.createServer(async(req,res)=>{
       const exp=now + 10*60*1000; // 10 minutes
       db.prepare('INSERT INTO loader_otps(code,user_id,created,expires,used) VALUES(?,?,?,?,0)').run(code, u.id, now, exp);
       return send(res,200,{ok:true,code,expires:exp,ttl_sec:600});
+    }
+
+    if(url==='/api/loader/download-token'){
+      // one-time token to personalize downloaded loader (auto-login to this account)
+      db.prepare('DELETE FROM loader_download_tokens WHERE user_id=? OR expires<?').run(u.id, Date.now()-DAY);
+      const token=makeDlToken();
+      const exp=Date.now() + 15*60*1000; // 15 minutes
+      db.prepare('INSERT INTO loader_download_tokens(token,user_id,created,expires,used) VALUES(?,?,?,?,0)').run(token,u.id,Date.now(),exp);
+      return send(res,200,{ok:true,token,expires:exp,url:'/api/loader/download?token='+encodeURIComponent(token)});
     }
 
 

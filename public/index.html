@@ -425,8 +425,9 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="8" cy="15" r="4"/><path class="dr" pathLength="1" d="m11 12 9-9M17 6l3 3"/></svg></div><h3>Активировать ключ</h3><p>Введите ключ подписки или промокод, чтобы продлить доступ.</p>
 <div class="cab-in"><div class="fld"><input id="key" placeholder=" "><label>Ключ / промокод</label><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/></svg></div><button class="btn sm" onclick="redeem()">OK</button></div><div class="err" id="ke" style="margin-top:8px"></div></div>
 <div class="card rv" style="--d:.2s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr a" pathLength="1" x="4" y="5" width="16" height="14" rx="2"/><path class="dr" pathLength="1" d="M8 9h8M8 13h5"/></svg></div><h3>Мои ключи подписки</h3><p>Ключи, выданные вашему аккаунту (включая пробный при регистрации). Отображаются все подписочные/выданные ключи в кабинете.</p>
-<div class="lst" id="mkList"><p style="color:var(--m)">Загрузка...</p></div><button class="btn sm ghost" style="margin-top:8px" onclick="loadMyKeys()">Обновить</button></div><div class="card rv" style="--d:.22s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M8 11V8a4 4 0 1 1 8 0v3"/><rect class="dr" pathLength="1" x="5" y="11" width="14" height="10" rx="2"/><path class="dr a" pathLength="1" d="M12 15v2"/></svg></div><h3>Вход в лоадер</h3><p>Одноразовый код для быстрого и безопасного входа в лоадер (без ввода пароля). Код действует 10 минут и привязывается к сессии входа.</p>
-<div class="row"><button class="btn sm" onclick="genLoaderOtp()">Сгенерировать код</button></div>
+<div class="lst" id="mkList"><p style="color:var(--m)">Загрузка...</p></div><button class="btn sm ghost" style="margin-top:8px" onclick="loadMyKeys()">Обновить</button></div><div class="card rv" style="--d:.22s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M8 11V8a4 4 0 1 1 8 0v3"/><rect class="dr" pathLength="1" x="5" y="11" width="14" height="10" rx="2"/><path class="dr a" pathLength="1" d="M12 15v2"/></svg></div><h3>Вход в лоадер</h3><p>Скачайте лоадер из личного кабинета — он автоматически войдёт в этот аккаунт на вашем устройстве. Также можно использовать одноразовый код (10 минут).</p>
+<div class="row"><button class="btn sm" onclick="downloadLoader()">Скачать лоадер</button><button class="btn sm ghost" onclick="genLoaderOtp()">Сгенерировать код</button></div>
+<div class="err" id="dlErr" style="margin-top:8px"></div>
 <div id="lotpBox" style="margin-top:10px;display:none">
   <div style="font-size:22px;font-weight:800;letter-spacing:3px;color:#fff" id="lotpCode"></div>
   <div style="font-size:12px;color:var(--m);margin-top:4px" id="lotpExp"></div>
@@ -693,6 +694,16 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
  }
  setTimeout(obs,50)}
 async function loadStatus(){try{const r=await fetch('/api/status');const s=await r.json();const el=$('prodstatus');if(el)el.innerHTML=`Статус: <b>${esc(s.status||'online')}</b> — ${esc(s.text||'')}${s.maintenance?' <span style="color:var(--r)">(техработы)</span>':''}${s.killswitch?' <span style="color:red">(отключён)</span>':''}`;}catch{}}
+
+
+async function downloadLoader(){
+  const e=$('dlErr'); if(e) e.textContent='';
+  try{
+    const r=await api('/api/loader/download-token',{});
+    if(r && r.url){ window.location.href = r.url; toast('Скачивание лоадера...'); }
+    else throw new Error('Не удалось получить ссылку');
+  }catch(err){ if(e) e.textContent=err.message||'Ошибка скачивания'; else toast(err.message||'Ошибка'); }
+}
 
 async function genLoaderOtp(){
   $('lotpErr').textContent='';
