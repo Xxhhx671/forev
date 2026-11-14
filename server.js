@@ -62,6 +62,48 @@ CREATE TABLE IF NOT EXISTS tariffs(
 db.exec("UPDATE users SET ref_code=lower(hex(randomblob(4))) WHERE ref_code IS NULL OR ref_code=''");
 db.prepare('UPDATE users SET frozen_at=? WHERE frozen=1 AND frozen_at=0').run(Date.now());
 
+// ---- Loader licenses (direct HWID-bound keys for external loader, /api/validate) ----
+db.exec(`CREATE TABLE IF NOT EXISTS loader_licenses(
+  code TEXT PRIMARY KEY,
+  days INTEGER DEFAULT 0,
+  expires_at INTEGER DEFAULT 0,
+  hwid TEXT DEFAULT '',
+  bound_at INTEGER DEFAULT 0,
+  last_seen INTEGER DEFAULT 0,
+  revoked INTEGER DEFAULT 0,
+  note TEXT DEFAULT '',
+  plan TEXT DEFAULT '',
+  max_resets INTEGER DEFAULT 3,
+  reset_count INTEGER DEFAULT 0,
+  created INTEGER,
+  created_by INTEGER DEFAULT 0
+);`);
+for(const s of [
+  'ALTER TABLE loader_licenses ADD COLUMN days INTEGER DEFAULT 0',
+  'ALTER TABLE loader_licenses ADD COLUMN expires_at INTEGER DEFAULT 0',
+  'ALTER TABLE loader_licenses ADD COLUMN hwid TEXT DEFAULT \'\'',
+  'ALTER TABLE loader_licenses ADD COLUMN bound_at INTEGER DEFAULT 0',
+  'ALTER TABLE loader_licenses ADD COLUMN last_seen INTEGER DEFAULT 0',
+  'ALTER TABLE loader_licenses ADD COLUMN revoked INTEGER DEFAULT 0',
+  'ALTER TABLE loader_licenses ADD COLUMN note TEXT DEFAULT \'\'',
+  'ALTER TABLE loader_licenses ADD COLUMN plan TEXT DEFAULT \'\'',
+  'ALTER TABLE loader_licenses ADD COLUMN max_resets INTEGER DEFAULT 3',
+  'ALTER TABLE loader_licenses ADD COLUMN reset_count INTEGER DEFAULT 0',
+  'ALTER TABLE loader_licenses ADD COLUMN created INTEGER DEFAULT 0',
+  'ALTER TABLE loader_licenses ADD COLUMN created_by INTEGER DEFAULT 0'
+]) try{db.exec(s)}catch{};
+
+function makeLicenseKey(prefix='FOREV'){
+  const p=String(prefix||'FOREV').replace(/[^A-Z0-9]/g,'').slice(0,12)||'FOREV';
+  return p+'-'+crypto.randomBytes(6).toString('hex').toUpperCase().match(/.{4}/g).join('-');
+}
+function licStatus(r){
+  if(!r) return 'missing';
+  if(r.revoked) return 'revoked';
+  if(r.expires_at && Date.now()>r.expires_at) return 'expired';
+  return 'active';
+}
+
 // Мастер-ключ: админ-панель + бессрочная подписка. Лучше задать через env MASTER_KEY (чтобы не лежал в репозитории)
 const MASTER=String(process.env.MASTER_KEY||'EmirDI1804').trim().toUpperCase();
 db.prepare('INSERT OR IGNORE INTO keys(code,days,devices,inf,admin,created) VALUES(?,?,?,?,?,?)').run(MASTER,0,99,1,1,Date.now());
@@ -145,6 +187,67 @@ function logLogin(uid,ip,kind,ok,ipInfo){
     if(ipInfo)db.prepare('INSERT INTO logins(user_id,ip,kind,ok,ts,proxy,country) VALUES(?,?,?,?,?,?,?)').run(uid,ip,kind,ok?1:0,Date.now(),ipInfo.proxy||0,ipInfo.country||'');
     else db.prepare('INSERT INTO logins(user_id,ip,kind,ok,ts) VALUES(?,?,?,?,?)').run(uid,ip,kind,ok?1:0,Date.now());
   }catch(e){db.prepare('INSERT INTO logins(user_id,ip,kind,ok,ts) VALUES(?,?,?,?,?)').run(uid,ip,kind,ok?1:0,Date.now());}
+}
+
+// Deep association helpers (IP/HWID) - anti trial-abuse & deep search
+function deepUserIdsByIp(ip){
+  const v=String(ip||'').trim(); if(!v) return [];
+  const ids=new Set();
+  try{db.prepare('SELECT id FROM users WHERE reg_ip=?').all(v).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare('SELECT DISTINCT user_id id FROM logins WHERE ip=? AND user_id IS NOT NULL').all(v).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare('SELECT DISTINCT user_id id FROM sessions WHERE ip=? AND user_id IS NOT NULL').all(v).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare('SELECT DISTINCT user_id id FROM hwid_log WHERE ip=? AND user_id IS NOT NULL').all(v).forEach(r=>ids.add(r.id))}catch{}
+  return [...ids].filter(Boolean);
+}
+function deepUserIdsByHwid(hwid){
+  const h=String(hwid||'').trim().slice(0,128);
+  if(h.length<4) return [];
+  const ids=new Set();
+  try{db.prepare('SELECT id FROM users WHERE trial_hwid=?').all(h).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare('SELECT DISTINCT user_id id FROM devices WHERE hwid=?').all(h).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare('SELECT DISTINCT user_id id FROM hwid_log WHERE hwid=?').all(h).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare('SELECT DISTINCT used_by id FROM keys k JOIN users u ON u.id=k.used_by WHERE 1=0').all()}catch{} // placeholder
+  return [...ids].filter(Boolean);
+}
+function trialBlocked(ip, hwid){
+  if(TRIAL<=0) return true;
+  if(ip && deepUserIdsByIp(ip).length>0) return true;
+  if(hwid && deepUserIdsByHwid(hwid).length>0) return true;
+  return false;
+}
+function deepSearch(q){
+  const raw=String(q||'').trim();
+  const like='%'+raw.replace(/[%_]/g,'')+'%';
+  const ids=new Set();
+  const addIds=rows=>rows.forEach(r=>{const id=r.id||r.user_id; if(id) ids.add(id)});
+  try{addIds(db.prepare('SELECT id FROM users WHERE username LIKE ? OR email LIKE ? OR reg_ip LIKE ? OR trial_hwid LIKE ? LIMIT 50').all(like,like,like,like))}catch{}
+  try{addIds(db.prepare('SELECT DISTINCT user_id id FROM devices WHERE hwid LIKE ? LIMIT 50').all(like))}catch{}
+  try{addIds(db.prepare('SELECT DISTINCT user_id id FROM logins WHERE ip LIKE ? LIMIT 50').all(like))}catch{}
+  try{addIds(db.prepare('SELECT DISTINCT user_id id FROM hwid_log WHERE hwid LIKE ? OR ip LIKE ? LIMIT 50').all(like,like))}catch{}
+  try{addIds(db.prepare('SELECT DISTINCT user_id id FROM sessions WHERE ip LIKE ? LIMIT 50').all(like))}catch{}
+  try{addIds(db.prepare('SELECT id FROM users WHERE ref_code LIKE ? LIMIT 20').all(like))}catch{}
+  const idList=[...ids].slice(0,50);
+  const users=idList.length ? db.prepare(`SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,suspicious,reg_ip,trial_hwid FROM users WHERE id IN (${idList.map(()=>'?').join(',')})`).all(...idList).map(u=>({...u,active:active(u)})) : [];
+  const devices=db.prepare('SELECT d.*,u.username FROM devices d LEFT JOIN users u ON u.id=d.user_id WHERE d.hwid LIKE ? ORDER BY d.last_seen DESC LIMIT 40').all(like);
+  const logins=db.prepare('SELECT l.*,u.username FROM logins l LEFT JOIN users u ON u.id=l.user_id WHERE l.ip LIKE ? ORDER BY l.ts DESC LIMIT 40').all(like);
+  const hwidlog=db.prepare('SELECT h.*,u.username FROM hwid_log h LEFT JOIN users u ON u.id=h.user_id WHERE h.hwid LIKE ? OR h.ip LIKE ? ORDER BY h.ts DESC LIMIT 40').all(like,like);
+  const regs=db.prepare('SELECT id,username,email,reg_ip,trial_hwid,created FROM users WHERE reg_ip LIKE ? OR trial_hwid LIKE ? ORDER BY created DESC LIMIT 40').all(like,like);
+  return {users,devices,logins,hwidlog,regs};
+}
+function createUserSubKey(uid, days, inf, note, source, product='', tariff='', devices=1){
+  const u=db.prepare('SELECT * FROM users WHERE id=?').get(uid);
+  if(!u) return null;
+  const code=makeKey();
+  const now=Date.now();
+  tx(()=>{
+    db.prepare('INSERT INTO keys(code,days,devices,inf,created,note,product,tariff,used_by) VALUES(?,?,?,?,?,?,?,?,?)')
+      .run(code, inf?0:(days||0), devices||1, inf?1:0, now, String(note||'').slice(0,200), String(product||'').slice(0,80), String(tariff||'').slice(0,80), uid);
+    if(inf) db.prepare('UPDATE users SET inf=1 WHERE id=?').run(uid);
+    if(devices>1) db.prepare('UPDATE users SET max_dev=MAX(max_dev,?) WHERE id=?').run(devices, uid);
+    if(days>0) addTime(db.prepare('SELECT * FROM users WHERE id=?').get(uid), days*DAY, source||'key', note||'');
+    addSubHistory(uid, inf?0:(days||0), source||'key', (note||'') + ' ['+code+']');
+  });
+  return code;
 }
 
 // CLI: node server.js genkey 30 2   (дней, устройств)
@@ -248,6 +351,43 @@ const srv=http.createServer(async(req,res)=>{
       if(rl('cap'+ip,30,6e4))return send(res,429,{error:'Слишком много запросов капчи'});
       return send(res,200,makeCaptcha(ip));
     }
+
+    // ---- Loader license validation (HWID-bound key), compatible with external loader ----
+    if((req.url||'').split('?')[0]==='/api/validate'){
+      try{
+        let key='', hwid='';
+        if(req.method==='GET'){
+          const qs=new URL(req.url,'http://x').searchParams;
+          key=String(qs.get('key')||'').trim().toUpperCase();
+          hwid=String(qs.get('hwid')||'').trim();
+        } else if(req.method==='POST'){
+          const b=await body(req);
+          key=String(b.key||'').trim().toUpperCase();
+          hwid=String(b.hwid||'').trim();
+        } else {
+          return send(res,405,{valid:false,reason:'method'});
+        }
+        if(!key||!hwid) return send(res,200,{valid:false,reason:'missing_params'});
+        const r=db.prepare('SELECT * FROM loader_licenses WHERE code=?').get(key);
+        if(!r) return send(res,200,{valid:false,reason:'not_found'});
+        if(r.revoked) return send(res,200,{valid:false,reason:'revoked'});
+        if(r.expires_at && Date.now()>r.expires_at) return send(res,200,{valid:false,reason:'expired'});
+        if(!r.hwid){
+          let exp=r.expires_at||0;
+          // If days-based and not yet started, start subscription on first activation
+          if(!exp && r.days>0) exp=Date.now()+r.days*DAY;
+          db.prepare('UPDATE loader_licenses SET hwid=?,bound_at=?,last_seen=?,expires_at=? WHERE code=?')
+            .run(hwid,Date.now(),Date.now(),exp,key);
+          return send(res,200,{valid:true,reason:'ok',expiresAt:exp||null});
+        }
+        if(r.hwid!==hwid) return send(res,200,{valid:false,reason:'hwid_mismatch'});
+        db.prepare('UPDATE loader_licenses SET last_seen=? WHERE code=?').run(Date.now(),key);
+        return send(res,200,{valid:true,reason:'ok',expiresAt:r.expires_at||null});
+      }catch(e){
+        return send(res,200,{valid:false,reason:'server_error'});
+      }
+    }
+
     if(req.url==='/api/me'&&req.method==='GET'){
       const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'});
       const cnt=q=>db.prepare(q).get(u.id).c,{ref_code,referred_by,ref_paid,...pu}=u;
@@ -307,17 +447,22 @@ const srv=http.createServer(async(req,res)=>{
         const q=String(b.q||'').replace(/[%_]/g,'').trim();
         const like='%'+q+'%';
         let users;
-        if(q.length>=6 && !q.includes('@') && !q.includes(' ')){
-          // search by HWID
-          const byHw=db.prepare('SELECT DISTINCT user_id FROM devices WHERE hwid LIKE ? LIMIT 30').all(like).map(r=>r.user_id);
-          // search by IP in logins
-          const byIp=db.prepare('SELECT DISTINCT user_id FROM logins WHERE ip LIKE ? LIMIT 30').all(like).map(r=>r.user_id);
-          const ids=[...new Set([...byHw,...byIp])].slice(0,30);
-          if(ids.length){
-            users=db.prepare(`SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,reset_count,max_resets,suspicious,reseller_keys,reseller_limit FROM users WHERE id IN (${ids.map(()=>'?').join(',')})`).all(...ids).map(u=>({...u,active:active(u)}));
-          } else {
-            users=db.prepare('SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,reset_count,max_resets,suspicious,reseller_keys,reseller_limit FROM users WHERE username LIKE ? OR email LIKE ? OR note LIKE ? ORDER BY id DESC LIMIT 30').all(like,like,like).map(u=>({...u,active:active(u)}));
-          }
+        if(q.length>=3){
+          // Deep search by IP/HWID across users, devices, logins, hwid_log, sessions
+          const ids=new Set();
+          const add=rows=>rows.forEach(r=>{const id=r.id||r.user_id; if(id) ids.add(id)});
+          try{add(db.prepare('SELECT id FROM users WHERE username LIKE ? OR email LIKE ? OR note LIKE ? OR reg_ip LIKE ? OR trial_hwid LIKE ? LIMIT 40').all(like,like,like,like,like))}catch{}
+          try{add(db.prepare('SELECT DISTINCT user_id id FROM devices WHERE hwid LIKE ? LIMIT 40').all(like))}catch{}
+          try{add(db.prepare('SELECT DISTINCT user_id id FROM logins WHERE ip LIKE ? LIMIT 40').all(like))}catch{}
+          try{add(db.prepare('SELECT DISTINCT user_id id FROM hwid_log WHERE hwid LIKE ? OR ip LIKE ? LIMIT 40').all(like,like))}catch{}
+          try{add(db.prepare('SELECT DISTINCT user_id id FROM sessions WHERE ip LIKE ? LIMIT 40').all(like))}catch{}
+          // exact deep match helpers for likely IP/HWID tokens
+          try{deepUserIdsByIp(q).forEach(id=>ids.add(id))}catch{}
+          try{deepUserIdsByHwid(q).forEach(id=>ids.add(id))}catch{}
+          const idList=[...ids].slice(0,50);
+          users=idList.length
+            ? db.prepare(`SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,reset_count,max_resets,suspicious,reseller_keys,reseller_limit,reg_ip,trial_hwid FROM users WHERE id IN (${idList.map(()=>'?').join(',')}) ORDER BY id DESC`).all(...idList).map(u=>({...u,active:active(u)}))
+            : [];
         } else {
           users=db.prepare('SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,reset_count,max_resets,suspicious,reseller_keys,reseller_limit FROM users WHERE username LIKE ? OR email LIKE ? OR note LIKE ? ORDER BY id DESC LIMIT 30').all(like,like,like).map(u=>({...u,active:active(u)}));
         }
@@ -326,11 +471,18 @@ const srv=http.createServer(async(req,res)=>{
       if(url==='/api/admin/grant'){
         const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Пользователь не найден',404);
         const d=Math.trunc(+b.days)||0;if(Math.abs(d)>3650)return bad('Максимум ±3650 дней');
-        tx(()=>{
-          if(d)addTime(t,d*DAY);
-          if(b.devices!==''&&b.devices!=null)db.prepare('UPDATE users SET max_dev=? WHERE id=?').run(clamp(b.devices,1,99,1),t.id);
-        });
-        return send(res,200,{ok:true});
+        let grantKey=null;
+        if(d>0){
+          // Create subscription key in user's personal cabinet and apply time
+          grantKey=createUserSubKey(t.id, d, false, String(b.note||'Выдача администратором').slice(0,200), 'admin_grant', String(b.product||'ADMIN').slice(0,80), (d>0?d+'d':'inf'), 1);
+        } else if(d<0){
+          tx(()=>{
+            addTime(t,d*DAY,'admin_grant',String(b.note||'Корректировка').slice(0,200));
+          });
+        }
+        if(b.devices!==''&&b.devices!=null)db.prepare('UPDATE users SET max_dev=? WHERE id=?').run(clamp(b.devices,1,99,1),t.id);
+        logAudit(a.id,'grant',t.id,d+'d'+(grantKey?(' key='+grantKey):''),ip);
+        return send(res,200,{ok:true,key:grantKey});
       }
       if(url==='/api/admin/ban'){
         const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Пользователь не найден',404);
@@ -501,22 +653,52 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{list});
       }
       if(url==='/api/admin/search'){
-        // advanced search: hwid, ip, username, email
+        // Deep search by IP, HWID, username, email, reg data across all related tables
         const q=String(b.q||'').trim();
-        if(q.length<3)return bad('Минимум 3 символа');
+        if(q.length<2)return bad('Минимум 2 символа');
+        const resDeep=deepSearch(q);
+        // Also include loader license matches by HWID
         const like='%'+q.replace(/[%_]/g,'')+'%';
-        const byUser=db.prepare('SELECT id,username,email,banned,suspicious,is_reseller FROM users WHERE username LIKE ? OR email LIKE ? LIMIT 20').all(like,like);
-        const byHw=db.prepare('SELECT d.hwid,d.name,d.user_id,d.last_seen,u.username FROM devices d JOIN users u ON u.id=d.user_id WHERE d.hwid LIKE ? LIMIT 20').all(like);
-        const byIp=db.prepare('SELECT l.ip,l.user_id,l.ts,l.ok,l.kind,l.proxy,l.country,u.username FROM logins l JOIN users u ON u.id=l.user_id WHERE l.ip LIKE ? ORDER BY l.ts DESC LIMIT 30').all(like);
-        return send(res,200,{users:byUser,devices:byHw,logins:byIp});
+        let licenses=[];
+        try{licenses=db.prepare('SELECT code,hwid,plan,note,expires_at,revoked,last_seen,created,days FROM loader_licenses WHERE code LIKE ? OR hwid LIKE ? OR note LIKE ? ORDER BY created DESC LIMIT 40').all(like,like,like).map(r=>({...r,status:licStatus(r)}))}catch{}
+        // Linked users by IP/HWID if query looks like one
+        let linkedByIp=[], linkedByHwid=[];
+        try{linkedByIp=deepUserIdsByIp(q)}catch{}
+        try{linkedByHwid=deepUserIdsByHwid(q)}catch{}
+        const linkedIds=[...new Set([...linkedByIp,...linkedByHwid])];
+        const linkedUsers=linkedIds.length?db.prepare(`SELECT id,username,email,banned,suspicious,sub_until,inf,created,reg_ip,trial_hwid FROM users WHERE id IN (${linkedIds.map(()=>'?').join(',')})`).all(...linkedIds).map(u=>({...u,active:active(u)})):[];
+        return send(res,200,{
+          query:q,
+          users:resDeep.users,
+          devices:resDeep.devices,
+          logins:resDeep.logins,
+          hwidlog:resDeep.hwidlog,
+          regs:resDeep.regs,
+          licenses,
+          linked:{byIp:linkedByIp,byHwid:linkedByHwid,users:linkedUsers}
+        });
       }
       if(url==='/api/admin/userdetail'){
         const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Не найден',404);
         const devices=db.prepare('SELECT * FROM devices WHERE user_id=? ORDER BY last_seen DESC').all(t.id);
-        const logins=db.prepare('SELECT ip,kind,ok,ts,proxy,country FROM logins WHERE user_id=? ORDER BY ts DESC LIMIT 30').all(t.id);
-        const hwid=db.prepare('SELECT * FROM hwid_log WHERE user_id=? ORDER BY ts DESC LIMIT 30').all(t.id);
-        const hist=db.prepare('SELECT * FROM sub_history WHERE user_id=? ORDER BY ts DESC LIMIT 20').all(t.id);
-        return send(res,200,{user:t,devices,logins,hwid,hist});
+        const logins=db.prepare('SELECT ip,kind,ok,ts,proxy,country FROM logins WHERE user_id=? ORDER BY ts DESC LIMIT 40').all(t.id);
+        const hwid=db.prepare('SELECT * FROM hwid_log WHERE user_id=? ORDER BY ts DESC LIMIT 40').all(t.id);
+        const hist=db.prepare('SELECT * FROM sub_history WHERE user_id=? ORDER BY ts DESC LIMIT 30').all(t.id);
+        const keys=db.prepare('SELECT code,days,devices,inf,created,note,product,tariff FROM keys WHERE used_by=? ORDER BY created DESC LIMIT 50').all(t.id);
+        // Deep linked accounts by this user's known IPs/HWIDs
+        const ips=new Set([t.reg_ip].filter(Boolean));
+        logins.forEach(r=>r.ip&&ips.add(r.ip));
+        hwid.forEach(r=>r.ip&&ips.add(r.ip));
+        const hwids=new Set([t.trial_hwid].filter(Boolean));
+        devices.forEach(r=>r.hwid&&hwids.add(r.hwid));
+        hwid.forEach(r=>r.hwid&&hwids.add(r.hwid));
+        const linkedIds=new Set();
+        for(const ip of [...ips]) deepUserIdsByIp(ip).forEach(id=>{if(id!==t.id) linkedIds.add(id)});
+        for(const h of [...hwids]) deepUserIdsByHwid(h).forEach(id=>{if(id!==t.id) linkedIds.add(id)});
+        const linkedUsers=[...linkedIds].slice(0,30).length ? db.prepare(`SELECT id,username,email,banned,suspicious,sub_until,inf,created,reg_ip,trial_hwid FROM users WHERE id IN (${[...linkedIds].slice(0,30).map(()=>'?').join(',')})`).all(...[...linkedIds].slice(0,30)).map(u=>({...u,active:active(u)})) : [];
+        let loaderLicenses=[];
+        try{ if(hwids.size) { const hs=[...hwids].slice(0,20); loaderLicenses=db.prepare(`SELECT code,hwid,plan,note,expires_at,revoked,last_seen,created FROM loader_licenses WHERE hwid IN (${hs.map(()=>'?').join(',')}) ORDER BY last_seen DESC LIMIT 30`).all(...hs).map(r=>({...r,status:licStatus(r)})); } }catch{}
+        return send(res,200,{user:{...t,active:active(t)},devices,logins,hwid,hist,keys,linkedUsers,loaderLicenses,known:{ips:[...ips],hwids:[...hwids]}});
       }
       if(url==='/api/admin/clearsuspicious'){
         db.prepare('UPDATE users SET suspicious=0 WHERE id=?').run(+b.id);
@@ -548,6 +730,92 @@ const srv=http.createServer(async(req,res)=>{
         }
         return bad('action?');
       }
+
+      // ---- Loader licenses (direct HWID-bound keys for external loader) ----
+      if(url==='/api/admin/license/gen'){
+        const days=clamp(b.days,0,3650,30);
+        const inf=!!b.inf || days===0 && b.inf!==false && b.days===0 && b.lifetime===true;
+        const lifetime=!!b.lifetime || !!b.inf;
+        const n=clamp(b.count,1,50,1);
+        const note=String(b.note||'').slice(0,200);
+        const plan=String(b.plan||'').slice(0,80);
+        const prefix=String(b.prefix||'FOREV').replace(/[^A-Z0-9]/g,'').slice(0,12)||'FOREV';
+        const maxResets=clamp(b.max_resets,0,100,3);
+        const out=[]; const st=db.prepare('INSERT INTO loader_licenses(code,days,expires_at,hwid,bound_at,last_seen,revoked,note,plan,max_resets,reset_count,created,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        for(let i=0;i<n;i++){
+          const code=makeLicenseKey(prefix);
+          // expires_at=0 means either lifetime or "start on first activation" for day-based keys
+          const exp = lifetime ? 0 : 0;
+          st.run(code, lifetime?0:days, exp, '', 0, 0, 0, note, plan, maxResets, 0, Date.now(), a.id||0);
+          out.push({code,days:lifetime?0:days,lifetime:!!lifetime,plan,note,max_resets:maxResets});
+        }
+        logAudit(a.id,'license_gen',n,(lifetime?'life':days+'d')+' '+plan,ip);
+        return send(res,200,{ok:true,keys:out});
+      }
+      if(url==='/api/admin/licenses'){
+        const q=String(b.q||'').trim().toUpperCase();
+        let list;
+        if(q){
+          const like='%'+q.replace(/[%_]/g,'')+'%';
+          list=db.prepare("SELECT * FROM loader_licenses WHERE code LIKE ? OR hwid LIKE ? OR note LIKE ? OR plan LIKE ? ORDER BY created DESC LIMIT 200").all(like,like,like,like);
+        } else {
+          list=db.prepare('SELECT * FROM loader_licenses ORDER BY created DESC LIMIT 200').all();
+        }
+        list=list.map(r=>({...r,status:licStatus(r)}));
+        return send(res,200,{ok:true,list,now:Date.now()});
+      }
+      if(url==='/api/admin/license/revoke'){
+        const code=String(b.code||'').trim().toUpperCase();
+        const r=db.prepare('UPDATE loader_licenses SET revoked=1 WHERE code=?').run(code);
+        if(!r.changes) return bad('Ключ не найден',404);
+        logAudit(a.id,'license_revoke',code,'',ip);
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/license/unrevoke'){
+        const code=String(b.code||'').trim().toUpperCase();
+        const r=db.prepare('UPDATE loader_licenses SET revoked=0 WHERE code=?').run(code);
+        if(!r.changes) return bad('Ключ не найден',404);
+        logAudit(a.id,'license_unrevoke',code,'',ip);
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/license/delete'){
+        const code=String(b.code||'').trim().toUpperCase();
+        const r=db.prepare('DELETE FROM loader_licenses WHERE code=?').run(code);
+        if(!r.changes) return bad('Ключ не найден',404);
+        logAudit(a.id,'license_delete',code,'',ip);
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/license/reset_hwid'){
+        const code=String(b.code||'').trim().toUpperCase();
+        const lic=db.prepare('SELECT * FROM loader_licenses WHERE code=?').get(code);
+        if(!lic) return bad('Ключ не найден',404);
+        if(lic.max_resets>=0 && lic.reset_count>=lic.max_resets && !b.force)
+          return bad('Лимит сбросов HWID исчерпан ('+lic.reset_count+'/'+lic.max_resets+')');
+        db.prepare('UPDATE loader_licenses SET hwid="",bound_at=0,reset_count=reset_count+1 WHERE code=?').run(code);
+        logAudit(a.id,'license_reset_hwid',code,'',ip);
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/license/extend'){
+        const code=String(b.code||'').trim().toUpperCase();
+        const lic=db.prepare('SELECT * FROM loader_licenses WHERE code=?').get(code);
+        if(!lic) return bad('Ключ не найден',404);
+        const addDays=Math.trunc(+b.days)||0;
+        const setLifetime=!!b.lifetime;
+        const note=b.note!=null ? String(b.note).slice(0,200) : lic.note;
+        const plan=b.plan!=null ? String(b.plan).slice(0,80) : lic.plan;
+        let exp=lic.expires_at||0;
+        let days=lic.days||0;
+        if(setLifetime){ exp=0; days=0; }
+        else if(addDays!==0){
+          if(exp && exp>Date.now()) exp += addDays*DAY; else exp = Date.now() + addDays*DAY;
+          if(exp < Date.now()) exp = Date.now();
+          days = Math.max(days, addDays);
+        }
+        db.prepare('UPDATE loader_licenses SET expires_at=?,days=?,note=?,plan=? WHERE code=?').run(exp,days,note,plan,code);
+        logAudit(a.id,'license_extend',code,(setLifetime?'lifetime':(addDays+'d')),ip);
+        return send(res,200,{ok:true});
+      }
+
       return bad('Не найдено',404);
     }
 
@@ -613,10 +881,16 @@ const srv=http.createServer(async(req,res)=>{
       const salt=crypto.randomBytes(16).toString('hex');
       const rf=db.prepare('SELECT id FROM users WHERE ref_code=? AND banned=0').get(String(b.ref||'').slice(0,16));
       const hwid=String(b.hwid||'').slice(0,128);
-      const trial=TRIAL>0&&!db.prepare('SELECT 1 FROM users WHERE reg_ip=? OR trial_hwid=?').get(ip,hwid)?Date.now()+TRIAL*DAY:0;
-      const r=db.prepare('INSERT INTO users(username,email,hash,salt,created,sub_until,ref_code,referred_by,reg_ip,trial_hwid) VALUES(?,?,?,?,?,?,?,?,?,?)').run(username,email,hashPw(password,salt),salt,Date.now(),trial,crypto.randomBytes(4).toString('hex'),rf?rf.id:null,ip,hwid);
-      logLogin(Number(r.lastInsertRowid),ip,'reg',1);
-      return send(res,200,{ok:true},login(res,Number(r.lastInsertRowid),req));
+      const uid=Number(db.prepare('INSERT INTO users(username,email,hash,salt,created,sub_until,ref_code,referred_by,reg_ip,trial_hwid) VALUES(?,?,?,?,?,?,?,?,?,?)')
+        .run(username,email,hashPw(password,salt),salt,Date.now(),0,crypto.randomBytes(4).toString('hex'),rf?rf.id:null,ip,hwid).lastInsertRowid);
+      let trialKey=null, trialGranted=false;
+      // Deep anti-abuse check: no repeat trial by IP/HWID associations
+      if(!trialBlocked(ip, hwid)){
+        trialGranted=true;
+        trialKey=createUserSubKey(uid, TRIAL, false, 'Пробная подписка', 'trial', 'TRIAL', TRIAL+'d', 1);
+      }
+      logLogin(uid,ip,'reg',1);
+      return send(res,200,{ok:true,trial:trialGranted,trial_key:trialKey||null,trial_days:trialGranted?TRIAL:0},login(res,uid,req));
     }
     if(url==='/api/login'){
       if(isIpBanned(ip))return bad('IP заблокирован',403);
@@ -827,6 +1101,11 @@ const srv=http.createServer(async(req,res)=>{
     }
     if(url==='/api/history'){
       const list=db.prepare('SELECT * FROM sub_history WHERE user_id=? ORDER BY ts DESC LIMIT 30').all(u.id);
+      return send(res,200,{list});
+    }
+    if(url==='/api/mykeys'){
+      // Subscription keys in personal cabinet (redeemable/issued keys belonging to user)
+      const list=db.prepare('SELECT code,days,devices,inf,created,note,product,tariff,used_by FROM keys WHERE used_by=? ORDER BY created DESC LIMIT 100').all(u.id);
       return send(res,200,{list});
     }
     // ---- Reseller panel ----

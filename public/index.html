@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>FOREV EXT — CS2</title><link rel="icon" href="/favicon.png">
@@ -273,32 +273,115 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 
 <main>
 <div id="land">
-<section class="hero" id="top">
-<div class="hw"><img src="/logo.webp" alt="FOREV EXT"></div>
-<p class="tagl">Софт для Counter-Strike 2. Стабильная работа, быстрые обновления и живая поддержка. Всё управление — в личном кабинете.</p>
-<div id="prodstatus" style="margin:10px 0;font-size:14px;color:var(--m)">Загрузка статуса...</div>
-<div class="btns"><button class="btn" onclick="openM('reg')">Создать аккаунт</button><button class="btn ghost" onclick="openM('log')">Войти</button></div>
-<div class="scroll"></div>
+<style>
+.hero2{min-height:100vh;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:120px 5vw 80px;max-width:1200px;margin:auto}
+@media(max-width:900px){.hero2{grid-template-columns:1fr;padding-top:110px;text-align:center}.hero2 .actions{justify-content:center}.hero2 .mini{justify-content:center}}
+.hbadge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid #ff1f3d55;background:#ff1f3d12;color:#ffb3be;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:18px}
+.h1{font-size:clamp(40px,6vw,72px);line-height:.95;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px}
+.h1 span{display:block;color:transparent;-webkit-text-stroke:1px #fff}.h1 b{color:var(--r);-webkit-text-stroke:0}
+.hsub{color:var(--m);max-width:560px;font-size:17px;margin:0 0 28px}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.mini{display:flex;gap:18px;flex-wrap:wrap;color:#cfcfcf;font-size:13px}
+.mini i{color:var(--r);font-style:normal;font-weight:800;margin-right:6px}
+.heroCard{position:relative;background:linear-gradient(160deg,#121212,#090909 60%);border:1px solid #2a2a2a;box-shadow:0 30px 80px #000;overflow:hidden}
+.heroCard::before{content:"";position:absolute;inset:-40% -10% auto auto;width:420px;height:420px;background:radial-gradient(circle,#ff1f3d33,transparent 65%);filter:blur(10px)}
+.heroCard .shot{position:relative;padding:26px 26px 0}
+.heroCard .shot img{width:100%;max-width:420px;display:block;margin:0 auto;filter:drop-shadow(0 20px 50px #ff1f3d22);animation:fl 7s ease-in-out infinite}
+.heroStats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:18px 18px 20px;border-top:1px solid #242424;background:#0b0b0bcc}
+.heroStats div{background:#121212;border:1px solid #242424;padding:12px 10px;text-align:center}
+.heroStats b{display:block;color:#fff;font-size:18px}.heroStats span{font-size:11px;color:var(--m);text-transform:uppercase;letter-spacing:1px}
+.band{max-width:1200px;margin:10px auto 0;padding:0 5vw 10px}
+.bandGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:900px){.bandGrid{grid-template-columns:repeat(2,1fr)}}
+.pill{padding:16px 16px;border:1px solid #252525;background:#0b0b0b;color:#d8d8d8;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:12px;display:flex;align-items:center;gap:10px}
+.pill em{width:8px;height:8px;background:var(--r);box-shadow:0 0 12px var(--r);display:inline-block}
+.sec{padding:90px 5vw;max-width:1200px;margin:auto}
+.secHead{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:28px;flex-wrap:wrap}
+.secHead h2{text-align:left;margin:0}.secHead h2::after{margin:14px 0 0}
+.secHead p{margin:0;color:var(--m);max-width:520px}
+.featureGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.featureGrid{grid-template-columns:1fr}}
+.fcard{padding:26px;border:1px solid #242424;background:linear-gradient(180deg,#101010,#0a0a0a);position:relative;overflow:hidden;min-height:190px}
+.fcard::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border:1px solid #ff1f3d33;border-radius:50%}
+.fcard h3{margin:0 0 10px;font-size:20px;text-transform:uppercase}.fcard p{margin:0;color:var(--m)}
+.fnum{font-size:12px;color:var(--r);font-weight:800;letter-spacing:2px;margin-bottom:14px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch}
+@media(max-width:900px){.split{grid-template-columns:1fr}}
+.panel{border:1px solid #242424;background:#0b0b0b;padding:28px}
+.steps2{display:grid;gap:12px}
+.step{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start;padding:14px;border:1px solid #232323;background:#101010}
+.step b{width:44px;height:44px;display:grid;place-items:center;background:#ff1f3d1a;border:1px solid #ff1f3d55;color:#fff}
+.step h4{margin:0 0 4px;font-size:16px}.step p{margin:0;color:var(--m);font-size:14px}
+.cta2{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:30px;border:1px solid #ff1f3d55;background:linear-gradient(90deg,#14090b,#0b0b0b 45%);box-shadow:inset 0 0 0 1px #ffffff08}
+.cta2 h3{margin:0;font-size:28px;text-transform:uppercase}.cta2 p{margin:6px 0 0;color:#c9aeb3}
+</style>
+
+<section class="hero2" id="top">
+  <div>
+    <div class="hbadge">CS2 External вЂў Loader вЂў HWID License</div>
+    <h1 class="h1"><span>FOREV</span><b>CONTROL PANEL</b></h1>
+    <p class="hsub">РќРѕРІС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ СЃР°Р№С‚Р°: Р»РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚ СЃ РєР»СЋС‡Р°РјРё РїРѕРґРїРёСЃРєРё, Р°РґРјРёРЅ-РїР°РЅРµР»СЊСЋ, РіР»СѓР±РѕРєРёРј РїРѕРёСЃРєРѕРј РїРѕ IP/HWID Рё Р·Р°С‰РёС‚РѕР№ РѕС‚ РїРѕРІС‚РѕСЂРЅРѕР№ Р°РєС‚РёРІР°С†РёРё РїСЂРѕР±РЅРѕРіРѕ РїРµСЂРёРѕРґР°.</p>
+    <div id="prodstatus" style="margin:0 0 18px;font-size:14px;color:var(--m)">Р—Р°РіСЂСѓР·РєР° СЃС‚Р°С‚СѓСЃР°...</div>
+    <div class="actions">
+      <button class="btn" onclick="openM('reg')">РЎРѕР·РґР°С‚СЊ Р°РєРєР°СѓРЅС‚</button>
+      <button class="btn ghost" onclick="openM('log')">Р’РѕР№С‚Рё РІ РєР°Р±РёРЅРµС‚</button>
+      <button class="btn ghost" onclick="go('feat')">Р’РѕР·РјРѕР¶РЅРѕСЃС‚Рё</button>
+    </div>
+    <div class="mini"><div><i>01</i>РўСЂРёР°Р»-РєР»СЋС‡ РїСЂРё СЂРµРіРёСЃС‚СЂР°С†РёРё</div><div><i>02</i>РџРѕРґРїРёСЃРєР° РєР»СЋС‡РѕРј РІ РєР°Р±РёРЅРµС‚Рµ</div><div><i>03</i>РћРЅР»Р°Р№РЅ-РІР°Р»РёРґР°С†РёСЏ HWID</div></div>
+  </div>
+  <div class="heroCard">
+    <div class="shot"><img src="/logo.webp" alt="FOREV EXT"></div>
+    <div class="heroStats">
+      <div><b>24/7</b><span>Р”РѕСЃС‚СѓРї</span></div>
+      <div><b>HWID</b><span>РџСЂРёРІСЏР·РєР°</span></div>
+      <div><b>IP+HWID</b><span>РђРЅС‚РёР°Р±СѓР·</span></div>
+    </div>
+  </div>
 </section>
-<div class="mq"><div><span>STABLE</span><span>FAST</span><span>UPDATES</span><span>SUPPORT</span><span>CS2</span><span>FOREV EXT</span><span>STABLE</span><span>FAST</span><span>UPDATES</span><span>SUPPORT</span><span>CS2</span><span>FOREV EXT</span></div></div>
 
-<section id="feat"><h2 class="rv">Почему <b>FOREV EXT</b></h2><p class="lead rv">Всё, что нужно для комфортной игры, в одном месте.</p>
-<div class="grid">
-<div class="card rv"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Производительность</h3><p>Оптимизированная работа без просадок FPS.</p></div>
-<div class="card rv" style="--d:.08s"><div class="ic i-ref"><svg viewBox="0 0 24 24"><path class="a" d="M20 11a8 8 0 0 0-14-4M4 13a8 8 0 0 0 14 4"/><path d="M20 4v5h-5M4 20v-5h5"/></svg></div><h3>Обновления</h3><p>Быстрая адаптация после обновлений игры.</p></div>
-<div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr" pathLength="1" d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path class="dr a" pathLength="1" d="m8.5 12 2.5 2.5 4.5-5"/></svg></div><h3>Поддержка</h3><p>Помощь с установкой и вопросами по аккаунту.</p></div>
-<div class="card rv" style="--d:.24s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="8" cy="15" r="4"/><path class="dr" pathLength="1" d="m11 12 9-9M17 6l3 3"/></svg></div><h3>Личный кабинет</h3><p>Активация ключей и статус подписки онлайн.</p></div>
-</div></section>
+<div class="band"><div class="bandGrid">
+  <div class="pill"><em></em>РђРґРјРёРЅРєР° Рё РіРµРЅРµСЂР°С†РёСЏ РєР»СЋС‡РµР№</div>
+  <div class="pill"><em></em>РџРѕРёСЃРє РїРѕ IP / HWID / Р°РєРєР°СѓРЅС‚Сѓ</div>
+  <div class="pill"><em></em>РљР»СЋС‡Рё РїРѕРґРїРёСЃРєРё РІ Р»РёС‡РЅРѕРј РєР°Р±РёРЅРµС‚Рµ</div>
+  <div class="pill"><em></em>РџСЂРѕР±РЅС‹Р№ РїРµСЂРёРѕРґ РѕРґРёРЅ СЂР°Р·</div>
+</div></div>
 
-<section id="how"><h2 class="rv">Как <b>начать</b></h2><p class="lead rv">Три простых шага.</p>
-<div class="grid steps">
-<div class="card rv"><span class="num">01</span><div class="ic"><svg viewBox="0 0 24 24"><circle class="a dr" pathLength="1" cx="12" cy="8" r="4"/><path class="dr" pathLength="1" d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><h3>Регистрация</h3><p>Создайте аккаунт за минуту.</p></div>
-<div class="card rv" style="--d:.12s"><span class="num">02</span><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="8" cy="15" r="4"/><path class="dr" pathLength="1" d="m11 12 9-9M17 6l3 3"/></svg></div><h3>Получите ключ</h3><p>Ключ выдаёт администратор.</p></div>
-<div class="card rv" style="--d:.24s"><span class="num">03</span><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr" pathLength="1" cx="12" cy="12" r="9"/><path class="dr a" pathLength="1" d="m8 12.5 3 3 5-6"/></svg></div><h3>Активируйте</h3><p>Введите ключ в личном кабинете.</p></div>
-</div></section>
-<section><div class="cta rv"><h2>Готовы <b>начать?</b></h2><button class="btn" onclick="openM('reg')">Создать аккаунт</button></div></section>
+<section id="feat" class="sec">
+  <div class="secHead"><h2 class="rv">Р’РѕР·РјРѕР¶РЅРѕСЃС‚Рё <b>СЃРёСЃС‚РµРјС‹</b></h2><p class="rv">РЈРїСЂР°РІР»РµРЅРёРµ РїРѕРґРїРёСЃРєР°РјРё, Р»РёС†РµРЅР·РёСЏРјРё Р»РѕР°РґРµСЂР° Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРјРё РІ РѕРґРЅРѕРј РёРЅС‚РµСЂС„РµР№СЃРµ.</p></div>
+  <div class="featureGrid">
+    <div class="fcard rv"><div class="fnum">LICENSES</div><h3>РљР»СЋС‡Рё Рё РїРѕРґРїРёСЃРєРё</h3><p>Р“РµРЅРµСЂР°С†РёСЏ, РІС‹РґР°С‡Р°, РїСЂРѕРґР»РµРЅРёРµ Рё РѕС‚Р·С‹РІ РєР»СЋС‡РµР№. РџСЂРѕР±РЅР°СЏ Рё РїР»Р°С‚РЅР°СЏ РїРѕРґРїРёСЃРєР° РѕС„РѕСЂРјР»СЏСЋС‚СЃСЏ РєР°Рє РєР»СЋС‡Рё РІ РєР°Р±РёРЅРµС‚Рµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.</p></div>
+    <div class="fcard rv" style="--d:.08s"><div class="fnum">SECURITY</div><h3>Р“Р»СѓР±РѕРєР°СЏ РїСЂРѕРІРµСЂРєР°</h3><p>РџРѕРёСЃРє Рё СЃРІСЏР·С‹РІР°РЅРёРµ Р°РєРєР°СѓРЅС‚РѕРІ РїРѕ IP Рё HWID, РєРѕРЅС‚СЂРѕР»СЊ РїРѕРІС‚РѕСЂРЅС‹С… РїСЂРѕР±РЅС‹С… РїРµСЂРёРѕРґРѕРІ Рё СЃРІСЏР·Р°РЅРЅС‹С… СѓСЃС‚СЂРѕР№СЃС‚РІ/РІС…РѕРґРѕРІ.</p></div>
+    <div class="fcard rv" style="--d:.16s"><div class="fnum">CABINET</div><h3>Р›РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚</h3><p>РђРєС‚РёРІР°С†РёСЏ РєР»СЋС‡РµР№, РїСЂРѕСЃРјРѕС‚СЂ СЃС‚Р°С‚СѓСЃР° РїРѕРґРїРёСЃРєРё, РёСЃС‚РѕСЂРёРё Рё РєР»СЋС‡РµР№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, СѓРїСЂР°РІР»РµРЅРёРµ РїСЂРѕС„РёР»РµРј Рё СѓСЃС‚СЂРѕР№СЃС‚РІР°РјРё.</p></div>
+  </div>
+</section>
+
+<section id="how" class="sec" style="padding-top:40px">
+  <div class="split">
+    <div class="panel rv">
+      <h2 style="text-align:left;margin-bottom:8px">РљР°Рє СЌС‚Рѕ <b>СЂР°Р±РѕС‚Р°РµС‚</b></h2>
+      <p style="color:var(--m);margin-bottom:18px">РџСѓС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РѕС‚ СЂРµРіРёСЃС‚СЂР°С†РёРё РґРѕ Р°РєС‚РёРІР°С†РёРё Р»РёС†РµРЅР·РёРё.</p>
+      <div class="steps2">
+        <div class="step"><b>1</b><div><h4>Р РµРіРёСЃС‚СЂР°С†РёСЏ</h4><p>РЎРѕР·РґР°С‘С‚СЃСЏ Р°РєРєР°СѓРЅС‚, РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РїСЂРѕРІРµСЂРєР° IP/HWID Рё РїСЂРё РїРµСЂРІРѕРј РґРѕРїСѓСЃС‚РёРјРѕРј РІС…РѕРґРµ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РІС‹РґР°С‘С‚СЃСЏ РїСЂРѕР±РЅС‹Р№ РєР»СЋС‡.</p></div></div>
+        <div class="step"><b>2</b><div><h4>РљР»СЋС‡ РїРѕРґРїРёСЃРєРё</h4><p>РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РёР»Рё СЃРёСЃС‚РµРјР° СЃРѕР·РґР°С‘С‚ РєР»СЋС‡ РЅР° РЅСѓР¶РЅС‹Р№ СЃСЂРѕРє. РљР»СЋС‡ С…СЂР°РЅРёС‚СЃСЏ Рё РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РІ Р»РёС‡РЅРѕРј РєР°Р±РёРЅРµС‚Рµ.</p></div></div>
+        <div class="step"><b>3</b><div><h4>РђРєС‚РёРІР°С†РёСЏ РІ Р»РѕР°РґРµСЂРµ</h4><p>Р›РѕР°РґРµСЂ РїСЂРѕРІРµСЂСЏРµС‚ РєР»СЋС‡ РѕРЅР»Р°Р№РЅ РїРѕ HWID Рё Р°РєС‚РёРІРёСЂСѓРµС‚ РґРѕСЃС‚СѓРї РїСЂРё СѓСЃРїРµС€РЅРѕР№ РІР°Р»РёРґР°С†РёРё.</p></div></div>
+      </div>
+    </div>
+    <div class="panel rv" style="--d:.1s;display:flex;flex-direction:column;justify-content:center">
+      <div class="cta2">
+        <div>
+          <h3>Р“РѕС‚РѕРІРѕ Рє СЂР°Р±РѕС‚Рµ</h3>
+          <p>Р’РѕР№РґРёС‚Рµ РІ Р°РєРєР°СѓРЅС‚, С‡С‚РѕР±С‹ РѕС‚РєСЂС‹С‚СЊ РєР°Р±РёРЅРµС‚, РєР»СЋС‡Рё Рё Р°РґРјРёРЅ-С„СѓРЅРєС†РёРё (РґР»СЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°).</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" onclick="openM('reg')">Р РµРіРёСЃС‚СЂР°С†РёСЏ</button>
+          <button class="btn ghost" onclick="openM('log')">Р’С…РѕРґ</button>
+        </div>
+      </div>
+      <div style="margin-top:14px;color:var(--m);font-size:13px">Р”Р»СЏ РїСЂРѕРґР°РєС€РµРЅР° Р·Р°РґР°Р№С‚Рµ <code>ADMIN_PASSWORD</code>, РїСЂР°РІР° Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° Рё РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё <code>KEEPALIVE_URL</code>, <code>DATA_FILE</code>.</div>
+    </div>
+  </div>
+</section>
 </div>
-
 <section id="cab">
 <div class="prof rv"><div class="av" id="av"></div><div><h2 id="cu"></h2><p id="ce"></p><span class="bdg" id="adb" style="display:none">ADMIN</span></div></div>
 <div id="notifbox" class="lst" style="margin-bottom:16px"></div>
@@ -338,9 +421,10 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <pre id="rslOut" style="margin-top:10px;font-size:12px;white-space:pre-wrap"></pre>
 <div id="rslList" style="margin-top:8px;max-height:200px;overflow:auto"></div>
 </div>
-<div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="8" cy="15" r="4"/><path class="dr" pathLength="1" d="m11 12 9-9M17 6l3 3"/></svg></div><h3>Ключ / промокод</h3><p>Введите ключ или промокод, чтобы продлить подписку.</p>
-<div class="cab-in"><div class="fld"><input id="key" placeholder=" "><label>Ключ или промокод</label><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/></svg></div><button class="btn sm" onclick="redeem()">OK</button></div><div class="err" id="ke" style="margin-top:8px"></div></div>
-<div class="card rv" style="--d:.24s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M3 8h18v4H3zM12 8v13M5 12v9h14v-9M12 8C9 8 7 7 7 5s3-2 5 3c2-5 5-5 5-3s-2 3-5 3"/></svg></div><h3>Подарить дни</h3><p>Дни спишутся с вашей подписки и уйдут получателю.</p>
+<div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="8" cy="15" r="4"/><path class="dr" pathLength="1" d="m11 12 9-9M17 6l3 3"/></svg></div><h3>Активировать ключ</h3><p>Введите ключ подписки или промокод, чтобы продлить доступ.</p>
+<div class="cab-in"><div class="fld"><input id="key" placeholder=" "><label>Ключ / промокод</label><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/></svg></div><button class="btn sm" onclick="redeem()">OK</button></div><div class="err" id="ke" style="margin-top:8px"></div></div>
+<div class="card rv" style="--d:.2s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr a" pathLength="1" x="4" y="5" width="16" height="14" rx="2"/><path class="dr" pathLength="1" d="M8 9h8M8 13h5"/></svg></div><h3>Мои ключи подписки</h3><p>Ключи, выданные вашему аккаунту (включая пробный при регистрации). Отображаются все подписочные/выданные ключи в кабинете.</p>
+<div class="lst" id="mkList"><p style="color:var(--m)">Загрузка...</p></div><button class="btn sm ghost" style="margin-top:8px" onclick="loadMyKeys()">Обновить</button></div><div class="card rv" style="--d:.24s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M3 8h18v4H3zM12 8v13M5 12v9h14v-9M12 8C9 8 7 7 7 5s3-2 5 3c2-5 5-5 5-3s-2 3-5 3"/></svg></div><h3>Подарить дни</h3><p>Дни спишутся с вашей подписки и уйдут получателю.</p>
 <div class="cab-in"><div class="fld "><input autocomplete="off" oninput="gs()" id="gto"  placeholder=" " ><label>Ник получателя</label><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="fld n"><input id="gd" type="number" min="1" placeholder=" " ><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><button class="btn sm" onclick="gift()">Подарить</button></div>
 <div class="chips" id="sug"></div><div class="err" id="ge"></div><div class="lst" id="gh"></div></div>
 <div class="card rv" style="--d:.32s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr a" pathLength="1" x="3" y="4" width="18" height="12" rx="2"/><path class="dr" pathLength="1" d="M8 20h8M12 16v4"/></svg></div><h3>Устройства <span id="dvh" style="color:var(--r)"></span></h3><p>Привязка по HWID. Лимит задаётся ключом.</p><div class="lst" id="dv"></div></div>
@@ -360,7 +444,7 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <div class="fld "><input id="ts"  placeholder=" " ><label>Тема</label><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></div><div class="fld ta"><textarea id="tt" placeholder=" "></textarea><label>Сообщение</label></div><div class="row" style="margin:0 0 6px"><button class="btn sm" onclick="tnew()">Отправить тикет</button></div><div class="err" id="te"></div>
 <div class="lst" id="tl"></div><div id="tv"></div></div>
 <div class="card w" id="adm" style="display:none"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></div><h3>Админ-панель</h3>
-<div class="seg" id="seg"><button class="on" onclick="at(0)">Выдать ключ</button><button onclick="at(1)">Ключи</button><button onclick="at(2)">Пользователи</button><button onclick="at(3)">Промокоды</button><button onclick="at(4)">Тикеты</button><button onclick="at(5)">Новости</button><button onclick="at(6)">Статистика</button><button onclick="at(7)">Настройки</button><button onclick="at(8)">Аудит</button><button onclick="at(9)">Графики</button><button onclick="at(10)">Купоны</button><button onclick="at(11)">Топ реф</button><button onclick="at(12)">IP списки</button><button onclick="at(13)">Экспорт</button><button onclick="at(14)">Поиск HWID/IP</button><button onclick="at(15)">HWID лог</button><button onclick="at(16)">Конфиги</button></div>
+<div class="seg" id="seg"><button class="on" onclick="at(0)">Выдать ключ</button><button onclick="at(1)">Ключи</button><button onclick="at(2)">Пользователи</button><button onclick="at(3)">Промокоды</button><button onclick="at(4)">Тикеты</button><button onclick="at(5)">Новости</button><button onclick="at(6)">Статистика</button><button onclick="at(7)">Настройки</button><button onclick="at(8)">Аудит</button><button onclick="at(9)">Графики</button><button onclick="at(10)">Купоны</button><button onclick="at(11)">Топ реф</button><button onclick="at(12)">IP списки</button><button onclick="at(13)">Экспорт</button><button onclick="at(14)">Поиск HWID/IP</button><button onclick="at(15)">HWID лог</button><button onclick="at(16)">Конфиги</button><button onclick="at(17)">Лицензии</button></div>
 <div id="ap14" style="display:none">
 <div class="search-box"><input id="advQ" placeholder="HWID / IP / ник / email" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><button class="btn sm" onclick="advSearch()">Найти</button></div>
 <div id="advRes"></div>
@@ -382,7 +466,24 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
   </div>
   <div class="lst" id="cfgAdmList" style="margin-top:12px"></div>
 </div>
-<div id="ap15" style="display:none">
+<div id="ap17" style="display:none">
+  <h3 style="margin:0 0 10px">Лицензии лоадера (HWID-ключи)</h3>
+  <p style="margin:0 0 12px;font-size:13px;color:var(--m)">Ключи для внешнего лоадера (проверка через <code>/api/validate</code>). HWID привязывается при первой активации. Подписка: срок в днях или бессрочно, продление, отзыв, сброс HWID.</p>
+  <div class="cab-in" style="margin-bottom:10px">
+    <div class="fld n"><input id="licDays" type="number" min="0" value="30"><label>Дней (0 = при lifetime)</label></div>
+    <div class="fld n"><input id="licCount" type="number" min="1" max="50" value="1"><label>Количество</label></div>
+    <div class="fld n"><input id="licResets" type="number" min="0" value="3"><label>Сбросов HWID</label></div>
+    <div class="fld"><input id="licPlan" placeholder=" "><label>План/тариф (опц.)</label></div>
+    <div class="fld"><input id="licNote" placeholder=" "><label>Заметка (опц.)</label></div>
+    <div class="fld"><input id="licPrefix" placeholder=" " value="FOREV"><label>Префикс</label></div>
+    <label class="chk"><input type="checkbox" id="licLife"> Бессрочно (lifetime)</label>
+    <div class="row" style="margin:8px 0 0"><button class="btn" onclick="licGen()">Создать ключи</button><button class="btn ghost" onclick="licList()">Обновить список</button></div>
+  </div>
+  <div id="licOut" style="margin:8px 0;font-size:13px;white-space:pre-wrap"></div>
+  <div class="cab-in" style="margin:10px 0"><div class="fld"><input id="licQ" placeholder=" " oninput="licSearchDeb()"><label>Поиск: ключ / HWID / заметка / план</label></div></div>
+  <div class="lst" id="licList"></div>
+</div>
+    <div id="ap15" style="display:none">
 <button class="btn sm" onclick="loadHwidLog()">Обновить</button>
 <div id="hwidLogList" style="margin-top:10px;max-height:400px;overflow:auto"></div>
 </div>
@@ -523,13 +624,21 @@ async function submit(){const b=$('mb');b.classList.add('ld');$('me').textConten
   const payload={captcha_id:captchaId,captcha:$('capA')?.value};
   if(mode==='reg')r=await api('/api/register',{username:$('f1').value,email:$('f2').value,password:$('f3').value,ref:REF,...payload});
   else r=await api('/api/login',{login:$('f1').value,password:$('f3').value,...payload});
-  closeM();$('f3').value='';await init();user&&toast('Добро пожаловать, '+user.username+'!');
+  closeM();$('f3').value='';await init();
+  if(user){
+    if(mode==='reg'&&r&&r.trial_key){toast('Аккаунт создан. Пробный ключ: '+r.trial_key);try{alert('Аккаунт создан!
+Пробный ключ (сохранён в личном кабинете):
+'+r.trial_key+(r.trial_days?('
+Срок: '+r.trial_days+' дн.') :''));}catch{} if(typeof loadMyKeys==='function')loadMyKeys();}
+    else if(mode==='reg'&&r&&r.trial===false){toast('Аккаунт создан (пробный период недоступен)');}
+    else {toast('Добро пожаловать, '+user.username+'!');}
+  }
  }
  catch(e){$('me').textContent=e.message;const a=$('am');a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake');loadCaptcha()}
  b.classList.remove('ld')}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&$('ov').classList.contains('on'))submit();if(e.key==='Escape'){closeM();tm(0)}});
 async function logout(){tm(0);await api('/api/logout');user=null;render();scrollTo(0,0);toast('Вы вышли из аккаунта')}
-async function redeem(){try{const r=await api('/api/redeem',{key:$('key').value});$('key').value='';$('ke').textContent='';await init();toast(r.promo?'Промокод: +'+r.days+' дн.':'Ключ активирован!')}catch(e){$('ke').textContent=e.message}}
+async function redeem(){try{const r=await api('/api/redeem',{key:$('key').value});$('key').value='';$('ke').textContent='';await init();if(typeof loadMyKeys==='function')loadMyKeys();toast(r.promo?('Промокод: +'+r.days+' дн.'):'Ключ активирован!')}catch(e){$('ke').textContent=e.message}}
 async function showConfigs(){
   let box=$('cfgBox');
   if(!box){
@@ -576,7 +685,21 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
  }
  setTimeout(obs,50)}
 async function loadStatus(){try{const r=await fetch('/api/status');const s=await r.json();const el=$('prodstatus');if(el)el.innerHTML=`Статус: <b>${esc(s.status||'online')}</b> — ${esc(s.text||'')}${s.maintenance?' <span style="color:var(--r)">(техработы)</span>':''}${s.killswitch?' <span style="color:red">(отключён)</span>':''}`;}catch{}}
-async function init(){for(let n=0;n<4;n++){try{const r=await fetch('/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render();loadStatus()}
+async function loadMyKeys(){
+  const el=$('mkList'); if(!el) return;
+  if(!user){el.innerHTML='<p style="color:var(--m)">Войдите в аккаунт</p>';return}
+  try{
+    const r=await api('/api/mykeys');
+    const list=r.list||[];
+    if(!list.length){el.innerHTML='<p style="color:var(--m)">Ключей пока нет. При регистрации (если доступен пробный период) ключ создаётся автоматически.</p>';return}
+    el.innerHTML=list.map(k=>{
+      const label=k.inf?'Бессрочно':((k.days||0)+' дн.');
+      const meta=[k.product,k.tariff,k.note].filter(Boolean).join(' • ');
+      return `<div class="it"><div style="min-width:0"><b style="word-break:break-all">${esc(k.code||'')}</b><small>${esc(label)}${meta?' · '+esc(meta):''}<br>${k.created?fd(k.created):''}</small></div><button class="xs" onclick="cp('${String(k.code||'').replace(/'/g,"\\'")}')" title="Копировать">⎘</button></div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<p style="color:var(--r)">'+esc(e.message||'Ошибка загрузки ключей')+'</p>'}
+}
+async function init(){for(let n=0;n<4;n++){try{const r=await fetch('/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render();if(user)loadMyKeys();loadStatus()}
 /* кабинет: заморозка, подарки, устройства, админка */
 const D=864e5,esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fd=t=>new Date(t).toLocaleDateString('ru');
 const cp=t=>navigator.clipboard.writeText(t).then(()=>toast('Скопировано'),()=>toast('Не удалось скопировать',1));
@@ -589,7 +712,7 @@ async function loadDev(){try{const r=await api('/api/devices');$('dvh').textCont
  $('dv').innerHTML=r.list.map(d=>`<div class="it"><div>${esc(d.name||'Устройство')}<small>последний вход: ${fd(d.last_seen)}</small></div><button class="xs" onclick="dd(${d.id})" aria-label="Удалить">×</button></div>`).join('')||'<p>Пусто. Устройство добавится при первом входе в клиент.</p>'}catch{}}
 async function dd(id){try{await api('/api/device/del',{id});loadDev();toast('Устройство удалено')}catch(e){toast(e.message,1)}}
 /* админка */
-function at(i){[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].forEach(k=>{const el=$('ap'+k);if(el)el.style.display=k===i?'':'none';if($('seg').children[k])$('seg').children[k].classList.toggle('on',k===i)});$('seg').children[i]?.scrollIntoView({inline:'center',block:'nearest'});[null,lk,ul,pli,()=>tlist(1),nli,stt,loadSet,loadAud,loadChart,loadCoup,loadTop,loadIp,null,()=>{},loadHwidLog,loadCfgAdm][i]?.()}
+function at(i){[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].forEach(k=>{const el=$('ap'+k);if(el)el.style.display=k===i?'':'none';if($('seg').children[k])$('seg').children[k].classList.toggle('on',k===i)});$('seg').children[i]?.scrollIntoView({inline:'center',block:'nearest'});[null,lk,ul,pli,()=>tlist(1),nli,stt,loadSet,loadAud,loadChart,loadCoup,loadTop,loadIp,null,()=>{},loadHwidLog,loadCfgAdm,licList][i]?.()}
 function pd(n){$('ki').checked=!n;if(n)$('kd').value=n}
 async function mk(){try{const r=await api('/api/admin/genkey',{days:+$('kd').value,devices:+$('kv').value,count:+$('kc').value,inf:$('ki').checked,prefix:$('kpre').value,note:$('knote').value,product:$('kprod')?.value||'',tariff:$('ktar')?.value||''});$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Создано ключей: '+r.keys.length)}catch(e){toast(e.message,1)}}
 async function impKeys(){try{const r=await api('/api/admin/importkeys',{list:$('klist').value,days:+$('kd').value,devices:+$('kv').value,inf:$('ki').checked,product:$('kprod')?.value||'',tariff:$('ktar')?.value||'',note:$('knote').value||'import'});$('klist').value='';$('kout').textContent=r.keys.join('\n');$('kcp').style.display='';toast('Импортировано: '+r.added+' из '+r.total);lk()}catch(e){toast(e.message,1)}}
@@ -656,6 +779,16 @@ async function loadCfgAdm(){try{const r=await api('/api/admin/configs');$('cfgOp
 async function cfgAdd(){try{await api('/api/admin/config/add',{title:$('cfgTitle').value,description:$('cfgDesc').value,content:$('cfgContent').value,photo:$('cfgPhoto').value,is_file:$('cfgIsFile').checked,filename:$('cfgFname').value});$('cfgTitle').value=$('cfgDesc').value=$('cfgContent').value=$('cfgPhoto').value=$('cfgFname').value='';toast('Добавлено');loadCfgAdm()}catch(e){toast(e.message,1)}}
 async function cfgDel(id){try{await api('/api/admin/config/del',{id});loadCfgAdm()}catch(e){toast(e.message,1)}}
 async function cfgTog(id){try{await api('/api/admin/config/toggle',{id});loadCfgAdm()}catch(e){toast(e.message,1)}}
+
+async function licGen(){try{const r=await api('/api/admin/license/gen',{days:+$('licDays').value,count:+$('licCount').value,max_resets:+$('licResets').value,plan:$('licPlan').value,note:$('licNote').value,prefix:$('licPrefix').value,lifetime:$('licLife').checked});if(!r.ok){toast(r.error||'Ошибка',1);$('licOut').textContent=JSON.stringify(r,null,2);return}const keys=(r.keys||[]).map(k=>k.code).join('\n');$('licOut').innerHTML='<b>Созданы ключи (нажмите для копирования):</b><br><code style="white-space:pre-wrap;cursor:pointer" onclick="cp(this.textContent)">'+keys.replace(/</g,'&lt;')+'</code>';toast('Создано: '+(r.keys||[]).length);licList()}catch(e){toast(e.message,1);$('licOut').textContent=e.message}}
+let licT;function licSearchDeb(){clearTimeout(licT);licT=setTimeout(licList,300)}
+async function licList(){try{const q=($('licQ')&&$('licQ').value)||'';const r=await api('/api/admin/licenses',{q});if(!r.ok){toast(r.error||'Ошибка',1);return}const now=Date.now();const fmt=d=>d?new Date(d).toLocaleString():'—';$('licList').innerHTML=(r.list||[]).map(k=>{const st=k.status||'active';const col=st==='active'?'#4caf50':st==='expired'?'#ff9800':st==='revoked'?'#f44336':'#9e9e9e';let exp='бессрочно';if(k.expires_at)exp=fmt(k.expires_at);else if(k.days>0&&!k.hwid)exp='старт при активации ('+k.days+' дн.)';const left=k.expires_at&&k.expires_at>now?(' (ост. '+Math.ceil((k.expires_at-now)/864e5)+' дн.)'):'';return '<div class="it"><div style="min-width:0"><code style="cursor:pointer" onclick="cp(\''+k.code+'\')">'+k.code+'</code> <span style="color:'+col+';font-size:12px">['+st+']</span><br><small>План: '+esc(k.plan||'—')+' | HWID: '+(k.hwid?('<code>'+esc(k.hwid)+'</code>'):'не привязан')+' | Истекает: '+exp+left+' | Сбросы HWID: '+(k.reset_count||0)+'/'+(k.max_resets||0)+' | Last: '+fmt(k.last_seen)+'<br>Заметка: '+esc(k.note||'—')+'</small></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn sm ghost" onclick="licExtend(\''+k.code+'\')">Продлить</button><button class="btn sm ghost" onclick="licReset(\''+k.code+'\')">Сброс HWID</button>'+(k.revoked?'<button class="btn sm" onclick="licUnrevoke(\''+k.code+'\')">Восст.</button>':'<button class="btn sm ghost" onclick="licRevoke(\''+k.code+'\')">Отозвать</button>')+'<button class="btn sm ghost" onclick="licDel(\''+k.code+'\')">Удалить</button></div></div>'}).join('')||'<p style="color:var(--m)">Нет лицензий</p>'}catch(e){toast(e.message,1)}}
+async function licRevoke(code){if(!confirm('Отозвать ключ '+code+'?'))return;try{await api('/api/admin/license/revoke',{code});toast('Отозван');licList()}catch(e){toast(e.message,1)}}
+async function licUnrevoke(code){try{await api('/api/admin/license/unrevoke',{code});toast('Восстановлен');licList()}catch(e){toast(e.message,1)}}
+async function licDel(code){if(!confirm('Удалить ключ '+code+' навсегда?'))return;try{await api('/api/admin/license/delete',{code});toast('Удалён');licList()}catch(e){toast(e.message,1)}}
+async function licReset(code){if(!confirm('Сбросить HWID для '+code+'?'))return;try{const r=await api('/api/admin/license/reset_hwid',{code});if(!r.ok){toast(r.error||'Ошибка',1);return}toast('HWID сброшен');licList()}catch(e){toast(e.message,1)}}
+async function licExtend(code){const days=prompt('Добавить дней (0 = без изменения срока):','30');if(days===null)return;const life=confirm('Сделать бессрочным? (OK = да, Отмена = нет)');const note=prompt('Новая заметка (оставьте пустым чтобы не менять):');try{const body={code,days:+days||0,lifetime:life};if(note!==null && note!=='') body.note=note;const r=await api('/api/admin/license/extend',body);if(!r.ok){toast(r.error||'Ошибка',1);return}toast('Обновлено');licList()}catch(e){toast(e.message,1)}}
+
 async function toggleConfigsOpen(){try{const r=await api('/api/admin/configs');const now=!(r.open==='1'||r.open===true);await api('/api/admin/configs/open',{open:now});loadCfgAdm();toast(now?'Раздел открыт':'Раздел закрыт')}catch(e){toast(e.message,1)}}
 
 async function cadd(){try{const r=await api('/api/admin/coupon/add',{code:$('ccode').value,discount:+$('cdisc').value,uses:+$('cuses').value});toast('Создан: '+r.code);$('ccode').value='';loadCoup()}catch(e){toast(e.message,1)}}
