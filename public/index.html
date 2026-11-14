@@ -695,10 +695,12 @@ async function loadMyKeys(){
     el.innerHTML=list.map(k=>{
       const label=k.inf?'Бессрочно':((k.days||0)+' дн.');
       const meta=[k.product,k.tariff,k.note].filter(Boolean).join(' • ');
-      return `<div class="it"><div style="min-width:0"><b style="word-break:break-all">${esc(k.code||'')}</b><small>${esc(label)}${meta?' · '+esc(meta):''}<br>${k.created?fd(k.created):''}</small></div><button class="xs" onclick="cp('${String(k.code||'').replace(/'/g,"\\'")}')" title="Копировать">⎘</button></div>`;
+      const code=String(k.code||'').replace(/'/g,"&#39;");
+      return `<div class="it"><div style="min-width:0"><b style="word-break:break-all">${esc(k.code||'')}</b><small>${esc(label)}${meta?' · '+esc(meta):''}<br>${k.created?fd(k.created):''}</small></div><button class="xs" onclick="cp('${code}')" title="Копировать">Коп.</button></div>`;
     }).join('');
   }catch(e){el.innerHTML='<p style="color:var(--r)">'+esc(e.message||'Ошибка загрузки ключей')+'</p>'}
 }
+
 async function init(){for(let n=0;n<4;n++){try{const r=await fetch('/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render();if(user)loadMyKeys();loadStatus()}
 /* кабинет: заморозка, подарки, устройства, админка */
 const D=864e5,esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fd=t=>new Date(t).toLocaleDateString('ru');
