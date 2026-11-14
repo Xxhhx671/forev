@@ -93,6 +93,53 @@ for(const s of [
   'ALTER TABLE loader_licenses ADD COLUMN created_by INTEGER DEFAULT 0'
 ]) try{db.exec(s)}catch{};
 
+// ---- Loader device sessions + one-time login codes ----
+db.exec(`CREATE TABLE IF NOT EXISTS loader_sessions(
+  token TEXT PRIMARY KEY,
+  user_id INTEGER,
+  hwid TEXT DEFAULT '',
+  created INTEGER,
+  expires INTEGER,
+  last_seen INTEGER
+);`);
+db.exec(`CREATE TABLE IF NOT EXISTS loader_otps(
+  code TEXT PRIMARY KEY,
+  user_id INTEGER,
+  created INTEGER,
+  expires INTEGER,
+  used INTEGER DEFAULT 0,
+  used_at INTEGER DEFAULT 0
+);`);
+
+function makeLoaderToken(){
+  return crypto.randomBytes(32).toString('hex');
+}
+function makeLoaderOtp(){
+  // 8-digit numeric code, easy to type in loader
+  return String(10000000 + Math.floor(Math.random()*90000000));
+}
+function createLoaderSession(uid, hwid){
+  const token=makeLoaderToken();
+  const now=Date.now();
+  const exp=now + 30*DAY; // 30 days, HWID-bound session for loader
+  db.prepare('INSERT INTO loader_sessions(token,user_id,hwid,created,expires,last_seen) VALUES(?,?,?,?,?,?)')
+    .run(token, uid, String(hwid||'').slice(0,128), now, exp, now);
+  return {token, expires: exp};
+}
+function getLoaderUser(token, hwid){
+  const t=String(token||'').trim();
+  const h=String(hwid||'').trim();
+  if(!t || h.length<8) return null;
+  const s=db.prepare('SELECT * FROM loader_sessions WHERE token=? AND expires>?').get(t, Date.now());
+  if(!s) return null;
+  if(s.hwid && s.hwid !== h) return null;
+  const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit FROM users WHERE id=?').get(s.user_id);
+  if(!u || u.banned) return null;
+  db.prepare('UPDATE loader_sessions SET last_seen=? WHERE token=?').run(Date.now(), t);
+  return u;
+}
+
+
 function makeLicenseKey(prefix='FOREV'){
   const p=String(prefix||'FOREV').replace(/[^A-Z0-9]/g,'').slice(0,12)||'FOREV';
   return p+'-'+crypto.randomBytes(6).toString('hex').toUpperCase().match(/.{4}/g).join('-');
@@ -826,11 +873,9 @@ const srv=http.createServer(async(req,res)=>{
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
       if(isIpBanned(ip))return bad('IP заблокирован',403);
       if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
-      // Fast path: use cached IP info if available, avoid blocking login on external IP lookup
       let ipInfo = ipCache.get(ip) || db.prepare('SELECT * FROM ip_cache WHERE ip=? AND checked>?').get(ip,Date.now()-7*DAY) || null;
       const blockVpn=getSetting('block_vpn')==='1';
       if(blockVpn && ipInfo && (ipInfo.proxy||ipInfo.hosting)) return bad('VPN/Proxy/Hosting запрещён',403);
-      // Refresh IP info in background (non-blocking)
       if(!ipInfo){ checkIp(ip).catch(()=>{}); ipInfo={proxy:0,hosting:0,country:'',isp:''}; }
       const u=checkPw(b.login,b.password);
       if(!u){
@@ -842,7 +887,6 @@ const srv=http.createServer(async(req,res)=>{
       clearFails(ip);
       if(u.banned) return send(res,200,{ok:false,reason:'banned',banned:true,ban_reason:u.ban_reason||'',username:u.username,active:false,inf:!!u.inf,until:u.inf?0:u.sub_until,frozen:!!u.frozen});
       const hw=String(b.hwid||'').trim().slice(0,128);
-      // Register/track device on login attempt (best effort)
       if(hw.length>=8){
         try{
           const wlCount=db.prepare('SELECT COUNT(*) c FROM hwid_whitelist WHERE user_id=?').get(u.id).c;
@@ -868,6 +912,7 @@ const srv=http.createServer(async(req,res)=>{
         }catch(e){}
       }
       const subActive = active(u);
+      const sess = (hw.length>=8) ? createLoaderSession(u.id, hw) : null;
       return send(res,200,{
         ok:true,
         username:u.username,
@@ -877,7 +922,68 @@ const srv=http.createServer(async(req,res)=>{
         until:u.inf?0:(u.sub_until||0),
         frozen:!!u.frozen,
         banned:false,
-        reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive')
+        reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive'),
+        session_token: sess ? sess.token : '',
+        session_expires: sess ? sess.expires : 0
+      });
+    }
+
+    if(url==='/api/loader/session'){
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
+      if(isIpBanned(ip))return bad('IP заблокирован',403);
+      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
+      const token=String(b.token||'').trim();
+      const hw=String(b.hwid||'').trim();
+      const u=getLoaderUser(token, hw);
+      if(!u) return bad('Сессия недействительна. Войдите заново.',401);
+      const subActive = active(u);
+      return send(res,200,{
+        ok:true,
+        username:u.username,
+        email:u.email||'',
+        active:subActive,
+        inf:!!u.inf,
+        until:u.inf?0:(u.sub_until||0),
+        frozen:!!u.frozen,
+        banned:false,
+        reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive'),
+        session_token: token,
+        session_expires: 0
+      });
+    }
+
+    if(url==='/api/loader/login/otp'){
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
+      if(isIpBanned(ip))return bad('IP заблокирован',403);
+      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
+      const code=String(b.code||'').replace(/\s+/g,'').trim();
+      const hw=String(b.hwid||'').trim().slice(0,128);
+      if(!/^\d{6,10}$/.test(code)) return bad('Неверный одноразовый код',400);
+      if(hw.length<8) return bad('Нет HWID',400);
+      const otp=db.prepare('SELECT * FROM loader_otps WHERE code=?').get(code);
+      if(!otp || otp.used) return bad('Код недействителен или уже использован',401);
+      if(otp.expires < Date.now()) return bad('Срок действия кода истёк',401);
+      const u=db.prepare('SELECT * FROM users WHERE id=?').get(otp.user_id);
+      if(!u) return bad('Пользователь не найден',404);
+      if(u.banned) return send(res,200,{ok:false,reason:'banned',banned:true,ban_reason:u.ban_reason||'',username:u.username,active:false,inf:!!u.inf,until:u.inf?0:u.sub_until,frozen:!!u.frozen});
+      db.prepare('UPDATE loader_otps SET used=1,used_at=? WHERE code=? AND used=0').run(Date.now(), code);
+      try{ logLogin(u.id,ip,'loader_otp',1,null); }catch{}
+      const subActive = active(u);
+      const sess = createLoaderSession(u.id, hw);
+      return send(res,200,{
+        ok:true,
+        username:u.username,
+        email:u.email||'',
+        active:subActive,
+        inf:!!u.inf,
+        until:u.inf?0:(u.sub_until||0),
+        frozen:!!u.frozen,
+        banned:false,
+        reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive'),
+        session_token: sess.token,
+        session_expires: sess.expires
       });
     }
 
@@ -974,6 +1080,16 @@ const srv=http.createServer(async(req,res)=>{
 
     // ---------- всё ниже — только для авторизованных ----------
     const u=authUser(req);if(!u)return bad('Не авторизован',401);
+
+    if(url==='/api/loader/otp'){
+      const now=Date.now();
+      db.prepare('DELETE FROM loader_otps WHERE user_id=? OR expires<? OR used=1').run(u.id, now);
+      const code=makeLoaderOtp();
+      const exp=now + 10*60*1000; // 10 minutes
+      db.prepare('INSERT INTO loader_otps(code,user_id,created,expires,used) VALUES(?,?,?,?,0)').run(code, u.id, now, exp);
+      return send(res,200,{ok:true,code,expires:exp,ttl_sec:600});
+    }
+
 
     if(url==='/api/redeem'){
       const code=String(b.key||'').trim().toUpperCase();

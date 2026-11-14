@@ -425,7 +425,17 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <div class="card rv" style="--d:.16s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="8" cy="15" r="4"/><path class="dr" pathLength="1" d="m11 12 9-9M17 6l3 3"/></svg></div><h3>Активировать ключ</h3><p>Введите ключ подписки или промокод, чтобы продлить доступ.</p>
 <div class="cab-in"><div class="fld"><input id="key" placeholder=" "><label>Ключ / промокод</label><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/></svg></div><button class="btn sm" onclick="redeem()">OK</button></div><div class="err" id="ke" style="margin-top:8px"></div></div>
 <div class="card rv" style="--d:.2s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr a" pathLength="1" x="4" y="5" width="16" height="14" rx="2"/><path class="dr" pathLength="1" d="M8 9h8M8 13h5"/></svg></div><h3>Мои ключи подписки</h3><p>Ключи, выданные вашему аккаунту (включая пробный при регистрации). Отображаются все подписочные/выданные ключи в кабинете.</p>
-<div class="lst" id="mkList"><p style="color:var(--m)">Загрузка...</p></div><button class="btn sm ghost" style="margin-top:8px" onclick="loadMyKeys()">Обновить</button></div><div class="card rv" style="--d:.24s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M3 8h18v4H3zM12 8v13M5 12v9h14v-9M12 8C9 8 7 7 7 5s3-2 5 3c2-5 5-5 5-3s-2 3-5 3"/></svg></div><h3>Подарить дни</h3><p>Дни спишутся с вашей подписки и уйдут получателю.</p>
+<div class="lst" id="mkList"><p style="color:var(--m)">Загрузка...</p></div><button class="btn sm ghost" style="margin-top:8px" onclick="loadMyKeys()">Обновить</button></div><div class="card rv" style="--d:.22s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M8 11V8a4 4 0 1 1 8 0v3"/><rect class="dr" pathLength="1" x="5" y="11" width="14" height="10" rx="2"/><path class="dr a" pathLength="1" d="M12 15v2"/></svg></div><h3>Вход в лоадер</h3><p>Одноразовый код для быстрого и безопасного входа в лоадер (без ввода пароля). Код действует 10 минут и привязывается к сессии входа.</p>
+<div class="row"><button class="btn sm" onclick="genLoaderOtp()">Сгенерировать код</button></div>
+<div id="lotpBox" style="margin-top:10px;display:none">
+  <div style="font-size:22px;font-weight:800;letter-spacing:3px;color:#fff" id="lotpCode"></div>
+  <div style="font-size:12px;color:var(--m);margin-top:4px" id="lotpExp"></div>
+  <button class="btn sm ghost" style="margin-top:8px" onclick="cp($('lotpCode').textContent)">Копировать</button>
+</div>
+<div class="err" id="lotpErr" style="margin-top:8px"></div>
+<p style="font-size:12px;color:var(--m);margin-top:10px">После первого входа (по паролю или коду) лоадер запоминает сессию на этом устройстве (привязка к HWID) и не запрашивает пароль каждый раз, пока сессия действительна.</p>
+</div>
+<div class="card rv" style="--d:.24s"><div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M3 8h18v4H3zM12 8v13M5 12v9h14v-9M12 8C9 8 7 7 7 5s3-2 5 3c2-5 5-5 5-3s-2 3-5 3"/></svg></div><h3>Подарить дни</h3><p>Дни спишутся с вашей подписки и уйдут получателю.</p>
 <div class="cab-in"><div class="fld "><input autocomplete="off" oninput="gs()" id="gto"  placeholder=" " ><label>Ник получателя</label><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="fld n"><input id="gd" type="number" min="1" placeholder=" " ><label>Дней</label><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><button class="btn sm" onclick="gift()">Подарить</button></div>
 <div class="chips" id="sug"></div><div class="err" id="ge"></div><div class="lst" id="gh"></div></div>
 <div class="card rv" style="--d:.32s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr a" pathLength="1" x="3" y="4" width="18" height="12" rx="2"/><path class="dr" pathLength="1" d="M8 20h8M12 16v4"/></svg></div><h3>Устройства <span id="dvh" style="color:var(--r)"></span></h3><p>Привязка по HWID. Лимит задаётся ключом.</p><div class="lst" id="dv"></div></div>
@@ -683,6 +693,19 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
  }
  setTimeout(obs,50)}
 async function loadStatus(){try{const r=await fetch('/api/status');const s=await r.json();const el=$('prodstatus');if(el)el.innerHTML=`Статус: <b>${esc(s.status||'online')}</b> — ${esc(s.text||'')}${s.maintenance?' <span style="color:var(--r)">(техработы)</span>':''}${s.killswitch?' <span style="color:red">(отключён)</span>':''}`;}catch{}}
+
+async function genLoaderOtp(){
+  $('lotpErr').textContent='';
+  try{
+    const r=await api('/api/loader/otp',{});
+    $('lotpCode').textContent=r.code||'';
+    const d=r.expires?new Date(r.expires):null;
+    $('lotpExp').textContent=d?('Действует до: '+d.toLocaleString('ru-RU')+' (10 минут, одноразовый)'):'Действует 10 минут (одноразовый)';
+    $('lotpBox').style.display='block';
+    toast('Одноразовый код создан');
+  }catch(e){ $('lotpErr').textContent=e.message||'Ошибка'; }
+}
+
 async function loadMyKeys(){
   const el=$('mkList'); if(!el) return;
   if(!user){el.innerHTML='<p style="color:var(--m)">Войдите в аккаунт</p>';return}
