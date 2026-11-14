@@ -242,6 +242,16 @@ const active=u=>!u.frozen&&!!(u.inf||u.sub_until>Date.now());
 function addKeys(days,devices,n,inf,note='',prefix='FOREV',product='',tariff=''){const keys=[],st=db.prepare('INSERT INTO keys(code,days,devices,inf,created,note,product,tariff) VALUES(?,?,?,?,?,?,?,?)');for(let i=0;i<n;i++){const c=prefix+'-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');st.run(c,days,devices,inf?1:0,Date.now(),note,product,tariff);keys.push(c)}return keys}
 function addSubHistory(uid,days,source,details=''){db.prepare('INSERT INTO sub_history(user_id,days,source,details,ts) VALUES(?,?,?,?,?)').run(uid,days,source,details,Date.now())}
 function addNotif(uid,text){db.prepare('INSERT INTO notifications(user_id,text,ts) VALUES(?,?,?)').run(uid,text.slice(0,300),Date.now())}
+// Реальный IP клиента. Лоадер ходит через Cloudflare Worker-прокси,
+// поэтому приоритет: X-Client-IP (ставит наш воркер) -> CF-Connecting-IP -> XFF -> сокет.
+function reqIp(req){
+  const h=(req&&req.headers)||{};
+  const raw=String(h['x-client-ip']||'').trim()
+    || String(h['cf-connecting-ip']||'').trim()
+    || String(h['x-forwarded-for']||'').split(',')[0].trim()
+    || (req&&req.socket&&req.socket.remoteAddress)||'';
+  return raw.replace(/^::ffff:/,'').slice(0,45);
+}
 function isIpBanned(ip){return !!db.prepare("SELECT 1 FROM ip_list WHERE ip=? AND type='black'").get(ip)}
 function isIpAllowed(ip){const white=db.prepare("SELECT 1 FROM ip_list WHERE type='white'").all();if(!white.length)return true;return !!db.prepare("SELECT 1 FROM ip_list WHERE ip=? AND type='white'").get(ip)}
 function logLogin(uid,ip,kind,ok,ipInfo){
@@ -273,7 +283,7 @@ function deepUserIdsByHwid(hwid){
 }
 function trialBlocked(ip, hwid){
   if(TRIAL<=0) return true;
-  if(ip && deepUserIdsByIp(ip).length>0) return true;
+  // Только HWID: IP-проверка отключена (CGNAT, VPN, Cloudflare-прокси дают общий IP)
   if(hwid && deepUserIdsByHwid(hwid).length>0) return true;
   return false;
 }
@@ -320,11 +330,11 @@ if(process.argv[2]==='genkey'){
 
 const hits=new Map();
 const rl=(k,max,ms=6e5)=>{const n=Date.now(),a=(hits.get(k)||[]).filter(t=>n-t<ms);a.push(n);hits.set(k,a);if(a.length>max*3)hits.set(k,a.slice(-max));return a.length>max};
-// прогрессивная блокировка после неудачных логинов
-function recordFail(ip,uid=0){
+// прогрессивная блокировка после неудачных логинов (autoBan=false — только лог, без бана IP)
+function recordFail(ip,uid=0,autoBan=true){
   db.prepare('INSERT INTO failed_auth(ip,user_id,ts) VALUES(?,?,?)').run(ip,uid||0,Date.now());
   const fails=db.prepare('SELECT COUNT(*) c FROM failed_auth WHERE ip=? AND ts>?').get(ip,Date.now()-15*60*1000).c;
-  if(fails>=10){db.prepare("INSERT OR REPLACE INTO ip_list(ip,type,reason,ts) VALUES(?,?,?,?)").run(ip,'black','auto: too many fails',Date.now());return true;}
+  if(autoBan && fails>=10){db.prepare("INSERT OR REPLACE INTO ip_list(ip,type,reason,ts) VALUES(?,?,?,?)").run(ip,'black','auto: too many fails',Date.now());return true;}
   return false;
 }
 function clearFails(ip){db.prepare('DELETE FROM failed_auth WHERE ip=?').run(ip);}
@@ -361,7 +371,7 @@ const authUser=req=>{
 };
 const login=(res,uid,req)=>{
   const t=crypto.randomBytes(32).toString('hex');
-  const ip=req?(String(req.headers['x-forwarded-for']||'').split(',')[0].trim()||req.socket.remoteAddress):'';
+  const ip=req?reqIp(req):'';
   const ua=req?String(req.headers['user-agent']||'').slice(0,200):'';
   try{db.prepare('INSERT INTO sessions(token,user_id,expires,ip,ua,created) VALUES(?,?,?,?,?,?)').run(t,uid,Date.now()+6048e5,ip,ua,Date.now());}
   catch{db.prepare('INSERT INTO sessions(token,user_id,expires) VALUES(?,?,?)').run(t,uid,Date.now()+6048e5);}
@@ -392,10 +402,11 @@ function findLoaderExe(){
   return null;
 }
 const DL_PLACEHOLDER = 'DLBOOT________________________________________________________________________________________'; // 94 chars
+const BUILD_ID = '2026-11-14-hwid-only';
 
 const srv=http.createServer(async(req,res)=>{
   try{
-    const ip=String(req.headers['x-forwarded-for']||'').split(',')[0].trim()||req.socket.remoteAddress;
+    const ip=reqIp(req);
     if(req.method==='GET'&&!req.url.startsWith('/api/')){
       if(req.url==='/health'){res.writeHead(200,{'Content-Type':'text/plain'});return res.end('ok')}
       let p=req.url.split('?')[0];if(p==='/')p='/index.html';
@@ -413,7 +424,7 @@ const srv=http.createServer(async(req,res)=>{
       const token = String(full.searchParams.get('token')||'').trim();
       if(!token) { res.writeHead(400,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Нет токена'})); }
       const dt=db.prepare('SELECT * FROM loader_download_tokens WHERE token=?').get(token);
-      if(!dt || dt.used || dt.expires < Date.now()){ res.writeHead(410,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Ссылка недействительна или истекла. Скачайте лоадер заново из личного кабинета.'})); }
+      if(!dt || dt.expires < Date.now()){ res.writeHead(410,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Ссылка недействительна или истекла. Скачайте лоадер заново из личного кабинета.'})); }
       const exePath=findLoaderExe();
       if(!exePath){ res.writeHead(503,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Файл лоадера временно недоступен'})); }
       try{
@@ -436,6 +447,9 @@ const srv=http.createServer(async(req,res)=>{
       }
     }
 
+    if(req.url==='/api/version'&&req.method==='GET'){
+      return send(res,200,{build:BUILD_ID,node:process.version});
+    }
     if(req.url==='/api/status'&&req.method==='GET'){
       scanExpiryNotices(); // throttled
       return send(res,200,{status:getSetting('status'),text:getSetting('status_text'),maintenance:getSetting('maintenance')==='1',killswitch:getSetting('killswitch')==='1',captcha:true,configs_open:getSetting('configs_open','1')==='1'});
@@ -929,15 +943,12 @@ const srv=http.createServer(async(req,res)=>{
     if(url==='/api/loader/login'){
       if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
-      if(isIpBanned(ip))return bad('IP заблокирован',403);
-      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
+      // Вход лоадера — только по HWID. IP/VPN-проверки отключены намеренно.
       let ipInfo = ipCache.get(ip) || db.prepare('SELECT * FROM ip_cache WHERE ip=? AND checked>?').get(ip,Date.now()-7*DAY) || null;
-      const blockVpn=getSetting('block_vpn')==='1';
-      if(blockVpn && ipInfo && (ipInfo.proxy||ipInfo.hosting)) return bad('VPN/Proxy/Hosting запрещён',403);
       if(!ipInfo){ checkIp(ip).catch(()=>{}); ipInfo={proxy:0,hosting:0,country:'',isp:''}; }
       const u=checkPw(b.login,b.password);
       if(!u){
-        recordFail(ip);
+        recordFail(ip,0,false);
         try{ logLogin(null,ip,'loader',0,ipInfo); }catch{}
         return bad('Неверный логин или пароль',401);
       }
@@ -989,8 +1000,6 @@ const srv=http.createServer(async(req,res)=>{
     if(url==='/api/loader/session'){
       if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
-      if(isIpBanned(ip))return bad('IP заблокирован',403);
-      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
       const token=String(b.token||'').trim();
       const hw=String(b.hwid||'').trim();
       const u=getLoaderUser(token, hw);
@@ -1014,8 +1023,6 @@ const srv=http.createServer(async(req,res)=>{
     if(url==='/api/loader/login/otp'){
       if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
-      if(isIpBanned(ip))return bad('IP заблокирован',403);
-      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
       const code=String(b.code||'').replace(/\s+/g,'').trim();
       const hw=String(b.hwid||'').trim().slice(0,128);
       if(!/^\d{6,10}$/.test(code)) return bad('Неверный одноразовый код',400);
@@ -1049,8 +1056,6 @@ const srv=http.createServer(async(req,res)=>{
     if(url==='/api/loader/bootstrap'){
       if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
-      if(isIpBanned(ip))return bad('IP заблокирован',403);
-      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
       const token=String(b.token||'').trim();
       const hw=String(b.hwid||'').trim().slice(0,128);
       if(!token || hw.length<8) return bad('Неверный запрос',400);
@@ -1087,15 +1092,11 @@ const srv=http.createServer(async(req,res)=>{
     if(url==='/api/client/auth'){
       if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
-      if(isIpBanned(ip))return bad('IP заблокирован',403);
-      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
-      // VPN/proxy check
+      // Вход чита — только по HWID; VPN/Proxy/Hosting не блокируем, только логируем
       const ipInfo=await checkIp(ip);
-      const blockVpn=getSetting('block_vpn')==='1';
-      if(blockVpn&&(ipInfo.proxy||ipInfo.hosting))return bad('VPN/Proxy/Hosting запрещены',403);
       const u=checkPw(b.login,b.password);
       if(!u){
-        recordFail(ip);
+        recordFail(ip,0,false);
         return bad('Неверный логин или пароль',401);
       }
       if(u.banned)return bad('Аккаунт заблокирован'+(u.ban_reason?': '+u.ban_reason:''),403);

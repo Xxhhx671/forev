@@ -518,7 +518,7 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
   <div class="cab-in">
     <button class="btn sm" onclick="toggleSet('killswitch')">Kill-switch</button>
     <button class="btn sm" onclick="toggleSet('maintenance')">Техработы</button>
-    <button class="btn sm" onclick="toggleSet('block_vpn')">Блок VPN/Proxy</button>
+    <button class="btn sm" onclick="toggleSet('block_vpn')">Блок VPN/Proxy (не используется)</button>
     <div class="fld"><input id="sttxt" placeholder=" "><label>Текст статуса</label></div>
     <button class="btn sm" onclick="setStatus()">Обновить статус</button>
     <button class="btn sm ghost" onclick="doBackup()">Бэкап базы</button>
@@ -788,7 +788,7 @@ async function nadd(){try{await api('/api/admin/news/add',{title:$('nt').value,t
 async function ndl(id){try{await api('/api/admin/news/del',{id});nli();loadNews()}catch(e){toast(e.message,1)}}
 async function stt(){try{const r=await api('/api/admin/stats'),L={users:'Пользователей',new1:'Новых за 24 ч',new7:'Новых за 7 дн.',active:'Активных подписок',frozen:'Заморожено',banned:'Забанено',suspicious:'Подозрительных',keys:'Ключей создано',keys_used:'Ключей активировано',keys_free:'Свободных ключей',devices:'Устройств',tickets:'Открытых тикетов',gifts:'Подарков',promo_uses:'Промо применено',logins24:'Входов за 24 ч',logins_fail24:'Неудачных входов',proxy24:'VPN/Proxy входов',resellers:'Реселлеров',hwid_events24:'HWID событий за 24 ч'};
  $('sts').innerHTML='<div class="stat-grid">'+Object.keys(L).map(k=>`<div class="stat-card"><b>${r.stats[k]??0}</b><span>${L[k]}</span></div>`).join('')+'</div>'}catch(e){toast(e.message,1)}}
-async function loadSet(){try{const r=await api('/api/admin/settings',{action:'get'});$('setinfo').innerHTML=`Kill-switch: ${r.killswitch==='1'?'ВКЛ':'выкл'} · Техработы: ${r.maintenance==='1'?'ВКЛ':'выкл'} · Блок VPN: ${r.block_vpn==='1'?'ВКЛ':'выкл'} · Статус: ${esc(r.status)} — ${esc(r.status_text)}`;}catch(e){toast(e.message,1)}}
+async function loadSet(){try{const r=await api('/api/admin/settings',{action:'get'});$('setinfo').innerHTML=`Kill-switch: ${r.killswitch==='1'?'ВКЛ':'выкл'} · Техработы: ${r.maintenance==='1'?'ВКЛ':'выкл'} · Блок VPN: отключён (вход лоадера только по HWID) · Статус: ${esc(r.status)} — ${esc(r.status_text)}`;}catch(e){toast(e.message,1)}}
 async function toggleSet(k){try{const cur=await api('/api/admin/settings',{action:'get'});await api('/api/admin/settings',{[k]:cur[k]!=='1'});loadSet();toast('Обновлено')}catch(e){toast(e.message,1)}}
 async function setStatus(){try{await api('/api/admin/settings',{status:'custom',status_text:$('sttxt').value});loadSet();toast('Статус обновлён')}catch(e){toast(e.message,1)}}
 async function doBackup(){try{const r=await fetch('/api/admin/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='forev-backup.db';a.click();toast('Бэкап скачан')}catch(e){toast('Ошибка бэкапа',1)}}
