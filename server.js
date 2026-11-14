@@ -820,6 +820,63 @@ const srv=http.createServer(async(req,res)=>{
     }
 
     // ---------- клиент (лоадер): логин + пароль + HWID ----------
+    // ---------- Loader login (username/password) + subscription status for loader UI ----------
+    if(url==='/api/loader/login'){
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
+      if(isIpBanned(ip))return bad('IP заблокирован',403);
+      if(!isIpAllowed(ip))return bad('IP не в белом списке',403);
+      const ipInfo=await checkIp(ip);
+      const blockVpn=getSetting('block_vpn')==='1';
+      if(blockVpn&&(ipInfo.proxy||ipInfo.hosting))return bad('VPN/Proxy/Hosting запрещён',403);
+      const u=checkPw(b.login,b.password);
+      if(!u){
+        recordFail(ip);
+        return bad('Неверный логин или пароль',401);
+      }
+      logLogin(u.id,ip,'loader',1,ipInfo);
+      clearFails(ip);
+      if(u.banned) return send(res,200,{ok:false,reason:'banned',banned:true,ban_reason:u.ban_reason||'',username:u.username,active:false,inf:!!u.inf,until:u.inf?0:u.sub_until,frozen:!!u.frozen});
+      const hw=String(b.hwid||'').trim().slice(0,128);
+      // Register/track device on login attempt (best effort)
+      if(hw.length>=8){
+        try{
+          const wlCount=db.prepare('SELECT COUNT(*) c FROM hwid_whitelist WHERE user_id=?').get(u.id).c;
+          if(wlCount>0){
+            const ok=db.prepare('SELECT 1 FROM hwid_whitelist WHERE user_id=? AND hwid=?').get(u.id,hw);
+            if(!ok){logHwid(u.id,hw,b.name,ip,'denied_wl');}
+          } else {
+            const d=db.prepare('SELECT id FROM devices WHERE user_id=? AND hwid=?').get(u.id,hw);
+            if(d){
+              db.prepare('UPDATE devices SET last_seen=?,name=? WHERE id=?').run(Date.now(),String(b.name||'Loader').slice(0,40),d.id);
+              logHwid(u.id,hw,b.name,ip,'seen');
+            }else{
+              const n=db.prepare('SELECT COUNT(*) c FROM devices WHERE user_id=?').get(u.id).c;
+              if(n < u.max_dev){
+                db.prepare('INSERT INTO devices(user_id,hwid,name,first_seen,last_seen) VALUES(?,?,?,?,?)').run(u.id,hw,String(b.name||'Loader').slice(0,40),Date.now(),Date.now());
+                logHwid(u.id,hw,b.name,ip,'new');
+                db.prepare('UPDATE users SET last_hwid_change=? WHERE id=?').run(Date.now(),u.id);
+              } else {
+                logHwid(u.id,hw,b.name,ip,'denied');
+              }
+            }
+          }
+        }catch(e){}
+      }
+      const subActive = active(u);
+      return send(res,200,{
+        ok:true,
+        username:u.username,
+        email:u.email||'',
+        active:subActive,
+        inf:!!u.inf,
+        until:u.inf?0:(u.sub_until||0),
+        frozen:!!u.frozen,
+        banned:false,
+        reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive')
+      });
+    }
+
     if(url==='/api/client/auth'){
       if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
