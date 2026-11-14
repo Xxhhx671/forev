@@ -835,7 +835,7 @@ async function resetDev(id){if(!confirm('Сбросить все устройс�
 async function showHist(id){try{const r=await api('/api/admin/history',{id});alert(r.list.map(h=>`${new Date(h.ts).toLocaleString('ru')}: ${h.days}д (${h.source})`).join('\n')||'Пусто')}catch(e){toast(e.message,1)}}
 
 // --- Theme / Profile / Activity / Reseller / Admin search ---
-function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);$('themeBtn').textContent=t==='light'?'🌙':'☀️'}
+function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);const tb=$('themeBtn');if(tb)tb.textContent=t==='light'?'🌙':'☀️'}
 function toggleTheme(){const t=document.documentElement.classList.contains('light')?'dark':'light';applyTheme(t);if(user)saveProfile()}
 async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),theme=$('themeSel').value;await api('/api/profile',{avatar,theme});if(user){user.avatar=avatar;user.theme=theme}applyTheme(theme);if(avatar){$('avimg').src=avatar;$('avimg').style.display='block'}toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
 function renderCal(list){

@@ -408,7 +408,7 @@ const srv=http.createServer(async(req,res)=>{
     }
     if(req.url.startsWith('/api/'))thaw();
 
-    if(url.startsWith('/api/loader/download') && req.method==='GET'){
+    if(req.url.startsWith('/api/loader/download') && req.method==='GET'){
       const full = new URL(req.url, 'http://x');
       const token = String(full.searchParams.get('token')||'').trim();
       if(!token) { res.writeHead(400,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Нет токена'})); }
