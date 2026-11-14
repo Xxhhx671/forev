@@ -626,10 +626,7 @@ async function submit(){const b=$('mb');b.classList.add('ld');$('me').textConten
   else r=await api('/api/login',{login:$('f1').value,password:$('f3').value,...payload});
   closeM();$('f3').value='';await init();
   if(user){
-    if(mode==='reg'&&r&&r.trial_key){toast('Аккаунт создан. Пробный ключ: '+r.trial_key);try{alert('Аккаунт создан!
-Пробный ключ (сохранён в личном кабинете):
-'+r.trial_key+(r.trial_days?('
-Срок: '+r.trial_days+' дн.') :''));}catch{} if(typeof loadMyKeys==='function')loadMyKeys();}
+    if(mode==='reg'&&r&&r.trial_key){toast('Аккаунт создан. Пробный ключ: '+r.trial_key);try{alert('Аккаунт создан!\nПробный ключ (сохранён в личном кабинете):\n'+r.trial_key+(r.trial_days?('\nСрок: '+r.trial_days+' дн.') :''));}catch{} if(typeof loadMyKeys==='function')loadMyKeys();}
     else if(mode==='reg'&&r&&r.trial===false){toast('Аккаунт создан (пробный период недоступен)');}
     else {toast('Добро пожаловать, '+user.username+'!');}
   }
