@@ -32,6 +32,21 @@ CREATE TABLE IF NOT EXISTS reseller_keys(id INTEGER PRIMARY KEY,reseller_id INTE
 CREATE TABLE IF NOT EXISTS failed_auth(ip TEXT,user_id INTEGER,ts INTEGER);
 CREATE TABLE IF NOT EXISTS hwid_whitelist(id INTEGER PRIMARY KEY,user_id INTEGER,hwid TEXT,note TEXT,created INTEGER,UNIQUE(user_id,hwid));
 CREATE TABLE IF NOT EXISTS sub_notices(user_id INTEGER,kind TEXT,ts INTEGER,PRIMARY KEY(user_id,kind));
+CREATE TABLE IF NOT EXISTS trial_claims(hwid TEXT PRIMARY KEY,user_id INTEGER,ip TEXT,ts INTEGER);
+CREATE TABLE IF NOT EXISTS trial_ip_claims(ip TEXT PRIMARY KEY,user_id INTEGER,ts INTEGER);
+CREATE TABLE IF NOT EXISTS trial_vid_claims(vid TEXT PRIMARY KEY,user_id INTEGER,ts INTEGER);
+CREATE TABLE IF NOT EXISTS trial_subnet_claims(subnet TEXT PRIMARY KEY,user_id INTEGER,ts INTEGER);
+CREATE TABLE IF NOT EXISTS identity_signals(
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER,
+  kind TEXT,
+  value TEXT,
+  meta TEXT DEFAULT '',
+  ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_identity_value ON identity_signals(value);
+CREATE INDEX IF NOT EXISTS idx_identity_user ON identity_signals(user_id);
+CREATE INDEX IF NOT EXISTS idx_identity_kind ON identity_signals(kind);
 INSERT OR IGNORE INTO settings(key,value) VALUES('killswitch','0'),('maintenance','0'),('status','online'),('status_text','Сервис работает'),('configs_open','1');`);
 db.exec(`CREATE TABLE IF NOT EXISTS configs(
   id INTEGER PRIMARY KEY,
@@ -173,6 +188,17 @@ db.prepare('INSERT OR IGNORE INTO keys(code,days,devices,inf,admin,created) VALU
 const DAY=864e5,PUB=path.join(__dirname,'public');
 // настройки через env: пробный период (дн.), бонус за реферала (дн.), макс. длительность заморозки и пауза между заморозками (дн.)
 const TRIAL=Number(process.env.TRIAL_DAYS??1),REF=Number(process.env.REF_DAYS??3),FZ_MAX=Number(process.env.FREEZE_MAX_DAYS??14),FZ_COOL=Number(process.env.FREEZE_COOLDOWN_DAYS??7),FZMS=FZ_MAX*DAY;
+// Одноразовый бэкфилл: существующие trial → trial_claims / trial_ip_claims / identity_signals
+try{
+  db.prepare("INSERT OR IGNORE INTO trial_claims(hwid,user_id,ip,ts) SELECT trial_hwid,id,reg_ip,created FROM users WHERE trial_hwid IS NOT NULL AND length(trial_hwid)>=4").run();
+  db.prepare("INSERT OR IGNORE INTO trial_claims(hwid,user_id,ip,ts) SELECT d.hwid,d.user_id,u.reg_ip,d.first_seen FROM devices d JOIN users u ON u.id=d.user_id JOIN sub_history sh ON sh.user_id=u.id AND sh.source='trial' WHERE length(d.hwid)>=4").run();
+  db.prepare("INSERT OR IGNORE INTO trial_ip_claims(ip,user_id,ts) SELECT reg_ip,id,created FROM users WHERE reg_ip IS NOT NULL AND length(reg_ip)>=7 AND id IN (SELECT user_id FROM sub_history WHERE source='trial')").run();
+  db.prepare("INSERT OR IGNORE INTO trial_ip_claims(ip,user_id,ts) SELECT ip,user_id,ts FROM trial_claims WHERE ip IS NOT NULL AND length(ip)>=7").run();
+  db.prepare("INSERT OR IGNORE INTO trial_ip_claims(ip,user_id,ts) SELECT l.ip,l.user_id,l.ts FROM logins l JOIN sub_history sh ON sh.user_id=l.user_id AND sh.source='trial' WHERE l.ip IS NOT NULL AND length(l.ip)>=7 AND l.ok=1").run();
+  // identity_signals из известных источников
+  db.prepare("INSERT INTO identity_signals(user_id,kind,value,meta,ts) SELECT id,'reg_ip',reg_ip,'backfill',created FROM users WHERE reg_ip IS NOT NULL AND length(reg_ip)>=7 AND NOT EXISTS (SELECT 1 FROM identity_signals s WHERE s.user_id=users.id AND s.value=users.reg_ip)").run();
+  db.prepare("INSERT INTO identity_signals(user_id,kind,value,meta,ts) SELECT user_id,'login_ip',ip,'backfill',MAX(ts) FROM logins WHERE ok=1 AND ip IS NOT NULL AND length(ip)>=7 GROUP BY user_id,ip").run();
+}catch(e){/* ignore on fresh db */}
 // авторазморозка: время паузы не больше FZ_MAX
 const thaw=()=>db.prepare('UPDATE users SET sub_until=frozen_at+?+freeze_left,last_unfreeze=frozen_at+?,frozen=0,freeze_left=0 WHERE frozen=1 AND frozen_at>0 AND frozen_at<?').run(FZMS,FZMS,Date.now()-FZMS);
 const logAudit=(adminId,action,target,details,ip='')=>db.prepare('INSERT INTO audit(admin_id,action,target,details,ts,ip) VALUES(?,?,?,?,?,?)').run(adminId||0,action,String(target||'').slice(0,100),String(details||'').slice(0,500),Date.now(),String(ip||'').slice(0,45));
@@ -242,6 +268,37 @@ const active=u=>!u.frozen&&!!(u.inf||u.sub_until>Date.now());
 function addKeys(days,devices,n,inf,note='',prefix='FOREV',product='',tariff=''){const keys=[],st=db.prepare('INSERT INTO keys(code,days,devices,inf,created,note,product,tariff) VALUES(?,?,?,?,?,?,?,?)');for(let i=0;i<n;i++){const c=prefix+'-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');st.run(c,days,devices,inf?1:0,Date.now(),note,product,tariff);keys.push(c)}return keys}
 function addSubHistory(uid,days,source,details=''){db.prepare('INSERT INTO sub_history(user_id,days,source,details,ts) VALUES(?,?,?,?,?)').run(uid,days,source,details,Date.now())}
 function addNotif(uid,text){db.prepare('INSERT INTO notifications(user_id,text,ts) VALUES(?,?,?)').run(uid,text.slice(0,300),Date.now())}
+// ========== Система идентификации IP (multi-signal) ==========
+// Собираем: conn IP, всю цепочку XFF/CF, client/real_ip от лоадера, WebRTC/STUN с браузера.
+// Любой публичный IP, с которого уже брали trial, блокирует повторный trial навсегда.
+function normIp(raw){
+  let v=String(raw||'').trim().replace(/^::ffff:/i,'');
+  // убрать порт у IPv4 host:port
+  if(/^\d+\.\d+\.\d+\.\d+:\d+$/.test(v)) v=v.split(':')[0];
+  // [ipv6]:port
+  if(v.startsWith('[')){const m=v.match(/^\[([^\]]+)\]/); if(m) v=m[1];}
+  return v.slice(0,45);
+}
+function isPrivateOrLocalIp(ip){
+  const v=normIp(ip);
+  if(!v||v==='127.0.0.1'||v==='::1'||v==='0.0.0.0') return true;
+  if(v.startsWith('10.')||v.startsWith('192.168.')||v.startsWith('169.254.')) return true;
+  if(/^172\.(1[6-9]|2\d|3[0-1])\./.test(v)) return true;
+  if(v.toLowerCase().startsWith('fc')||v.toLowerCase().startsWith('fd')||v.toLowerCase().startsWith('fe80')) return true;
+  return false;
+}
+function isValidPublicIp(ip){
+  const v=normIp(ip);
+  if(!v||isPrivateOrLocalIp(v)) return false;
+  // грубая валидация IPv4 / IPv6
+  if(/^\d{1,3}(\.\d{1,3}){3}$/.test(v)){
+    const parts=v.split('.').map(Number);
+    if(parts.some(n=>n>255)) return false;
+    return true;
+  }
+  if(v.includes(':') && /^[0-9a-fA-F:]+$/.test(v) && v.length>=3) return true;
+  return false;
+}
 // Реальный IP клиента. Лоадер ходит через Cloudflare Worker-прокси,
 // поэтому приоритет: X-Client-IP (ставит наш воркер) -> CF-Connecting-IP -> XFF -> сокет.
 function reqIp(req){
@@ -250,7 +307,174 @@ function reqIp(req){
     || String(h['cf-connecting-ip']||'').trim()
     || String(h['x-forwarded-for']||'').split(',')[0].trim()
     || (req&&req.socket&&req.socket.remoteAddress)||'';
-  return raw.replace(/^::ffff:/,'').slice(0,45);
+  return normIp(raw);
+}
+// Все IP из заголовков (цепочка прокси)
+function headerIpChain(req){
+  const h=(req&&req.headers)||{};
+  const out=[];
+  const push=(v,kind)=>{
+    String(v||'').split(',').forEach(part=>{
+      const ip=normIp(part);
+      if(isValidPublicIp(ip)) out.push({ip,kind});
+    });
+  };
+  push(h['x-client-ip'],'hdr_x_client');
+  push(h['cf-connecting-ip'],'hdr_cf');
+  push(h['true-client-ip'],'hdr_true_client');
+  push(h['x-real-ip'],'hdr_x_real');
+  push(h['x-forwarded-for'],'hdr_xff');
+  push(h['x-forwarded'],'hdr_x_forwarded');
+  push(h['forwarded']&&String(h['forwarded']).match(/for=([^;,\s]+)/i)?.[1],'hdr_forwarded');
+  const sock=req&&req.socket&&req.socket.remoteAddress;
+  if(sock){const ip=normIp(sock); if(isValidPublicIp(ip)) out.push({ip,kind:'sock'});}
+  // unique by ip
+  const seen=new Set(); const uniq=[];
+  for(const x of out){if(!seen.has(x.ip)){seen.add(x.ip);uniq.push(x);}}
+  return uniq;
+}
+// IP из body клиента (WebRTC, лоадер, ручные поля)
+function bodyIpList(b){
+  const out=[];
+  if(!b||typeof b!=='object') return out;
+  const add=(v,kind)=>{
+    if(Array.isArray(v)) v.forEach(x=>add(x,kind));
+    else {
+      const ip=normIp(v);
+      if(isValidPublicIp(ip)) out.push({ip,kind});
+    }
+  };
+  add(b.client_ip,'client_ip');
+  add(b.real_ip,'real_ip');
+  add(b.original_ip,'original_ip');
+  add(b.local_ip,'local_ip');
+  add(b.public_ip,'public_ip');
+  add(b.webrtc_ip,'webrtc');
+  add(b.webrtc_ips,'webrtc');
+  add(b.stun_ips,'stun');
+  add(b.ips,'client_ips');
+  if(b.identity&&typeof b.identity==='object'){
+    add(b.identity.webrtc,'webrtc');
+    add(b.identity.stun,'stun');
+    add(b.identity.public,'public_ip');
+    add(b.identity.ips,'client_ips');
+  }
+  const seen=new Set(); const uniq=[];
+  for(const x of out){if(!seen.has(x.ip)){seen.add(x.ip);uniq.push(x);}}
+  return uniq;
+}
+function ipv4Subnet24(ip){
+  const v=normIp(ip);
+  if(!/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) return '';
+  const p=v.split('.');
+  return p[0]+'.'+p[1]+'.'+p[2]+'.0/24';
+}
+// Полный набор сигналов: IP + durable visitor id + server tid + fp components
+function collectIdentity(req, body, connIp){
+  const b=body||{};
+  const ck=cookie(req);
+  const signals=[];
+  const primary=normIp(connIp||reqIp(req));
+  if(isValidPublicIp(primary)) signals.push({value:primary,kind:'conn'});
+  for(const x of headerIpChain(req)) signals.push({value:x.ip,kind:x.kind});
+  for(const x of bodyIpList(b)) signals.push({value:x.ip,kind:x.kind});
+  // server HttpOnly tracking id (ставится при первом заходе на сайт)
+  const tid=String(ck.forev_tid||b.tid||'').trim().slice(0,80);
+  if(tid.length>=16) signals.push({value:tid,kind:'tid'});
+  // durable visitor id (localStorage/cookie с фронта)
+  const vid=String(b.vid||b.visitor_id||b.device_id||ck.forev_vid||'').trim().slice(0,80);
+  if(vid.length>=8) signals.push({value:vid,kind:'vid'});
+  // fingerprint / hwid pieces
+  const fp=String(b.fp||b.hwid||'').trim().slice(0,128);
+  if(fp.length>=4) signals.push({value:fp,kind:'fp'});
+  if(b.fp_components&&typeof b.fp_components==='object'){
+    for(const [k,v] of Object.entries(b.fp_components)){
+      const val=String(v||'').trim().slice(0,160);
+      if(val.length>=4) signals.push({value:val,kind:'fpc_'+String(k).slice(0,20)});
+    }
+  }
+  // unique by value
+  const seen=new Set(); const uniq=[];
+  for(const x of signals){
+    const val=String(x.value||'').trim();
+    if(!val||seen.has(val)) continue;
+    seen.add(val);
+    uniq.push({value:val,kind:String(x.kind||'sig').slice(0,32)});
+  }
+  return uniq;
+}
+// Нормализация email (gmail dots/plus) + disposable
+function normalizeEmail(email){
+  let e=String(email||'').trim().toLowerCase();
+  const at=e.lastIndexOf('@'); if(at<1) return e;
+  let local=e.slice(0,at), domain=e.slice(at+1);
+  // plus-addressing
+  const plus=local.indexOf('+'); if(plus>=0) local=local.slice(0,plus);
+  if(domain==='gmail.com'||domain==='googlemail.com'){
+    local=local.replace(/\./g,'');
+    domain='gmail.com';
+  }
+  return local+'@'+domain;
+}
+const DISPOSABLE_EMAIL_DOMAINS=new Set(('mailinator.com guerrillamail.com guerrillamail.net sharklasers.com grr.la yopmail.com trashmail.com tempmail.com temp-mail.org 10minutemail.com 10minutemail.net throwawaymail.com getnada.com nada.email discard.email discarded.club tempail.com emailondeck.com maildrop.cc mohmal.com fakeinbox.com mailnesia.com').split(/\s+/));
+function isDisposableEmail(email){
+  const e=String(email||'').toLowerCase();
+  const domain=e.split('@')[1]||'';
+  return DISPOSABLE_EMAIL_DOMAINS.has(domain);
+}
+function emailHadTrial(email){
+  const norm=normalizeEmail(email);
+  if(!norm) return false;
+  try{
+    // точное и «похожие» gmail-варианты через norm хранить сложно — ищем по domain+local без точек грубо
+    const rows=db.prepare('SELECT id,email FROM users WHERE email=? OR email LIKE ? LIMIT 30').all(email, '%'+norm.split('@')[0].slice(0,20)+'%');
+    for(const r of rows){
+      if(normalizeEmail(r.email)===norm && hasHadTrial(r.id)) return true;
+    }
+  }catch{}
+  return false;
+}
+// Trust score 0..100 — trial только при достаточном «доверии» и чистых сигналах
+function trialTrustScore(ip, signals, ipInfo){
+  let score=50;
+  const kinds=new Set((signals||[]).map(s=>s.kind));
+  if(kinds.has('tid')) score+=15;
+  if(kinds.has('vid')) score+=12;
+  if(kinds.has('fp')||kinds.has('fpc_canvas')||kinds.has('fpc_webgl')) score+=10;
+  if(kinds.has('webrtc')||kinds.has('stun')) score+=10;
+  if(kinds.has('conn')) score+=5;
+  if(ipInfo&&(ipInfo.proxy||ipInfo.hosting)) score-=25;
+  if(ipInfo&&ipInfo.country==='?') score-=5;
+  // мало сигналов = подозрительно
+  if((signals||[]).length<2) score-=20;
+  return Math.max(0,Math.min(100,score));
+}
+function recordIdentitySignals(uid, signals, meta=''){
+  if(!uid||!signals||!signals.length) return;
+  const now=Date.now();
+  const ins=db.prepare('INSERT INTO identity_signals(user_id,kind,value,meta,ts) VALUES(?,?,?,?,?)');
+  for(const s of signals){
+    try{
+      const val=String(s.value||s.ip||'').trim();
+      if(!val) continue;
+      const exists=db.prepare('SELECT 1 FROM identity_signals WHERE user_id=? AND value=? AND ts>? LIMIT 1').get(uid,val,now-30*DAY);
+      if(!exists) ins.run(uid, String(s.kind||'sig').slice(0,32), val.slice(0,160), String(meta||'').slice(0,120), now);
+    }catch{}
+  }
+}
+// Есть ли среди сигналов связь с аккаунтом, у которого уже был trial
+function signalsLinkedToTrial(signals){
+  for(const s of (signals||[])){
+    const val=String(s.value||s.ip||'').trim();
+    if(!val||val.length<4) continue;
+    try{
+      const rows=db.prepare('SELECT DISTINCT user_id id FROM identity_signals WHERE value=? LIMIT 20').all(val);
+      for(const r of rows){ if(r.id&&hasHadTrial(r.id)) return true; }
+    }catch{}
+    // vid claim
+    try{if(db.prepare('SELECT 1 FROM trial_vid_claims WHERE vid=?').get(val)) return true}catch{}
+  }
+  return false;
 }
 function isIpBanned(ip){return !!db.prepare("SELECT 1 FROM ip_list WHERE ip=? AND type='black'").get(ip)}
 function isIpAllowed(ip){const white=db.prepare("SELECT 1 FROM ip_list WHERE type='white'").all();if(!white.length)return true;return !!db.prepare("SELECT 1 FROM ip_list WHERE ip=? AND type='white'").get(ip)}
@@ -263,12 +487,14 @@ function logLogin(uid,ip,kind,ok,ipInfo){
 
 // Deep association helpers (IP/HWID) - anti trial-abuse & deep search
 function deepUserIdsByIp(ip){
-  const v=String(ip||'').trim(); if(!v) return [];
+  const v=normIp(ip); if(!v) return [];
   const ids=new Set();
   try{db.prepare('SELECT id FROM users WHERE reg_ip=?').all(v).forEach(r=>ids.add(r.id))}catch{}
   try{db.prepare('SELECT DISTINCT user_id id FROM logins WHERE ip=? AND user_id IS NOT NULL').all(v).forEach(r=>ids.add(r.id))}catch{}
   try{db.prepare('SELECT DISTINCT user_id id FROM sessions WHERE ip=? AND user_id IS NOT NULL').all(v).forEach(r=>ids.add(r.id))}catch{}
   try{db.prepare('SELECT DISTINCT user_id id FROM hwid_log WHERE ip=? AND user_id IS NOT NULL').all(v).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare('SELECT DISTINCT user_id id FROM identity_signals WHERE value=?').all(v).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare('SELECT user_id id FROM trial_ip_claims WHERE ip=?').all(v).forEach(r=>ids.add(r.id))}catch{}
   return [...ids].filter(Boolean);
 }
 function deepUserIdsByHwid(hwid){
@@ -278,14 +504,117 @@ function deepUserIdsByHwid(hwid){
   try{db.prepare('SELECT id FROM users WHERE trial_hwid=?').all(h).forEach(r=>ids.add(r.id))}catch{}
   try{db.prepare('SELECT DISTINCT user_id id FROM devices WHERE hwid=?').all(h).forEach(r=>ids.add(r.id))}catch{}
   try{db.prepare('SELECT DISTINCT user_id id FROM hwid_log WHERE hwid=?').all(h).forEach(r=>ids.add(r.id))}catch{}
-  try{db.prepare('SELECT DISTINCT used_by id FROM keys k JOIN users u ON u.id=k.used_by WHERE 1=0').all()}catch{} // placeholder
+  try{db.prepare('SELECT user_id id FROM trial_claims WHERE hwid=?').all(h).forEach(r=>ids.add(r.id))}catch{}
+  try{db.prepare("SELECT DISTINCT user_id id FROM identity_signals WHERE kind IN ('hwid','fp') AND value=?").all(h).forEach(r=>ids.add(r.id))}catch{}
   return [...ids].filter(Boolean);
 }
-function trialBlocked(ip, hwid){
-  if(TRIAL<=0) return true;
-  // Только HWID: IP-проверка отключена (CGNAT, VPN, Cloudflare-прокси дают общий IP)
-  if(hwid && deepUserIdsByHwid(hwid).length>0) return true;
+function hasHadTrial(uid){
+  if(!uid) return false;
+  try{if(db.prepare("SELECT 1 FROM sub_history WHERE user_id=? AND source='trial' LIMIT 1").get(uid)) return true}catch{}
+  try{if(db.prepare("SELECT 1 FROM keys WHERE used_by=? AND (product='TRIAL' OR note LIKE '%Пробная%') LIMIT 1").get(uid)) return true}catch{}
+  try{if(db.prepare('SELECT 1 FROM trial_claims WHERE user_id=? LIMIT 1').get(uid)) return true}catch{}
   return false;
+}
+// Проверка: любой из IP-сигналов уже использовался для trial
+function anyIpBlocked(ips){
+  for(const raw of (ips||[])){
+    const v=typeof raw==='string'?normIp(raw):normIp(raw&&raw.ip);
+    if(!v||!isValidPublicIp(v)) continue;
+    try{if(db.prepare('SELECT 1 FROM trial_ip_claims WHERE ip=?').get(v)) return true}catch{}
+    try{
+      const linked=deepUserIdsByIp(v);
+      for(const uid of linked){ if(hasHadTrial(uid)) return true; }
+    }catch{}
+    try{
+      if(db.prepare("SELECT 1 FROM sub_history sh JOIN users u ON u.id=sh.user_id WHERE sh.source='trial' AND u.reg_ip=?").get(v)) return true;
+    }catch{}
+    try{
+      if(db.prepare("SELECT 1 FROM logins l JOIN sub_history sh ON sh.user_id=l.user_id AND sh.source='trial' WHERE l.ip=? AND l.ok=1 LIMIT 1").get(v)) return true;
+    }catch{}
+    try{
+      if(db.prepare("SELECT 1 FROM identity_signals s JOIN sub_history sh ON sh.user_id=s.user_id AND sh.source='trial' WHERE s.value=? LIMIT 1").get(v)) return true;
+    }catch{}
+  }
+  return false;
+}
+function trialBlocked(ip, hwid, extraIps, signals){
+  if(TRIAL<=0) return true;
+  const h=String(hwid||'').trim().slice(0,128);
+  // --- HWID / fingerprint ---
+  if(h.length>=4){
+    try{if(db.prepare('SELECT 1 FROM trial_claims WHERE hwid=?').get(h)) return true}catch{}
+    if(deepUserIdsByHwid(h).length>0) return true;
+  }
+  // --- IP list (conn + extras) ---
+  const list=[];
+  if(ip) list.push(ip);
+  if(Array.isArray(extraIps)){
+    for(const x of extraIps){
+      if(typeof x==='string') list.push(x);
+      else if(x&&x.ip) list.push(x.ip);
+      else if(x&&x.value&&isValidPublicIp(x.value)) list.push(x.value);
+    }
+  } else if(extraIps) list.push(extraIps);
+  if(anyIpBlocked(list)) return true;
+  // --- /24 subnet уже брал trial ---
+  for(const raw of list){
+    const sub=ipv4Subnet24(raw);
+    if(!sub) continue;
+    try{if(db.prepare('SELECT 1 FROM trial_subnet_claims WHERE subnet=?').get(sub)) return true}catch{}
+  }
+  // --- durable vid / shared identity graph ---
+  const sigs=signals&&signals.length?signals:list.map(v=>({value:String(v),kind:'ip'}));
+  if(h.length>=4) sigs.push({value:h,kind:'fp'});
+  if(signalsLinkedToTrial(sigs)) return true;
+  // vid / server tid прямо в claims
+  for(const s of sigs){
+    const val=String(s.value||'');
+    if(s.kind==='vid'||val.startsWith('VID')){
+      try{if(db.prepare('SELECT 1 FROM trial_vid_claims WHERE vid=?').get(val)) return true}catch{}
+    }
+    if(s.kind==='tid'||val.startsWith('TID')){
+      try{if(db.prepare('SELECT 1 FROM trial_vid_claims WHERE vid=?').get(val)) return true}catch{}
+    }
+  }
+  return false;
+}
+function claimTrial(hwid, uid, ip, extraIps, signals){
+  const h=String(hwid||'').trim().slice(0,128);
+  const now=Date.now();
+  if(h.length>=4){
+    try{db.prepare('INSERT OR IGNORE INTO trial_claims(hwid,user_id,ip,ts) VALUES(?,?,?,?)').run(h,uid,normIp(ip),now)}catch{}
+    try{db.prepare('UPDATE users SET trial_hwid=? WHERE id=? AND (trial_hwid IS NULL OR trial_hwid=\'\')').run(h,uid)}catch{}
+  }
+  const allIps=[];
+  if(ip) allIps.push(ip);
+  if(Array.isArray(extraIps)){
+    for(const x of extraIps){
+      if(typeof x==='string') allIps.push(x);
+      else if(x&&x.ip) allIps.push(x.ip);
+      else if(x&&x.value&&isValidPublicIp(x.value)) allIps.push(x.value);
+    }
+  } else if(extraIps) allIps.push(extraIps);
+  const seen=new Set();
+  for(const raw of allIps){
+    const v=normIp(raw);
+    if(!v||!isValidPublicIp(v)||seen.has(v)) continue;
+    seen.add(v);
+    try{db.prepare('INSERT OR IGNORE INTO trial_ip_claims(ip,user_id,ts) VALUES(?,?,?)').run(v,uid,now)}catch{}
+    const sub=ipv4Subnet24(v);
+    if(sub){
+      try{db.prepare('INSERT OR IGNORE INTO trial_subnet_claims(subnet,user_id,ts) VALUES(?,?,?)').run(sub,uid,now)}catch{}
+    }
+  }
+  // claim vid + server tid
+  for(const s of (signals||[])){
+    const val=String(s.value||'').trim();
+    if(!val) continue;
+    if(s.kind==='vid'||s.kind==='tid'||val.startsWith('VID')||val.startsWith('TID')){
+      try{db.prepare('INSERT OR IGNORE INTO trial_vid_claims(vid,user_id,ts) VALUES(?,?,?)').run(val.slice(0,80),uid,now)}catch{}
+    }
+  }
+  // все сигналы в журнал
+  try{recordIdentitySignals(uid, signals||[], 'trial_claim')}catch{}
 }
 function deepSearch(q){
   const raw=String(q||'').trim();
@@ -297,6 +626,9 @@ function deepSearch(q){
   try{addIds(db.prepare('SELECT DISTINCT user_id id FROM logins WHERE ip LIKE ? LIMIT 50').all(like))}catch{}
   try{addIds(db.prepare('SELECT DISTINCT user_id id FROM hwid_log WHERE hwid LIKE ? OR ip LIKE ? LIMIT 50').all(like,like))}catch{}
   try{addIds(db.prepare('SELECT DISTINCT user_id id FROM sessions WHERE ip LIKE ? LIMIT 50').all(like))}catch{}
+  try{addIds(db.prepare('SELECT DISTINCT user_id id FROM identity_signals WHERE value LIKE ? LIMIT 50').all(like))}catch{}
+  try{addIds(db.prepare('SELECT user_id id FROM trial_vid_claims WHERE vid LIKE ? LIMIT 20').all(like))}catch{}
+  try{addIds(db.prepare('SELECT user_id id FROM trial_subnet_claims WHERE subnet LIKE ? LIMIT 20').all(like))}catch{}
   try{addIds(db.prepare('SELECT id FROM users WHERE ref_code LIKE ? LIMIT 20').all(like))}catch{}
   const idList=[...ids].slice(0,50);
   const users=idList.length ? db.prepare(`SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,suspicious,reg_ip,trial_hwid FROM users WHERE id IN (${idList.map(()=>'?').join(',')})`).all(...idList).map(u=>({...u,active:active(u)})) : [];
@@ -402,7 +734,7 @@ function findLoaderExe(){
   return null;
 }
 const DL_PLACEHOLDER = 'DLBOOT________________________________________________________________________________________'; // 94 chars
-const BUILD_ID = '2026-11-14-hwid-only';
+const BUILD_ID = '2026-11-15-identity-v3-trust';
 
 const srv=http.createServer(async(req,res)=>{
   try{
@@ -412,7 +744,17 @@ const srv=http.createServer(async(req,res)=>{
       let p=req.url.split('?')[0];if(p==='/')p='/index.html';
       const f=path.join(PUB,path.normalize(p));
       if(f.startsWith(PUB+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile()){
-        res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':path.extname(f)==='.html'?'no-cache':'public, max-age=86400'});
+        const headers={'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':path.extname(f)==='.html'?'no-cache':'public, max-age=86400'};
+        // Server-side tracking id до регистрации (HttpOnly cookie)
+        if(path.extname(f)==='.html'||p==='/index.html'){
+          const ck=cookie(req);
+          let tid=String(ck.forev_tid||'').trim();
+          if(!tid||tid.length<16){
+            tid='TID'+crypto.randomBytes(16).toString('hex');
+            headers['Set-Cookie']=`forev_tid=${tid}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000${SEC}`;
+          }
+        }
+        res.writeHead(200,headers);
         return res.end(fs.readFileSync(f));
       }
       res.writeHead(404);return res.end('Not found');
@@ -1094,7 +1436,7 @@ const srv=http.createServer(async(req,res)=>{
       if(getSetting('maintenance')==='1')return bad('Технические работы',503);
       // Вход чита — только по HWID; VPN/Proxy/Hosting не блокируем, только логируем
       const ipInfo=await checkIp(ip);
-      const u=checkPw(b.login,b.password);
+      let u=checkPw(b.login,b.password);
       if(!u){
         recordFail(ip,0,false);
         return bad('Неверный логин или пароль',401);
@@ -1102,8 +1444,27 @@ const srv=http.createServer(async(req,res)=>{
       if(u.banned)return bad('Аккаунт заблокирован'+(u.ban_reason?': '+u.ban_reason:''),403);
       logLogin(u.id,ip,'client',1,ipInfo);
       clearFails(ip);
-      if(!active(u))return bad(u.frozen?'Подписка заморожена':'Подписка не активна',403);
       const hw=String(b.hwid||'').slice(0,128);if(hw.length<8)return bad('Нет HWID');
+      // Multi-signal identity: conn + headers + body (WebRTC/loader) + vid/fp
+      const idSignals=collectIdentity(req, b, ip);
+      const signalIps=idSignals.filter(s=>isValidPublicIp(s.value)).map(s=>s.value);
+      recordIdentitySignals(u.id, idSignals, 'client_auth');
+
+      // Если у аккаунта ещё не было подписки/trial — выдаём пробный период (глобальная проверка + trust)
+      if(!active(u) && !u.frozen && TRIAL>0 && !hasHadTrial(u.id) && !trialBlocked(ip, hw, signalIps, idSignals)){
+        const trust=trialTrustScore(ip, idSignals, ipInfo);
+        const hasWebrtc=idSignals.some(s=>s.kind==='webrtc'||s.kind==='stun');
+        const hasTid=idSignals.some(s=>s.kind==='tid'||s.kind==='vid');
+        const proxyStrict=!!(ipInfo&&(ipInfo.proxy||ipInfo.hosting)) && !hasWebrtc && !hasTid;
+        if(!proxyStrict && trust>=40){
+          createUserSubKey(u.id, TRIAL, false, 'Пробная подписка (первый вход)', 'trial', 'TRIAL', TRIAL+'d', 1);
+          claimTrial(hw, u.id, ip, signalIps, idSignals);
+          // перечитываем пользователя после выдачи времени
+          u=db.prepare('SELECT * FROM users WHERE id=?').get(u.id) || u;
+        }
+      }
+
+      if(!active(u))return bad(u.frozen?'Подписка заморожена':'Подписка не активна',403);
       // whitelist mode: if user has entries, only those HWIDs allowed
       const wlCount=db.prepare('SELECT COUNT(*) c FROM hwid_whitelist WHERE user_id=?').get(u.id).c;
       if(wlCount>0){
@@ -1133,6 +1494,10 @@ const srv=http.createServer(async(req,res)=>{
         db.prepare('UPDATE users SET last_hwid_change=? WHERE id=?').run(Date.now(),u.id);
         if(checkSuspiciousHwid(u.id))return bad('Аккаунт заблокирован: подозрительная активность',403);
       }
+      // Накапливаем все exit/WebRTC IP + vid при каждом входе с trial-аккаунта
+      if(hasHadTrial(u.id)){
+        claimTrial(hw, u.id, ip, signalIps, idSignals);
+      }
       return send(res,200,{ok:true,username:u.username,inf:!!u.inf,until:u.inf?0:u.sub_until});
     }
 
@@ -1142,20 +1507,36 @@ const srv=http.createServer(async(req,res)=>{
       if(!/^[A-Za-z0-9_]{3,20}$/.test(username||''))return bad('Ник: 3–20 символов (латиница, цифры, _)');
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email||''))return bad('Некорректный e-mail');
       if(typeof password!=='string'||password.length<8)return bad('Пароль минимум 8 символов');
+      if(isDisposableEmail(email))return bad('Временные email не принимаются',400);
       if(db.prepare('SELECT 1 FROM users WHERE username=? OR email=?').get(username,email))return bad('Ник или e-mail уже занят',409);
+      // тот же нормализованный email уже брал trial (gmail+tag / dots)
+      if(emailHadTrial(email))return bad('Пробный период для этого email уже использован',403);
       const salt=crypto.randomBytes(16).toString('hex');
       const rf=db.prepare('SELECT id FROM users WHERE ref_code=? AND banned=0').get(String(b.ref||'').slice(0,16));
-      const hwid=String(b.hwid||'').slice(0,128);
+      const hwid=String(b.hwid||b.fp||'').slice(0,128);
+      const idSignals=collectIdentity(req, b, ip);
+      const signalIps=idSignals.filter(s=>isValidPublicIp(s.value)).map(s=>s.value);
+      const ipInfo=await checkIp(ip);
       const uid=Number(db.prepare('INSERT INTO users(username,email,hash,salt,created,sub_until,ref_code,referred_by,reg_ip,trial_hwid) VALUES(?,?,?,?,?,?,?,?,?,?)')
         .run(username,email,hashPw(password,salt),salt,Date.now(),0,crypto.randomBytes(4).toString('hex'),rf?rf.id:null,ip,hwid).lastInsertRowid);
+      recordIdentitySignals(uid, idSignals, 'register');
+      // email norm as signal
+      try{recordIdentitySignals(uid,[{value:normalizeEmail(email),kind:'email_norm'}],'register')}catch{}
       let trialKey=null, trialGranted=false;
-      // Deep anti-abuse check: no repeat trial by IP/HWID associations
-      if(!trialBlocked(ip, hwid)){
+      const blocked=trialBlocked(ip, hwid, signalIps, idSignals);
+      const trust=trialTrustScore(ip, idSignals, ipInfo);
+      // proxy/hosting без WebRTC и без tid — trial не даём
+      const hasWebrtc=idSignals.some(s=>s.kind==='webrtc'||s.kind==='stun');
+      const hasTid=idSignals.some(s=>s.kind==='tid'||s.kind==='vid');
+      const proxyStrict=!!(ipInfo&&(ipInfo.proxy||ipInfo.hosting)) && !hasWebrtc && !hasTid;
+      // Глобальная проверка + trust score (порог 40)
+      if(!blocked && !proxyStrict && trust>=40){
         trialGranted=true;
         trialKey=createUserSubKey(uid, TRIAL, false, 'Пробная подписка', 'trial', 'TRIAL', TRIAL+'d', 1);
+        claimTrial(hwid, uid, ip, signalIps, idSignals);
       }
-      logLogin(uid,ip,'reg',1);
-      return send(res,200,{ok:true,trial:trialGranted,trial_key:trialKey||null,trial_days:trialGranted?TRIAL:0},login(res,uid,req));
+      logLogin(uid,ip,'reg',1,ipInfo);
+      return send(res,200,{ok:true,trial:trialGranted,trial_key:trialKey||null,trial_days:trialGranted?TRIAL:0,trust},login(res,uid,req));
     }
     if(url==='/api/login'){
       if(isIpBanned(ip))return bad('IP заблокирован',403);
