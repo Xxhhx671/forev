@@ -966,8 +966,39 @@ async function impKeys(){try{const r=await api('/api/admin/importkeys',{list:$('
 async function lk(){try{const r=await api('/api/admin/keys');$('kl').innerHTML=r.keys.map(k=>`<div class="it"><div><code style="cursor:pointer" onclick="cp('${k.code}')">${k.code}</code><small>${k.inf?'бессрочный':k.days+' дн.'} · устр. ${k.devices}${k.product?' · '+esc(k.product):''}${k.tariff?' · '+esc(k.tariff):''} · ${k.used?'активировал '+esc(k.used):'свободен'}</small></div>${k.used?'':`<button class="xs" onclick="dk('${k.code}')" aria-label="Удалить">×</button>`}</div>`).join('')||'<p>Ключей пока нет.</p>'}catch{}}
 async function dk(c){try{await api('/api/admin/delkey',{code:c});lk()}catch(e){toast(e.message,1)}}
 let uT;function ul(){clearTimeout(uT);uT=setTimeout(async()=>{try{const r=await api('/api/admin/users',{q:$('uq').value});
- $('ulst').innerHTML=r.users.map(x=>`<div class="it"><div><b>${esc(x.username)}</b>${x.is_admin?' · admin':''}${x.is_reseller?' · reseller':''}${x.banned?' · забанен':''}${x.suspicious?' <span class="badge-s">suspicious</span>':''}<small>${esc(x.email)} · ${x.inf?'бессрочно':x.frozen?'заморожена':x.active?'до '+fd(x.sub_until):'нет подписки'} · устр. ${x.max_dev} · сбросов ${x.reset_count||0}/${x.max_resets||3}</small>${x.note?'<br><small>Заметка: '+esc(x.note)+'</small>':''}</div><div class="row" style="margin:0"><input class="mi" id="gd${x.id}" type="number" placeholder="± дней"><input class="mi" id="gv${x.id}" type="number" placeholder="устр."><button class="btn sm" onclick="gr(${x.id})">OK</button>${x.is_admin?'':`<button class="btn sm ghost" onclick="bn(${x.id},${x.banned?0:1})">${x.banned?'Разбан':'Бан'}</button>`}<button class="btn sm ghost" onclick="setNote(${x.id})">Заметка</button><button class="btn sm ghost" onclick="toggleRes(${x.id},${x.is_reseller?0:1})">${x.is_reseller?'Убрать рес.':'Реселлер'}</button><button class="btn sm ghost" onclick="resetDev(${x.id})">Сброс HWID</button><button class="btn sm ghost" onclick="showWl(${x.id})">Whitelist</button><button class="btn sm ghost" onclick="showHist(${x.id})">История</button></div></div>`).join('')||'<p>Никого не найдено.</p>'}catch{}},200)}
+ $('ulst').innerHTML=r.users.map(x=>{
+  const badges = (x.is_admin?' • admin':'') + (x.is_super?' • super':'') + (x.is_tester?' • tester':'') + (x.is_reseller?' • reseller':'') + (x.banned?' • banned':'') + (x.suspicious?' <span class="badge-s">suspicious</span>':'');
+  const sub = x.inf ? 'inf' : (x.frozen ? 'frozen' : (x.active ? ('до '+fd(x.sub_until)) : 'нет подписки'));
+  const rlim = Number(x.reseller_limit||0), rkeys = Number(x.reseller_keys||0), rleft = Math.max(0, rlim - rkeys);
+  const rinfo = x.is_reseller ? `<br><small>Реселлер: лимит ${rlim} • создано ${rkeys} • осталось ${rleft}</small>` : '';
+  return `<div class="it"><div><b>${esc(x.username)}</b>${badges}<small>${esc(x.email||'')} • ${sub} • устр. ${x.max_dev||1} • сбросы ${x.reset_count||0}/${x.max_resets||3}</small>${x.note?'<br><small>Заметка: '+esc(x.note)+'</small>':''}${rinfo}</div>
+  <div class="row" style="margin:6px 0 0;flex-wrap:wrap;gap:6px">
+    <input class="mi" id="gd${x.id}" type="number" placeholder="+ дней" style="max-width:90px">
+    <input class="mi" id="gv${x.id}" type="number" placeholder="устр." style="max-width:80px">
+    <button class="btn sm" onclick="gr(${x.id})">OK</button>
+    ${x.is_admin?'':'<button class="btn sm ghost" onclick="bn('+x.id+','+(x.banned?0:1)+')">'+(x.banned?'Разбан':'Бан')+'</button>'}
+    <button class="btn sm ghost" onclick="setNote(${x.id})">Заметка</button>
+    <button class="btn sm ghost" onclick="toggleRes(${x.id},${x.is_reseller?0:1})">${x.is_reseller?'Снять реселлера':'Реселлер'}</button>
+    <button class="btn sm ghost" onclick="toggleTester(${x.id},${x.is_tester?0:1})">${x.is_tester?'Снять tester':'Tester'}</button>
+    ${(x.is_reseller||x.is_admin||x.is_super)?`<span style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap">
+      <small>Лимит ключей:</small>
+      <button class="btn sm ghost" onclick="adjRslLimit(${x.id},-10)">-10</button>
+      <button class="btn sm ghost" onclick="adjRslLimit(${x.id},-1)">-1</button>
+      <input class="mi" id="rl${x.id}" type="number" value="${rlim}" style="width:90px">
+      <button class="btn sm ghost" onclick="adjRslLimit(${x.id},1)">+1</button>
+      <button class="btn sm ghost" onclick="adjRslLimit(${x.id},10)">+10</button>
+      <button class="btn sm" onclick="setRslLimit(${x.id})">Set</button>
+    </span>`:''}
+    <button class="btn sm ghost" onclick="resetDev(${x.id})">Сброс HWID</button>
+    <button class="btn sm ghost" onclick="showWl(${x.id})">Whitelist</button>
+    <button class="btn sm ghost" onclick="showHist(${x.id})">История</button>
+  </div></div>`;
+}).join('')||'<p>Пользователи не найдены.</p>'}catch(e){}},200)}
 async function setNote(id){const n=prompt('Заметка к пользователю');if(n===null)return;try{await api('/api/admin/note',{id,note:n});toast('Заметка сохранена');ul()}catch(e){toast(e.message,1)}}
+async function setRslLimit(id){try{const v=Number(($('rl'+id)||{}).value||0); await api('/api/admin/resellerlimit',{id,limit:v}); toast('Лимит обновлён'); ul()}catch(e){toast(e.message,1)}}
+async function adjRslLimit(id,delta){try{const el=$('rl'+id); const cur=Number((el&&el.value)||0); const v=Math.max(0,cur+Number(delta||0)); if(el) el.value=v; await api('/api/admin/resellerlimit',{id,limit:v}); toast('Лимит: '+v); ul()}catch(e){toast(e.message,1)}}
+async function toggleTester(id,on){try{await api('/api/admin/tester',{id,enable:!!on});toast(on?'Tester выдан':'Tester снят');ul()}catch(e){toast(e.message,1)}}
+
 async function toggleRes(id,on){try{await api('/api/admin/reseller',{id,enable:!!on});toast(on?'Реселлер включён':'Выключен');ul()}catch(e){toast(e.message,1)}}
 async function gr(id){try{await api('/api/admin/grant',{id,days:$('gd'+id).value,devices:$('gv'+id).value});toast('Готово');ul()}catch(e){toast(e.message,1)}}
 /* безопасность, рефералы, тикеты, новости */

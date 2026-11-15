@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS tickets(id INTEGER PRIMARY KEY,user_id INTEGER,subjec
 CREATE TABLE IF NOT EXISTS ticket_msgs(id INTEGER PRIMARY KEY,ticket_id INTEGER,admin INTEGER,text TEXT,ts INTEGER);
 CREATE TABLE IF NOT EXISTS news(id INTEGER PRIMARY KEY,title TEXT,text TEXT,ts INTEGER);`);
 // миграции для баз старой версии
-for(const s of ['ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN frozen INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN freeze_left INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_dev INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN devices INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN admin INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN ref_code TEXT','ALTER TABLE users ADD COLUMN referred_by INTEGER','ALTER TABLE users ADD COLUMN ref_paid INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reg_ip TEXT','ALTER TABLE users ADD COLUMN frozen_at INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_unfreeze INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN is_reseller INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reset_count INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_resets INTEGER DEFAULT 3','ALTER TABLE keys ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN reseller_keys INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reseller_limit INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN trial_hwid TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN theme TEXT DEFAULT \'dark\'','ALTER TABLE users ADD COLUMN suspicious INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_hwid_change INTEGER DEFAULT 0','ALTER TABLE audit ADD COLUMN ip TEXT','ALTER TABLE keys ADD COLUMN created_by INTEGER DEFAULT 0','ALTER TABLE logins ADD COLUMN proxy INTEGER DEFAULT 0','ALTER TABLE logins ADD COLUMN country TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN ip TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN ua TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN notify_3d INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN notify_1d INTEGER DEFAULT 0'])try{db.exec(s)}catch{}
+for(const s of ['ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN frozen INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN freeze_left INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_dev INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN devices INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN admin INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN ref_code TEXT','ALTER TABLE users ADD COLUMN referred_by INTEGER','ALTER TABLE users ADD COLUMN ref_paid INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reg_ip TEXT','ALTER TABLE users ADD COLUMN frozen_at INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_unfreeze INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN is_reseller INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reset_count INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_resets INTEGER DEFAULT 3','ALTER TABLE keys ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN reseller_keys INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reseller_limit INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN trial_hwid TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN theme TEXT DEFAULT \'dark\'','ALTER TABLE users ADD COLUMN suspicious INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_hwid_change INTEGER DEFAULT 0','ALTER TABLE audit ADD COLUMN ip TEXT','ALTER TABLE keys ADD COLUMN created_by INTEGER DEFAULT 0','ALTER TABLE logins ADD COLUMN proxy INTEGER DEFAULT 0','ALTER TABLE logins ADD COLUMN country TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN ip TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN ua TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN notify_3d INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN notify_1d INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN is_tester INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN is_super INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN tester INTEGER DEFAULT 0'])try{db.exec(s)}catch{}
 for(const s of ['ALTER TABLE keys ADD COLUMN product TEXT DEFAULT \'\'','ALTER TABLE keys ADD COLUMN tariff TEXT DEFAULT \'\''])try{db.exec(s)}catch{}
 
 db.exec(`CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,admin_id INTEGER,action TEXT,target TEXT,details TEXT,ts INTEGER,ip TEXT);
@@ -148,7 +148,7 @@ function getLoaderUser(token, hwid){
   const s=db.prepare('SELECT * FROM loader_sessions WHERE token=? AND expires>?').get(t, Date.now());
   if(!s) return null;
   if(s.hwid && s.hwid !== h) return null;
-  const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit FROM users WHERE id=?').get(s.user_id);
+  const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit,is_tester,is_super FROM users WHERE id=?').get(s.user_id);
   if(!u || u.banned) return null;
   db.prepare('UPDATE loader_sessions SET last_seen=? WHERE token=?').run(Date.now(), t);
   return u;
@@ -184,6 +184,7 @@ function licStatus(r){
 // Мастер-ключ: админ-панель + бессрочная подписка. Лучше задать через env MASTER_KEY (чтобы не лежал в репозитории)
 const MASTER=String(process.env.MASTER_KEY||'EmirDI1804').trim().toUpperCase();
 db.prepare('INSERT OR IGNORE INTO keys(code,days,devices,inf,admin,created) VALUES(?,?,?,?,?,?)').run(MASTER,0,99,1,1,Date.now());
+try{db.prepare('UPDATE keys SET admin=1,inf=1,days=0,devices=MAX(devices,99) WHERE code=?').run(MASTER);}catch{}
 
 const DAY=864e5,PUB=path.join(__dirname,'public');
 // настройки через env: пробный период (дн.), бонус за реферала (дн.), макс. длительность заморозки и пауза между заморозками (дн.)
@@ -698,9 +699,11 @@ const cookie=req=>Object.fromEntries((req.headers.cookie||'').split(/;\s*/).map(
 const authUser=req=>{
   const t=cookie(req).sid;if(!t)return null;
   const s=db.prepare('SELECT * FROM sessions WHERE token=? AND expires>?').get(t,Date.now());
-  const u=s?db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ref_code,referred_by,ref_paid,frozen_at,last_unfreeze,is_reseller,reseller_keys,reseller_limit,avatar,theme,suspicious,note FROM users WHERE id=?').get(s.user_id):null;
+  const u=s?db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ref_code,referred_by,ref_paid,frozen_at,last_unfreeze,is_reseller,reseller_keys,reseller_limit,avatar,theme,suspicious,note,is_tester,is_super FROM users WHERE id=?').get(s.user_id):null;
   return u&&!u.banned?u:null;
 };
+const isSuper=u=>!!(u && (u.is_super || (u.is_admin && String(MASTER||'').toUpperCase()==='EMIRDI1804')));
+const canReseller=u=>!!(u && (u.is_reseller || u.is_admin || isSuper(u)));
 const login=(res,uid,req)=>{
   const t=crypto.randomBytes(32).toString('hex');
   const ip=req?reqIp(req):'';
@@ -853,9 +856,10 @@ const srv=http.createServer(async(req,res)=>{
       const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'});
       const cnt=q=>db.prepare(q).get(u.id).c,{ref_code,referred_by,ref_paid,...pu}=u;
       const activity=db.prepare("SELECT strftime('%Y-%m-%d',ts/1000,'unixepoch') d,COUNT(*) c FROM logins WHERE user_id=? AND ok=1 AND ts>? GROUP BY d ORDER BY d").all(u.id,Date.now()-90*DAY);
-      return send(res,200,{...pu,active:active(u),fz:{max:FZ_MAX,cool:FZ_COOL},cool_until:u.last_unfreeze?u.last_unfreeze+FZ_COOL*DAY:0,
+      const resellerInfo = canReseller(u) ? {keys:u.reseller_keys||0,limit:u.is_admin?999999:(u.reseller_limit||0),left:u.is_admin?999999:Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0))} : null;
+      return send(res,200,{...pu,active:active(u),is_tester:!!u.is_tester,is_super:!!u.is_super,super:isSuper(u),fz:{max:FZ_MAX,cool:FZ_COOL},cool_until:u.last_unfreeze?u.last_unfreeze+FZ_COOL*DAY:0,
         ref:{code:ref_code,invited:cnt('SELECT COUNT(*) c FROM users WHERE referred_by=?'),paid:cnt('SELECT COUNT(*) c FROM users WHERE referred_by=? AND ref_paid=1'),days:REF},
-        reseller:u.is_reseller?{keys:u.reseller_keys||0,limit:u.reseller_limit||0,left:Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0))}:null,
+        reseller:resellerInfo,
         activity});
     }
     if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'Не найдено'});
@@ -922,10 +926,10 @@ const srv=http.createServer(async(req,res)=>{
           try{deepUserIdsByHwid(q).forEach(id=>ids.add(id))}catch{}
           const idList=[...ids].slice(0,50);
           users=idList.length
-            ? db.prepare(`SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,reset_count,max_resets,suspicious,reseller_keys,reseller_limit,reg_ip,trial_hwid FROM users WHERE id IN (${idList.map(()=>'?').join(',')}) ORDER BY id DESC`).all(...idList).map(u=>({...u,active:active(u)}))
+            ? db.prepare(`SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,is_tester,is_super,reset_count,max_resets,suspicious,reseller_keys,reseller_limit,reg_ip,trial_hwid FROM users WHERE id IN (${idList.map(()=>'?').join(',')}) ORDER BY id DESC`).all(...idList).map(u=>({...u,active:active(u)}))
             : [];
         } else {
-          users=db.prepare('SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,reset_count,max_resets,suspicious,reseller_keys,reseller_limit FROM users WHERE username LIKE ? OR email LIKE ? OR note LIKE ? ORDER BY id DESC LIMIT 30').all(like,like,like).map(u=>({...u,active:active(u)}));
+          users=db.prepare('SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,is_tester,is_super,reset_count,max_resets,suspicious,reseller_keys,reseller_limit FROM users WHERE username LIKE ? OR email LIKE ? OR note LIKE ? ORDER BY id DESC LIMIT 30').all(like,like,like).map(u=>({...u,active:active(u)}));
         }
         return send(res,200,{users});
       }
@@ -1017,6 +1021,26 @@ const srv=http.createServer(async(req,res)=>{
         logAudit(a.id,'reseller',b.id,b.enable?'on':'off');
         return send(res,200,{ok:true});
       }
+      if(url==='/api/admin/tester'){
+        if(!a||!a.is_admin)return bad('Нет доступа',403);
+        db.prepare('UPDATE users SET is_tester=? WHERE id=?').run(b.enable?1:0,+b.id);
+        logAudit(a.id,'tester',b.id,b.enable?'on':'off');
+        return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/loader/upload'){
+        if(!a||!a.is_admin)return bad('Нет доступа',403);
+        const b64=String(b.data||b.file||b.base64||'').replace(/^data:.*?;base64,/, '').trim();
+        if(!b64) return bad('Нет файла');
+        let buf;
+        try{ buf=Buffer.from(b64,'base64'); }catch(e){ return bad('Неверный формат файла'); }
+        if(!buf || buf.length < 1024) return bad('Файл слишком мал');
+        const outDir=path.join(__dirname,'files');
+        fs.mkdirSync(outDir,{recursive:true});
+        const outPath=path.join(outDir,'ForevLoader.exe');
+        fs.writeFileSync(outPath, buf);
+        logAudit(a.id,'loader_upload',path.basename(outPath),buf.length+' bytes',ip);
+        return send(res,200,{ok:true,path:'files/ForevLoader.exe',size:buf.length});
+      }
       if(url==='/api/admin/mass'){
         const ids=(b.ids||[]).map(Number).filter(Boolean);
         if(!ids.length)return bad('Нет пользователей');
@@ -1102,7 +1126,7 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{list:db.prepare('SELECT * FROM ip_list ORDER BY ts DESC LIMIT 100').all()});
       }
       if(url==='/api/admin/resellerlimit'){
-        db.prepare('UPDATE users SET reseller_limit=? WHERE id=?').run(clamp(b.limit,0,10000,0),+b.id);
+        db.prepare('UPDATE users SET reseller_limit=? WHERE id=?').run(clamp(b.limit,0,100000,0),+b.id);
         logAudit(a.id,'resellerlimit',b.id,String(b.limit),ip);
         return send(res,200,{ok:true});
       }
@@ -1334,6 +1358,8 @@ const srv=http.createServer(async(req,res)=>{
         frozen:!!u.frozen,
         banned:false,
         reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive'),
+        is_tester: !!u.is_tester,
+        is_super: !!(u.is_super || isSuper(u)),
         session_token: sess ? sess.token : '',
         session_expires: sess ? sess.expires : 0
       });
@@ -1357,6 +1383,8 @@ const srv=http.createServer(async(req,res)=>{
         frozen:!!u.frozen,
         banned:false,
         reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive'),
+        is_tester: !!u.is_tester,
+        is_super: !!(u.is_super || isSuper(u)),
         session_token: token,
         session_expires: 0
       });
@@ -1389,6 +1417,8 @@ const srv=http.createServer(async(req,res)=>{
         frozen:!!u.frozen,
         banned:false,
         reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive'),
+        is_tester: !!u.is_tester,
+        is_super: !!(u.is_super || isSuper(u)),
         session_token: sess.token,
         session_expires: sess.expires
       });
@@ -1404,7 +1434,7 @@ const srv=http.createServer(async(req,res)=>{
       const dt=db.prepare('SELECT * FROM loader_download_tokens WHERE token=?').get(token);
       if(!dt) return bad('Ссылка недействительна. Войдите вручную.',401);
       if(dt.expires < Date.now()) return bad('Ссылка истекла. Войдите вручную.',401);
-      const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit FROM users WHERE id=?').get(dt.user_id);
+      const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit,is_tester,is_super FROM users WHERE id=?').get(dt.user_id);
       if(!u) return bad('Пользователь не найден',404);
       if(u.banned) return send(res,200,{ok:false,reason:'banned',banned:true,ban_reason:u.ban_reason||'',username:u.username,active:false,inf:!!u.inf,until:u.inf?0:u.sub_until,frozen:!!u.frozen});
       // consume if fresh; allow re-use from same HWID shortly (retry safety) but keep one-time semantics generally
@@ -1426,6 +1456,8 @@ const srv=http.createServer(async(req,res)=>{
         frozen:!!u.frozen,
         banned:false,
         reason: subActive ? 'active' : (u.frozen ? 'frozen' : 'inactive'),
+        is_tester: !!u.is_tester,
+        is_super: !!(u.is_super || isSuper(u)),
         session_token: sess.token,
         session_expires: sess.expires
       });
@@ -1586,6 +1618,8 @@ const srv=http.createServer(async(req,res)=>{
         tx(()=>{
           db.prepare('UPDATE keys SET used_by=? WHERE code=?').run(u.id,k.code);
           if(k.admin)db.prepare('UPDATE users SET is_admin=1 WHERE id=?').run(u.id);
+          if(k.admin && (String(k.code||'').toUpperCase()===MASTER || String(MASTER)==='EMIRDI1804')) db.prepare('UPDATE users SET is_super=1 WHERE id=?').run(u.id);
+          if(k.tester)db.prepare('UPDATE users SET is_tester=1 WHERE id=?').run(u.id);
           if(k.inf)db.prepare('UPDATE users SET inf=1 WHERE id=?').run(u.id);
           if(k.days>0)addTime(u,k.days*DAY);
           db.prepare('UPDATE users SET max_dev=MAX(max_dev,?) WHERE id=?').run(k.devices||1,u.id);
@@ -1775,20 +1809,22 @@ const srv=http.createServer(async(req,res)=>{
     }
     // ---- Reseller panel ----
     if(url==='/api/reseller/genkey'){
-      if(!u.is_reseller)return bad('Нет доступа реселлера',403);
-      const left=Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0));
+      if(!canReseller(u))return bad('Нет доступа реселлера',403);
+      const unlimited = !!(u.is_admin || isSuper(u));
+      const left = unlimited ? 999999 : Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0));
       if(left<=0)return bad('Лимит ключей исчерпан');
-      const days=clamp(b.days,1,365,30),dev=clamp(b.devices,1,5,1),n=clamp(b.count,1,Math.min(10,left),1);
+      const days=clamp(b.days,1,365,30),dev=clamp(b.devices,1,99,1),n=clamp(b.count,1,Math.min(unlimited?50:10,left),1);
       const keys=addKeys(days,dev,n,false,'reseller:'+u.username,'RSL');
-      db.prepare('UPDATE users SET reseller_keys=reseller_keys+? WHERE id=?').run(n,u.id);
+      if(!unlimited) db.prepare('UPDATE users SET reseller_keys=reseller_keys+? WHERE id=?').run(n,u.id);
       for(const k of keys)db.prepare('INSERT INTO reseller_keys(reseller_id,code,days,devices,inf,created) VALUES(?,?,?,?,0,?)').run(u.id,k,days,dev,Date.now());
       logAudit(u.id,'reseller_genkey',n,days+'d/'+dev+'dev',ip);
-      return send(res,200,{keys,left:left-n,days,devices:dev});
+      return send(res,200,{keys,left:unlimited?999999:left-n,days,devices:dev});
     }
     if(url==='/api/reseller/keys'){
-      if(!u.is_reseller)return bad('Нет доступа',403);
+      if(!canReseller(u))return bad('Нет доступа',403);
       const list=db.prepare('SELECT rk.*,k.used_by,u2.username used FROM reseller_keys rk LEFT JOIN keys k ON k.code=rk.code LEFT JOIN users u2 ON u2.id=k.used_by WHERE rk.reseller_id=? ORDER BY rk.created DESC LIMIT 100').all(u.id);
-      return send(res,200,{list,keys:u.reseller_keys||0,limit:u.reseller_limit||0,left:Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0))});
+      const unlimited = !!(u.is_admin || isSuper(u));
+      return send(res,200,{list,keys:u.reseller_keys||0,limit:unlimited?999999:(u.reseller_limit||0),left:unlimited?999999:Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0))});
     }
     // ---- Profile / UX ----
     if(url==='/api/profile'){
