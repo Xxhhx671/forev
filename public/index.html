@@ -630,12 +630,225 @@ async function loadCaptcha(){
   }catch(e){$('capQ').textContent='?';captchaId='';console.error(e)}
 }
 function renderCaptcha(){loadCaptcha()}
+// Durable visitor id: localStorage + cookie + IndexedDB (сложнее сбросить всё сразу)
+function getVisitorIdSync(){
+  const KEY='forev_vid';
+  try{
+    let v=localStorage.getItem(KEY)||'';
+    if(!v||v.length<12){
+      try{
+        const m=document.cookie.match(/(?:^|; )forev_vid=([^;]+)/);
+        if(m) v=decodeURIComponent(m[1]);
+      }catch{}
+    }
+    if(!v||v.length<12){
+      const seed=(crypto.randomUUID&&crypto.randomUUID())||(Date.now().toString(36)+Math.random().toString(36).slice(2,12));
+      v='VID'+seed.replace(/-/g,'').slice(0,24);
+    }
+    try{localStorage.setItem(KEY,v)}catch{}
+    try{document.cookie=KEY+'='+encodeURIComponent(v)+';path=/;max-age=31536000;SameSite=Lax'}catch{}
+    return v;
+  }catch(e){
+    return 'VID'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+  }
+}
+async function idbGet(key){
+  return new Promise(resolve=>{
+    try{
+      const open=indexedDB.open('forev_id',1);
+      open.onupgradeneeded=()=>{try{open.result.createObjectStore('kv')}catch{}};
+      open.onerror=()=>resolve('');
+      open.onsuccess=()=>{
+        try{
+          const db=open.result;
+          const tx=db.transaction('kv','readonly');
+          const g=tx.objectStore('kv').get(key);
+          g.onsuccess=()=>resolve(g.result||'');
+          g.onerror=()=>resolve('');
+        }catch{resolve('')}
+      };
+    }catch{resolve('')}
+  });
+}
+async function idbSet(key,val){
+  return new Promise(resolve=>{
+    try{
+      const open=indexedDB.open('forev_id',1);
+      open.onupgradeneeded=()=>{try{open.result.createObjectStore('kv')}catch{}};
+      open.onerror=()=>resolve();
+      open.onsuccess=()=>{
+        try{
+          const db=open.result;
+          const tx=db.transaction('kv','readwrite');
+          tx.objectStore('kv').put(val,key);
+          tx.oncomplete=()=>resolve();
+          tx.onerror=()=>resolve();
+        }catch{resolve()}
+      };
+    }catch{resolve()}
+  });
+}
+async function getVisitorId(){
+  let v=getVisitorIdSync();
+  try{
+    const fromIdb=await idbGet('vid');
+    if(fromIdb&&fromIdb.length>=12){
+      v=fromIdb;
+      try{localStorage.setItem('forev_vid',v)}catch{}
+      try{document.cookie='forev_vid='+encodeURIComponent(v)+';path=/;max-age=31536000;SameSite=Lax'}catch{}
+    } else {
+      await idbSet('vid',v);
+    }
+  }catch{}
+  return v;
+}
+function getVisitorIdLegacy(){return getVisitorIdSync()}
+function simpleHash(str){
+  let h=0;const s=String(str||'');
+  for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}
+  return Math.abs(h).toString(16);
+}
+// Усиленный fingerprint: canvas + WebGL + audio + screen
+async function getBrowserFpDetailed(){
+  const components={};
+  try{
+    components.ua=navigator.userAgent||'';
+    components.lang=(navigator.languages||[navigator.language||'']).join(',');
+    components.screen=screen.width+'x'+screen.height+'x'+(screen.colorDepth||0)+'x'+(devicePixelRatio||1);
+    components.tz=String(new Date().getTimezoneOffset());
+    components.cores=String(navigator.hardwareConcurrency||0);
+    components.mem=String(navigator.deviceMemory||0);
+    components.platform=navigator.platform||'';
+    components.touch=String(navigator.maxTouchPoints||0);
+    try{
+      const fonts=['Arial','Times New Roman','Courier New','Georgia','Verdana','Comic Sans MS','Impact','Roboto','Segoe UI','Menlo'];
+      const base=document.createElement('span');
+      base.style.cssText='position:absolute;left:-9999px;font-size:16px';
+      base.textContent='mmmmmmmmmmlli';
+      document.body.appendChild(base);
+      base.style.fontFamily='monospace';
+      const refW=base.offsetWidth;
+      const present=[];
+      for(const f of fonts){
+        base.style.fontFamily='"'+f+'",monospace';
+        if(base.offsetWidth!==refW) present.push(f);
+      }
+      document.body.removeChild(base);
+      components.fonts=simpleHash(present.join(','));
+    }catch{}
+    try{
+      const c=document.createElement('canvas');c.width=240;c.height=60;
+      const ctx=c.getContext('2d');
+      if(ctx){
+        ctx.textBaseline='top';ctx.font='14px Arial';
+        ctx.fillStyle='#f60';ctx.fillRect(0,0,240,60);
+        ctx.fillStyle='#069';ctx.fillText('forev-fp-'+components.tz,2,2);
+        ctx.strokeStyle='#0f0';ctx.strokeText('forev',4,28);
+        components.canvas=simpleHash(c.toDataURL());
+      }
+    }catch{}
+    try{
+      const c=document.createElement('canvas');
+      const gl=c.getContext('webgl')||c.getContext('experimental-webgl');
+      if(gl){
+        const ext=gl.getExtension('WEBGL_debug_renderer_info');
+        const vendor=ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR);
+        const renderer=ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
+        components.webgl=simpleHash(String(vendor)+'|'+String(renderer));
+      }
+    }catch{}
+    try{
+      const AC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+      if(AC){
+        const ctx=new AC(1,44100,44100);
+        const osc=ctx.createOscillator();
+        const comp=ctx.createDynamicsCompressor();
+        osc.type='triangle';osc.frequency.value=10000;
+        osc.connect(comp);comp.connect(ctx.destination);osc.start(0);
+        const buf=await Promise.race([
+          ctx.startRendering(),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error('audio-timeout')),800))
+        ]);
+        let sum=0;const data=buf.getChannelData(0);
+        for(let i=0;i<data.length;i+=100) sum+=Math.abs(data[i]);
+        components.audio=simpleHash(sum.toFixed(4));
+      }
+    }catch{}
+  }catch{}
+  const raw=Object.keys(components).sort().map(k=>k+':'+components[k]).join('|');
+  const fp='BF'+simpleHash(raw)+simpleHash(raw.slice(0,40))+String(raw.length.toString(16));
+  return {fp,components};
+}
+async function getBrowserFp(){
+  try{const d=await getBrowserFpDetailed();return d.fp}catch(e){return ''}
+}
+// WebRTC/STUN: пытаемся получить реальный публичный IP даже за VPN (если VPN не режет WebRTC)
+async function collectWebRtcIps(timeoutMs=2200){
+  const ips=new Set();
+  if(typeof RTCPeerConnection==='undefined') return [];
+  const servers=[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:stun.cloudflare.com:3478'}
+  ];
+  let pc;
+  try{
+    pc=new RTCPeerConnection({iceServers:servers});
+    pc.createDataChannel('x');
+    const done=new Promise(resolve=>{
+      const t=setTimeout(()=>resolve(),timeoutMs);
+      pc.onicecandidate=e=>{
+        if(!e||!e.candidate||!e.candidate.candidate){
+          if(e&&e.candidate===null){clearTimeout(t);resolve();}
+          return;
+        }
+        const c=e.candidate.candidate;
+        // candidate:... typ srflx/host raddr ...
+        const m=c.match(/([0-9]{1,3}(?:\.[0-9]{1,3}){3})|([0-9a-fA-F:]{3,})/);
+        if(m){
+          const ip=m[1]||m[2];
+          // отсекаем совсем локальные позже на сервере; здесь копим всё публичное-похожее
+          if(ip && !ip.startsWith('0.') && ip!=='::') ips.add(ip);
+        }
+      };
+    });
+    const offer=await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await done;
+  }catch(e){/* WebRTC blocked */}
+  finally{try{pc&&pc.close()}catch{}}
+  // дополнительно: публичный IP через сторонний echo (если сеть пускает)
+  try{
+    const ctrl=AbortSignal.timeout(1500);
+    const r=await fetch('https://api.ipify.org?format=json',{signal:ctrl,cache:'no-store'});
+    if(r.ok){const j=await r.json(); if(j&&j.ip) ips.add(String(j.ip));}
+  }catch{}
+  try{
+    const ctrl=AbortSignal.timeout(1500);
+    const r=await fetch('https://api64.ipify.org?format=json',{signal:ctrl,cache:'no-store'});
+    if(r.ok){const j=await r.json(); if(j&&j.ip) ips.add(String(j.ip));}
+  }catch{}
+  return [...ips];
+}
 async function submit(){const b=$('mb');b.classList.add('ld');$('me').textContent='';
  try{
   let r;
   const payload={captcha_id:captchaId,captcha:$('capA')?.value};
-  if(mode==='reg')r=await api('/api/register',{username:$('f1').value,email:$('f2').value,password:$('f3').value,ref:REF,...payload});
-  else r=await api('/api/login',{login:$('f1').value,password:$('f3').value,...payload});
+  if(mode==='reg'){
+    const [vid,fpData,webrtcIps]=await Promise.all([getVisitorId(),getBrowserFpDetailed(),collectWebRtcIps()]);
+    r=await api('/api/register',{
+      username:$('f1').value,email:$('f2').value,password:$('f3').value,ref:REF,
+      hwid:fpData.fp,fp:fpData.fp,fp_components:fpData.components,
+      vid:vid,visitor_id:vid,
+      webrtc_ips:webrtcIps,
+      stun_ips:webrtcIps,
+      identity:{webrtc:webrtcIps,ips:webrtcIps,vid:vid},
+      ...payload
+    });
+  } else {
+    const vid=await getVisitorId();
+    r=await api('/api/login',{login:$('f1').value,password:$('f3').value,vid,...payload});
+  }
   closeM();$('f3').value='';await init();
   if(user){
     if(mode==='reg'&&r&&r.trial_key){toast('Аккаунт создан. Пробный ключ: '+r.trial_key);try{alert('Аккаунт создан!\nПробный ключ (сохранён в личном кабинете):\n'+r.trial_key+(r.trial_days?('\nСрок: '+r.trial_days+' дн.') :''));}catch{} if(typeof loadMyKeys==='function')loadMyKeys();}
