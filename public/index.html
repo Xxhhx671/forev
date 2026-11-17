@@ -187,7 +187,7 @@ footer{text-align:center;color:var(--m);padding:36px;font-size:13px;border-top:1
 #toast.on{transform:translate(-50%,0)}
 #toast svg{width:20px;height:20px;stroke:var(--r);fill:none;stroke-width:2.5;stroke-linecap:round;flex:none}
 @media(max-width:760px){.am{grid-template-columns:1fr}.side{display:none}.frm{padding:30px 22px}.steps::before{display:none}}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
+@media(prefers-reduced-motion:reduce){*:not(.logo-img):not(.logo-text):not(.pre-img):not(.pre-logo):not(.pbar i){animation:none!important;transition-duration:.01s!important}}
 
 /* rounded theme */
 :root{--rad:18px}
@@ -489,18 +489,49 @@ header{backdrop-filter:blur(12px)!important}
 #pre{background:#000}
 .logo span{background:linear-gradient(90deg,#fff,#a0d0ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
+
+/* === FRV logo v2: crystal icon + animated gradient text === */
+.logo{text-shadow:none!important;gap:12px!important}
+.logo-img{width:36px;height:36px;border-radius:10px;object-fit:cover;display:block;
+  border:1px solid rgba(120,190,255,.55);
+  box-shadow:0 0 14px rgba(59,158,255,.65),inset 0 0 8px rgba(59,158,255,.35);
+  animation:frvGlow 2.8s ease-in-out infinite,frvFloat 4.5s ease-in-out infinite}
+.logo:hover .logo-img{animation-duration:1.2s,2s;transform:rotate(-6deg) scale(1.08)}
+.logo-img{transition:transform .35s}
+.logo-text{font-size:24px!important;font-weight:900!important;font-style:italic!important;letter-spacing:5px!important;
+  background:linear-gradient(100deg,#fff 0%,#7cc4ff 25%,#3b9eff 50%,#fff 75%,#7cc4ff 100%)!important;
+  background-size:250% 100%!important;
+  -webkit-background-clip:text!important;background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;color:transparent!important;
+  animation:frvShine 3.5s linear infinite;
+  filter:drop-shadow(0 0 8px rgba(59,158,255,.55))}
+@keyframes frvShine{from{background-position:0% 50%}to{background-position:250% 50%}}
+@keyframes frvGlow{0%,100%{box-shadow:0 0 10px rgba(59,158,255,.45),inset 0 0 6px rgba(59,158,255,.25)}
+  50%{box-shadow:0 0 22px rgba(59,158,255,.95),inset 0 0 12px rgba(59,158,255,.5)}}
+@keyframes frvFloat{0%,100%{translate:0 0}50%{translate:0 -2px}}
+.pre-img{width:84px;height:84px;border-radius:22px;object-fit:cover;
+  border:1px solid rgba(120,190,255,.6);
+  animation:frvGlow 1.8s ease-in-out infinite,pi 1s ease both}
+#pre .pre-logo{
+  background:linear-gradient(100deg,#fff 0%,#7cc4ff 25%,#3b9eff 50%,#fff 75%,#7cc4ff 100%);
+  background-size:250% 100%;
+  -webkit-background-clip:text!important;background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;color:transparent!important;
+  text-shadow:none!important;
+  animation:frvShine 2.8s linear infinite,pi 1s ease both;
+  filter:drop-shadow(0 0 22px rgba(59,158,255,.7))}
 </style>
 
 </head><body>
 <canvas id="cv"></canvas><div id="pg"></div>
 <div id="pre">
-  <div class="pre-logo">FRV</div>
+  <img class="pre-img" src="/favicon-frv.png" alt=""><div class="pre-logo">FRV</div>
   <div class="pre-sub">CS2 EXTERNAL</div>
   <div class="pbar"><i></i></div>
 </div>
 <header>
 <div class="logo" onclick="go('top')">
-  <div class="logo-mark"><i></i><i></i><i></i><i></i></div>
+  <img class="logo-img" src="/favicon-frv.png" alt="">
   <span class="logo-text">FRV</span>
 </div>
 <div style="display:flex;align-items:center;gap:10px">
