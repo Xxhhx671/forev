@@ -381,6 +381,7 @@ header{backdrop-filter:blur(12px)!important}
 .pre-sub{font-size:11px!important;letter-spacing:5px!important;color:rgba(255,255,255,.4)!important;font-weight:600!important;text-transform:uppercase!important}
 #pre .pbar{width:140px!important;height:2px!important;background:rgba(255,255,255,.1)!important;border-radius:2px!important;overflow:hidden!important;margin-top:6px!important}
 #pre .pbar i{display:block!important;height:100%!important;width:0!important;background:linear-gradient(90deg,#3b9eff,#a0d4ff)!important;box-shadow:0 0 10px #3b9eff!important;animation:pb 1s cubic-bezier(.4,0,.2,1) forwards!important}
+@keyframes pb{from{width:0}to{width:100%}}
 
 
 .heroCard{overflow:hidden}
@@ -674,7 +675,7 @@ header{backdrop-filter:blur(12px)!important}
 const $=id=>document.getElementById(id);let mode='log',user=null;
 /* Фон: сетка квадратов с точками на пересечениях (как на референсе) */
 const cv=$('cv'),cx=cv.getContext('2d');
-let W,H,cols,rows,gap,points=[],t=0,mx=-9999,my=-9999;
+let W,H,cols,rows,gap,points=[],animT=0,mx=-9999,my=-9999;
 
 function rebuild(){
   W=cv.width=innerWidth;H=cv.height=innerHeight;
@@ -700,7 +701,7 @@ rebuild();
 addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY},{passive:true});
 
 (function loop(){
-  t+=0.008;
+  animT+=0.008;
   cx.clearRect(0,0,W,H);
 
   // soft vignette
@@ -715,7 +716,7 @@ addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY},{passive:true});
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols-1;x++){
       const a=points[y*cols+x], b=points[y*cols+x+1];
-      const alpha=0.07 + Math.sin(t*0.6 + a.phase)*0.015;
+      const alpha=0.07 + Math.sin(animT*0.6 + a.phase)*0.015;
       cx.strokeStyle=`rgba(255,255,255,${alpha})`;
       cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();
     }
@@ -723,7 +724,7 @@ addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY},{passive:true});
   for(let x=0;x<cols;x++){
     for(let y=0;y<rows-1;y++){
       const a=points[y*cols+x], b=points[(y+1)*cols+x];
-      const alpha=0.07 + Math.sin(t*0.55 + a.phase+1)*0.015;
+      const alpha=0.07 + Math.sin(animT*0.55 + a.phase+1)*0.015;
       cx.strokeStyle=`rgba(255,255,255,${alpha})`;
       cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();
     }
@@ -732,9 +733,9 @@ addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY},{passive:true});
   // points + gentle mouse interaction + occasional brighter nodes
   for(const p of points){
     // subtle breathing
-    const breath = Math.sin(t*1.2 + p.phase)*1.2;
+    const breath = Math.sin(animT*1.2 + p.phase)*1.2;
     p.x = p.baseX + breath*0.3;
-    p.y = p.baseY + Math.cos(t*0.9 + p.phase)*0.3;
+    p.y = p.baseY + Math.cos(animT*0.9 + p.phase)*0.3;
 
     // mouse push
     const dx=p.x-mx, dy=p.y-my, d=Math.hypot(dx,dy);
@@ -743,7 +744,7 @@ addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY},{passive:true});
       p.y += dy/d * (110-d)*0.04;
     }
 
-    const pulse = 0.55 + Math.sin(t*1.4 + p.phase)*0.25 + p.bright*0.2;
+    const pulse = 0.55 + Math.sin(animT*1.4 + p.phase)*0.25 + p.bright*0.2;
     const size = 1.3 + pulse*0.9;
 
     // glow
@@ -760,8 +761,8 @@ addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY},{passive:true});
   }
 
   // occasional horizontal light streaks (like in the reference)
-  if(Math.sin(t*0.4)>0.92){
-    const y = (Math.sin(t*0.17)*0.5+0.5)*H;
+  if(Math.sin(animT*0.4)>0.92){
+    const y = (Math.sin(animT*0.17)*0.5+0.5)*H;
     const grad = cx.createLinearGradient(0,y,W,y);
     grad.addColorStop(0,'rgba(255,255,255,0)');
     grad.addColorStop(0.4,'rgba(255,255,255,0.04)');
