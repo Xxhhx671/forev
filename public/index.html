@@ -260,6 +260,15 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 
 /* === FRV Redesign polish === */
 
+#pre{background:#000;gap:18px}
+.pre-logo{font-size:clamp(48px,12vw,90px);font-weight:900;font-style:italic;letter-spacing:8px;color:#fff;text-shadow:0 0 40px rgba(59,158,255,.6),0 0 80px rgba(59,158,255,.3);animation:preIn .6s ease both}
+.pre-sub{font-size:12px;letter-spacing:6px;color:rgba(255,255,255,.45);font-weight:600;text-transform:uppercase;animation:preIn .6s .15s ease both}
+@keyframes preIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
+.pbar{width:160px;height:2px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-top:8px}
+.pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3b9eff,#7ec8ff);box-shadow:0 0 12px #3b9eff;animation:pb 1.1s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes pb{from{width:0}to{width:100%}}
+
+
 .heroCard{overflow:hidden}
 .shot{border:1px solid rgba(59,158,255,.15);box-shadow:0 0 60px rgba(59,158,255,.12)}
 .hero2 .h1 span{-webkit-text-stroke:1px rgba(255,255,255,.7)}
@@ -278,9 +287,13 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 
 </head><body>
 <canvas id="cv"></canvas><div id="pg"></div>
-<div id="pre"><img src="/frv-logo.webp" alt="FRV" style="width:min(420px,75vw);filter:drop-shadow(0 0 30px rgba(59,158,255,.5))"><div class="pbar"><i></i></div></div>
+<div id="pre">
+  <div class="pre-logo">FRV</div>
+  <div class="pre-sub">CS2 EXTERNAL</div>
+  <div class="pbar"><i></i></div>
+</div>
 <header>
-<div class="logo" onclick="go('top')"><img src="/frv-logo-sm.webp" alt="FRV" style="height:36px;filter:drop-shadow(0 0 8px rgba(59,158,255,.6))"><span style="font-weight:900;letter-spacing:4px;font-style:italic">FRV</span></div>
+<div class="logo" onclick="go('top')"><span style="font-weight:900;letter-spacing:5px;font-style:italic;font-size:24px;background:linear-gradient(90deg,#fff,#7ec8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 12px rgba(59,158,255,.4))">FRV</span></div>
 <div style="display:flex;align-items:center;gap:10px">
 <button id="langBtn" onclick="toggleLang()" style="background:#0a0a0a;border:1px solid var(--b);color:#fff;padding:8px 12px;font-weight:800;font-size:12px;letter-spacing:1px;cursor:pointer">EN</button>
 <button class="bg" id="bgr" aria-label="Меню" onclick="tm()"><i></i><i></i><i></i></button>
@@ -566,7 +579,7 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 <footer>© 2026 FRV. Все права защищены.</footer>
 
 <div class="ov" id="ov" onclick="if(event.target===this)closeM()"><div class="am" id="am">
-<div class="side"><img src="/frv-logo.webp" alt="FRV" style="max-width:220px;filter:drop-shadow(0 0 20px rgba(59,158,255,.4))"><p>Войдите, чтобы управлять подпиской и активировать ключи.</p></div>
+<div class="side"><div style="font-size:42px;font-weight:900;font-style:italic;letter-spacing:6px;color:#fff;text-shadow:0 0 30px rgba(59,158,255,.5);margin-bottom:12px">FRV</div><p>Войдите, чтобы управлять подпиской и активировать ключи.</p></div>
 <div class="frm"><button class="x" onclick="closeM()" aria-label="Закрыть"><svg viewBox="0 0 16 16"><path d="m2 2 12 12M14 2 2 14"/></svg></button>
 <div class="tabs" id="tabs"><i></i><button id="t1" onclick="openM('log')">Вход</button><button id="t2" onclick="openM('reg')">Регистрация</button></div>
 <h3 id="mt"></h3><p class="hint" id="mh"></p>
@@ -603,7 +616,7 @@ addEventListener('resize',rs);rs();addEventListener('mousemove',e=>{mx=e.clientX
  requestAnimationFrame(loop)})();
 /* Загрузка, прогресс, появление, подсветка карточек */
 function ready(){if(document.body.classList.contains('ready'))return;document.body.classList.add('ready');const p=$('pre');p.classList.add('out');setTimeout(()=>p.remove(),800)}
-addEventListener('load',()=>setTimeout(ready,1200));setTimeout(ready,3500);
+addEventListener('load',()=>setTimeout(ready,600));setTimeout(ready,1800);
 addEventListener('scroll',()=>{$('pg').style.width=scrollY/Math.max(1,document.body.scrollHeight-innerHeight)*100+'%'});
 const io=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting&&!x.target.classList.contains('on')){x.target.classList.add('on');setTimeout(()=>x.target.classList.add('done'),1300)}}),{threshold:.12});
 function obs(){document.querySelectorAll('.rv:not(.on)').forEach(e=>io.observe(e))}obs();
