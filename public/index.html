@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FRV — CS2</title><link rel="icon" href="/favicon-frv.png">
+<title>FRV — CS2</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Unbounded:wght@600;800&display=swap" rel="stylesheet"><link rel="icon" href="/favicon-frv.png">
 <script>window.API_BASE = window.API_BASE || "https://forev-ext-production.up.railway.app";</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
@@ -520,12 +520,112 @@ header{backdrop-filter:blur(12px)!important}
   text-shadow:none!important;
   animation:frvShine 2.8s linear infinite,pi 1s ease both;
   filter:drop-shadow(0 0 22px rgba(59,158,255,.7))}
+
+/* ================= FRV v3 — clean design layer ================= */
+:root{--r:#3b9eff;--r2:#1a6fd4;--ink:#eef2fa;--mut:#8b94a8;--line:rgba(255,255,255,.08);--glass:rgba(14,18,28,.62);--rad:18px;
+  --fd:'Unbounded','Inter',system-ui,sans-serif;--fb:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}
+html{scroll-padding-top:84px}
+body{font-family:var(--fb)!important;color:var(--ink);background:
+  radial-gradient(900px 500px at 12% -5%,rgba(59,158,255,.16),transparent 60%),
+  radial-gradient(800px 500px at 95% 15%,rgba(80,90,255,.10),transparent 60%),#05070c!important;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--fd);letter-spacing:-.01em}
+
+/* preloader: text only */
+#pre .pre-logo{font-family:var(--fd)!important;font-style:normal!important;letter-spacing:.12em!important}
+
+/* header */
+header{padding:14px 5vw!important;background:rgba(5,7,12,.72)!important;border-bottom:1px solid var(--line);
+  backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important}
+.logo{gap:12px!important}
+.logo .logo-img{width:34px!important;height:34px!important;min-width:34px;flex:none;border-radius:9px;object-fit:cover;aspect-ratio:1/1}
+.logo-text{font-family:var(--fd)!important;font-style:normal!important;font-size:20px!important;letter-spacing:.14em!important;font-weight:800!important}
+#langBtn{background:rgba(255,255,255,.05)!important;border:1px solid var(--line)!important;border-radius:10px!important;
+  padding:9px 13px!important;font-family:var(--fb)!important;transition:.2s}
+#langBtn:hover{border-color:rgba(59,158,255,.5)!important;background:rgba(59,158,255,.1)!important}
+.bg{border-radius:10px!important;border:1px solid var(--line)!important;background:rgba(255,255,255,.05)!important}
+#menu{background:rgba(8,11,18,.96)!important;backdrop-filter:blur(20px)}
+
+/* hero */
+.hero{max-width:1240px;padding:140px 5vw 90px!important;gap:56px!important}
+.badge{font-family:var(--fb);border-radius:99px!important;padding:8px 16px!important;letter-spacing:.2em!important}
+.hero-title{font-family:var(--fd)!important;font-style:normal!important;font-weight:800!important;
+  font-size:clamp(44px,7vw,92px)!important;line-height:1!important;letter-spacing:-.02em!important;margin:0 0 22px!important}
+.hero-title span{margin-top:6px;background:linear-gradient(100deg,#5db0ff,#b8dcff 55%,#fff)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important}
+.hero-desc{font-size:17px!important;line-height:1.7!important;color:var(--mut)!important;max-width:500px!important}
+.status-line{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:99px;background:var(--glass);font-size:12.5px!important;margin-bottom:28px!important}
+.btn{clip-path:none!important;border-radius:12px!important;font-family:var(--fb)!important;font-weight:700!important}
+.btn-primary,.btn:not(.ghost):not(.btn-ghost):not(.sm){background:linear-gradient(135deg,#4aa6ff,#1f70d6)!important;color:#fff!important;border:0!important;box-shadow:0 8px 28px rgba(59,158,255,.35)!important}
+.btn.ghost,.btn-ghost{background:rgba(255,255,255,.04)!important;border:1px solid var(--line)!important;color:#fff!important;box-shadow:none!important}
+.btn.ghost:hover,.btn-ghost:hover{border-color:rgba(59,158,255,.5)!important;background:rgba(59,158,255,.10)!important}
+.hf{background:var(--glass);border:1px solid var(--line);padding:9px 14px;border-radius:12px}
+.visual-frame{border-radius:26px!important;border:1px solid rgba(120,190,255,.22)!important;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 80px rgba(59,158,255,.12)!important}
+.visual-frame img{aspect-ratio:1/1;object-fit:cover}
+
+/* band */
+.features-band{background:transparent!important;border:0!important;max-width:1240px;margin:0 auto;padding:10px 5vw 30px!important}
+.band-item{padding:10px 16px;border:1px solid var(--line);border-radius:99px;background:var(--glass);font-size:13px!important}
+
+/* sections */
+.sec{max-width:1240px;margin:0 auto;padding:80px 5vw!important}
+.secHead{margin-bottom:36px;text-align:left}
+.secHead h2,.sec h2{font-family:var(--fd)!important;font-size:clamp(26px,3.6vw,40px)!important;font-weight:800!important;letter-spacing:-.02em!important;line-height:1.15;margin:0 0 12px!important;text-align:left}
+.secHead h2 b,.sec h2 b{color:var(--r);font-weight:800}
+.secHead p{color:var(--mut)!important;font-size:16px!important;max-width:560px;line-height:1.65}
+
+.featureGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.fcard{position:relative;padding:28px 26px!important;border-radius:var(--rad)!important;background:var(--glass)!important;border:1px solid var(--line)!important;overflow:hidden}
+.fcard::before{content:'';position:absolute;left:0;top:0;right:0;height:2px;background:linear-gradient(90deg,var(--r),transparent)}
+.fcard:hover{border-color:rgba(59,158,255,.4)!important;transform:translateY(-4px);box-shadow:0 18px 50px rgba(0,0,0,.4),0 0 40px rgba(59,158,255,.08)}
+.fnum{display:inline-block;padding:5px 11px;border-radius:99px;background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.3);font-size:10.5px!important;letter-spacing:.18em!important;margin-bottom:16px!important;opacity:1!important}
+.fcard h3{font-size:18px!important;margin-bottom:10px!important;color:#fff!important}
+.fcard p{font-size:14.5px!important;line-height:1.65!important}
+
+.split{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:stretch}
+.panel{padding:34px;border-radius:var(--rad);background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px)}
+.panel h2{font-size:clamp(22px,3vw,30px)!important}
+.steps2{display:flex;flex-direction:column;gap:14px;position:relative}
+.step{display:flex;gap:16px;align-items:flex-start;padding:16px 18px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--line);transition:.25s}
+.step:hover{border-color:rgba(59,158,255,.35);background:rgba(59,158,255,.05)}
+.step>b{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-family:var(--fd);font-size:14px;color:#fff;background:linear-gradient(135deg,#4aa6ff,#1f70d6);box-shadow:0 6px 18px rgba(59,158,255,.35)}
+.step h4{font-size:15px;margin:2px 0 6px;color:#fff}
+.step p{font-size:13.5px;line-height:1.6;color:var(--mut);margin:0}
+.cta2{display:flex;flex-direction:column;gap:22px;padding:6px}
+.cta2 h3{font-size:24px;margin:0 0 10px;color:#fff}
+.cta2 p{color:var(--mut);line-height:1.65;font-size:15px;margin:0}
+#how .panel:last-child{background:linear-gradient(160deg,rgba(59,158,255,.16),rgba(14,18,28,.7) 55%);border-color:rgba(59,158,255,.28)}
+
+/* cabinet, cards, modals: same language */
+.card,.box,.prof,.dash{border-radius:var(--rad)!important;background:var(--glass)!important;border:1px solid var(--line)!important;clip-path:none!important}
+.am{border-radius:22px!important;background:rgba(10,13,21,.97)!important;border:1px solid var(--line)!important}
+.fld input,.fld textarea,input,select,textarea{font-family:var(--fb)}
+.fld input{border-radius:12px!important}
+footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-align:center;font-size:13px}
+
+@media(max-width:960px){.featureGrid{grid-template-columns:1fr}.split{grid-template-columns:1fr}.sec{padding:56px 5vw!important}.hero{padding-top:110px!important}}
+@media(max-width:520px){.panel{padding:22px}.logo-text{font-size:17px!important}}
+
+/* fixes */
+#land .hero{display:grid!important;grid-template-columns:1.05fr .95fr;align-items:center!important;justify-items:stretch!important;text-align:left!important;min-height:auto!important}
+#land .hero-content{text-align:left}
+#land .hero-actions,#land .hero-features{justify-content:flex-start}
+#land h2{text-transform:none!important;text-align:left!important;letter-spacing:-.02em!important}
+#cv{opacity:.18!important}
+.hf{flex:none}
+@media(max-width:960px){#land .hero{grid-template-columns:1fr!important;text-align:center!important}#land .hero-content{text-align:center}#land .hero-actions,#land .hero-features{justify-content:center}}
+#land h2::after{display:none!important}
+#land .secHead{padding-bottom:0}
+#land .secHead h2{position:relative;padding-bottom:16px!important}
+#land .secHead h2::after{display:block!important;content:"";position:absolute;left:0;bottom:0;width:48px!important;height:3px;margin:0;border-radius:3px;background:linear-gradient(90deg,var(--r),transparent)}
+#land .panel h2::after{display:none!important}
+#toast:empty{display:none!important}
 </style>
 
 </head><body>
 <canvas id="cv"></canvas><div id="pg"></div>
 <div id="pre">
-  <img class="pre-img" src="/favicon-frv.png" alt=""><div class="pre-logo">FRV</div>
+  <div class="pre-logo">FRV</div>
   <div class="pre-sub">CS2 EXTERNAL</div>
   <div class="pbar"><i></i></div>
 </div>
