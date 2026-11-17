@@ -75,7 +75,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;justify-conte
 .ml em{font-style:normal;font-size:12px;color:var(--r);width:22px}
 .ml svg{width:20px;height:20px;margin-left:auto;transition:transform .3s}.ml:hover svg{transform:translateX(6px)}
 .mf{margin-top:auto;color:var(--m);font-size:13px}
-/* buttons: угловые, без скруглений */
+/* buttons: плавные, без рывков */
 .btn{position:relative;isolation:isolate;border:0;cursor:pointer;padding:16px 40px;font-weight:800;font-size:14px;letter-spacing:2px;text-transform:uppercase;color:#fff;background:var(--r);clip-path:var(--ch);transition:color .35s}
 .btn::before{content:"";position:absolute;inset:0;background:#fff;transform:scaleX(0);transform-origin:left;transition:transform .45s cubic-bezier(.7,0,.2,1);z-index:-1}
 .btn:hover{color:#000}.btn:hover::before{transform:scaleX(1)}
@@ -229,7 +229,7 @@ footer{text-align:center;color:var(--m);padding:36px;font-size:13px;border-top:1
 .cab-in .fld.n{flex:0 1 150px;min-width:130px}
 
 /* mobile + touch */
-.card::before,.card::after{pointer-events:none} /* перекрывали клики по вкладкам и кнопкам внутри карточек */
+.card::before,.card::after{pointer-events:none} /* отключаем клики по псевдоэлементам карточек */
 html{-webkit-text-size-adjust:100%}
 button,.chips span,.seg button,.it{touch-action:manipulation}
 header{padding-top:calc(14px + env(safe-area-inset-top))}
@@ -270,7 +270,7 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 </div>
 </header>
 <div class="mv" id="mv" onclick="tm(0)"></div>
-<aside id="menu"><div id="ml"></div><div class="mf">FOREV EXT © 2026<br>Софт для Counter-Strike 2</div></aside>
+<aside id="menu"><div id="ml"></div><div class="mf">FOREV EXT © 2026<br>Сервис для Counter-Strike 2</div></aside>
 
 <main>
 <div id="land">
@@ -321,11 +321,11 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
   <div>
     <div class="hbadge">CS2 External • Loader • HWID License</div>
     <h1 class="h1"><span>FOREV</span><b>CONTROL PANEL</b></h1>
-    <p class="hsub">Новый интерфейс сайта: личный кабинет с ключами подписки, админ-панелью, глубоким поиском по IP/HWID и защитой от повторной активации пробного периода.</p>
-    <div id="prodstatus" style="margin:0 0 18px;font-size:14px;color:var(--m)">Загрузка статуса...</div>
+    <p class="hsub">Единая панель управления: подписки и лицензии, привязка по HWID/IP, загрузка клиента и управление доступом из личного кабинета.</p>
+    <div id="prodstatus" style="margin:0 0 18px;font-size:14px;color:var(--m)">Загрузка данных...</div>
     <div class="actions">
       <button class="btn" onclick="openM('reg')">Создать аккаунт</button>
-      <button class="btn ghost" onclick="openM('log')">Войти в кабинет</button>
+      <button class="btn ghost" onclick="openM('log')">Войти в аккаунт</button>
       <button class="btn ghost" onclick="go('feat')">Возможности</button>
     </div>
     <div class="mini"><div><i>01</i>Триал-ключ при регистрации</div><div><i>02</i>Подписка ключом в кабинете</div><div><i>03</i>Онлайн-валидация HWID</div></div>

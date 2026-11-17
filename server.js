@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS promo_uses(code TEXT,user_id INTEGER,PRIMARY KEY(code
 CREATE TABLE IF NOT EXISTS tickets(id INTEGER PRIMARY KEY,user_id INTEGER,subject TEXT,status TEXT,created INTEGER,updated INTEGER);
 CREATE TABLE IF NOT EXISTS ticket_msgs(id INTEGER PRIMARY KEY,ticket_id INTEGER,admin INTEGER,text TEXT,ts INTEGER);
 CREATE TABLE IF NOT EXISTS news(id INTEGER PRIMARY KEY,title TEXT,text TEXT,ts INTEGER);`);
-// РјРёРіСЂР°С†РёРё РґР»СЏ Р±Р°Р· СЃС‚Р°СЂРѕР№ РІРµСЂСЃРёРё
+// миграции для баз старой версии
 for(const s of ['ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN frozen INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN freeze_left INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_dev INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN devices INTEGER DEFAULT 1','ALTER TABLE keys ADD COLUMN inf INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN admin INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN ref_code TEXT','ALTER TABLE users ADD COLUMN referred_by INTEGER','ALTER TABLE users ADD COLUMN ref_paid INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reg_ip TEXT','ALTER TABLE users ADD COLUMN frozen_at INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_unfreeze INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN is_reseller INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reset_count INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN max_resets INTEGER DEFAULT 3','ALTER TABLE keys ADD COLUMN note TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN reseller_keys INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN reseller_limit INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN trial_hwid TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT \'\'','ALTER TABLE users ADD COLUMN theme TEXT DEFAULT \'dark\'','ALTER TABLE users ADD COLUMN suspicious INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN last_hwid_change INTEGER DEFAULT 0','ALTER TABLE audit ADD COLUMN ip TEXT','ALTER TABLE keys ADD COLUMN created_by INTEGER DEFAULT 0','ALTER TABLE logins ADD COLUMN proxy INTEGER DEFAULT 0','ALTER TABLE logins ADD COLUMN country TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN ip TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN ua TEXT DEFAULT \'\'','ALTER TABLE sessions ADD COLUMN created INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN notify_3d INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN notify_1d INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN is_tester INTEGER DEFAULT 0','ALTER TABLE users ADD COLUMN is_super INTEGER DEFAULT 0','ALTER TABLE keys ADD COLUMN tester INTEGER DEFAULT 0'])try{db.exec(s)}catch{}
 for(const s of ['ALTER TABLE keys ADD COLUMN product TEXT DEFAULT \'\'','ALTER TABLE keys ADD COLUMN tariff TEXT DEFAULT \'\''])try{db.exec(s)}catch{}
 
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS identity_signals(
 CREATE INDEX IF NOT EXISTS idx_identity_value ON identity_signals(value);
 CREATE INDEX IF NOT EXISTS idx_identity_user ON identity_signals(user_id);
 CREATE INDEX IF NOT EXISTS idx_identity_kind ON identity_signals(kind);
-INSERT OR IGNORE INTO settings(key,value) VALUES('killswitch','0'),('maintenance','0'),('status','online'),('status_text','РЎРµСЂРІРёСЃ СЂР°Р±РѕС‚Р°РµС‚'),('configs_open','1');`);
+INSERT OR IGNORE INTO settings(key,value) VALUES('killswitch','0'),('maintenance','0'),('status','online'),('status_text','Сервис работает'),('configs_open','1');`);
 db.exec(`CREATE TABLE IF NOT EXISTS configs(
   id INTEGER PRIMARY KEY,
   title TEXT NOT NULL,
@@ -181,26 +181,26 @@ function licStatus(r){
   return 'active';
 }
 
-// РњР°СЃС‚РµСЂ-РєР»СЋС‡: Р°РґРјРёРЅ-РїР°РЅРµР»СЊ + Р±РµСЃСЃСЂРѕС‡РЅР°СЏ РїРѕРґРїРёСЃРєР°. Р›СѓС‡С€Рµ Р·Р°РґР°С‚СЊ С‡РµСЂРµР· env MASTER_KEY (С‡С‚РѕР±С‹ РЅРµ Р»РµР¶Р°Р» РІ СЂРµРїРѕР·РёС‚РѕСЂРёРё)
+// Мастер-ключ: админ-панель + бессрочная подписка. Лучше задать через env MASTER_KEY (чтобы не лежал в репозитории)
 const MASTER=String(process.env.MASTER_KEY||'EmirDI1804').trim().toUpperCase();
 db.prepare('INSERT OR IGNORE INTO keys(code,days,devices,inf,admin,created) VALUES(?,?,?,?,?,?)').run(MASTER,0,99,1,1,Date.now());
 try{db.prepare('UPDATE keys SET admin=1,inf=1,days=0,devices=MAX(devices,99) WHERE code=?').run(MASTER);}catch{}
 
 const DAY=864e5,PUB=path.join(__dirname,'public');
-// РЅР°СЃС‚СЂРѕР№РєРё С‡РµСЂРµР· env: РїСЂРѕР±РЅС‹Р№ РїРµСЂРёРѕРґ (РґРЅ.), Р±РѕРЅСѓСЃ Р·Р° СЂРµС„РµСЂР°Р»Р° (РґРЅ.), РјР°РєСЃ. РґР»РёС‚РµР»СЊРЅРѕСЃС‚СЊ Р·Р°РјРѕСЂРѕР·РєРё Рё РїР°СѓР·Р° РјРµР¶РґСѓ Р·Р°РјРѕСЂРѕР·РєР°РјРё (РґРЅ.)
+// настройки через env: пробный период (дн.), бонус за реферала (дн.), макс. длительность заморозки и пауза между заморозками (дн.)
 const TRIAL=Number(process.env.TRIAL_DAYS??1),REF=Number(process.env.REF_DAYS??3),FZ_MAX=Number(process.env.FREEZE_MAX_DAYS??14),FZ_COOL=Number(process.env.FREEZE_COOLDOWN_DAYS??7),FZMS=FZ_MAX*DAY;
-// РћРґРЅРѕСЂР°Р·РѕРІС‹Р№ Р±СЌРєС„РёР»Р»: СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ trial в†’ trial_claims / trial_ip_claims / identity_signals
+// Одноразовый бэкфилл: существующие trial → trial_claims / trial_ip_claims / identity_signals
 try{
   db.prepare("INSERT OR IGNORE INTO trial_claims(hwid,user_id,ip,ts) SELECT trial_hwid,id,reg_ip,created FROM users WHERE trial_hwid IS NOT NULL AND length(trial_hwid)>=4").run();
   db.prepare("INSERT OR IGNORE INTO trial_claims(hwid,user_id,ip,ts) SELECT d.hwid,d.user_id,u.reg_ip,d.first_seen FROM devices d JOIN users u ON u.id=d.user_id JOIN sub_history sh ON sh.user_id=u.id AND sh.source='trial' WHERE length(d.hwid)>=4").run();
   db.prepare("INSERT OR IGNORE INTO trial_ip_claims(ip,user_id,ts) SELECT reg_ip,id,created FROM users WHERE reg_ip IS NOT NULL AND length(reg_ip)>=7 AND id IN (SELECT user_id FROM sub_history WHERE source='trial')").run();
   db.prepare("INSERT OR IGNORE INTO trial_ip_claims(ip,user_id,ts) SELECT ip,user_id,ts FROM trial_claims WHERE ip IS NOT NULL AND length(ip)>=7").run();
   db.prepare("INSERT OR IGNORE INTO trial_ip_claims(ip,user_id,ts) SELECT l.ip,l.user_id,l.ts FROM logins l JOIN sub_history sh ON sh.user_id=l.user_id AND sh.source='trial' WHERE l.ip IS NOT NULL AND length(l.ip)>=7 AND l.ok=1").run();
-  // identity_signals РёР· РёР·РІРµСЃС‚РЅС‹С… РёСЃС‚РѕС‡РЅРёРєРѕРІ
+  // identity_signals из известных источников
   db.prepare("INSERT INTO identity_signals(user_id,kind,value,meta,ts) SELECT id,'reg_ip',reg_ip,'backfill',created FROM users WHERE reg_ip IS NOT NULL AND length(reg_ip)>=7 AND NOT EXISTS (SELECT 1 FROM identity_signals s WHERE s.user_id=users.id AND s.value=users.reg_ip)").run();
   db.prepare("INSERT INTO identity_signals(user_id,kind,value,meta,ts) SELECT user_id,'login_ip',ip,'backfill',MAX(ts) FROM logins WHERE ok=1 AND ip IS NOT NULL AND length(ip)>=7 GROUP BY user_id,ip").run();
 }catch(e){/* ignore on fresh db */}
-// Р°РІС‚РѕСЂР°Р·РјРѕСЂРѕР·РєР°: РІСЂРµРјСЏ РїР°СѓР·С‹ РЅРµ Р±РѕР»СЊС€Рµ FZ_MAX
+// авторазморозка: время паузы не больше FZ_MAX
 const thaw=()=>db.prepare('UPDATE users SET sub_until=frozen_at+?+freeze_left,last_unfreeze=frozen_at+?,frozen=0,freeze_left=0 WHERE frozen=1 AND frozen_at>0 AND frozen_at<?').run(FZMS,FZMS,Date.now()-FZMS);
 const logAudit=(adminId,action,target,details,ip='')=>db.prepare('INSERT INTO audit(admin_id,action,target,details,ts,ip) VALUES(?,?,?,?,?,?)').run(adminId||0,action,String(target||'').slice(0,100),String(details||'').slice(0,500),Date.now(),String(ip||'').slice(0,45));
 // VPN/Proxy detection via ip-api.com (free, cached 7 days)
@@ -222,7 +222,7 @@ async function checkIp(ip){
 function logHwid(uid,hwid,name,ip,action){
   db.prepare('INSERT INTO hwid_log(user_id,hwid,name,ip,action,ts) VALUES(?,?,?,?,?,?)').run(uid,String(hwid).slice(0,128),String(name||'').slice(0,40),String(ip||'').slice(0,45),action,Date.now());
 }
-// Р°РІС‚РѕР±Р°РЅ РїСЂРё РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅРѕР№ СЃРјРµРЅРµ HWID
+// автобан при подозрительной смене HWID
 function checkSuspiciousHwid(uid){
   const since=Date.now()-24*3600*1000;
   const changes=db.prepare("SELECT COUNT(*) c FROM hwid_log WHERE user_id=? AND action IN ('new','reset') AND ts>?").get(uid,since).c;
@@ -230,8 +230,8 @@ function checkSuspiciousHwid(uid){
   const maxChanges=Number(process.env.HWID_BAN_CHANGES||5);
   const maxDistinct=Number(process.env.HWID_BAN_DISTINCT||4);
   if(changes>=maxChanges||distinct>=maxDistinct){
-    db.prepare("UPDATE users SET banned=1,ban_reason=?,suspicious=1 WHERE id=? AND is_admin=0").run('РђРІС‚РѕР±Р°РЅ: РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅР°СЏ СЃРјРµРЅР° HWID ('+changes+' СЃРјРµРЅ / '+distinct+' СѓСЃС‚СЂ. Р·Р° 24С‡)',uid);
-    addNotif(uid,'РђРєРєР°СѓРЅС‚ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ: РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅР°СЏ Р°РєС‚РёРІРЅРѕСЃС‚СЊ СѓСЃС‚СЂРѕР№СЃС‚РІ');
+    db.prepare("UPDATE users SET banned=1,ban_reason=?,suspicious=1 WHERE id=? AND is_admin=0").run('Автобан: подозрительная смена HWID ('+changes+' смен / '+distinct+' устр. за 24ч)',uid);
+    addNotif(uid,'Аккаунт заблокирован: подозрительная активность устройств');
     logAudit(0,'autoban',uid,'hwid changes='+changes+' distinct='+distinct);
     return true;
   }
@@ -251,11 +251,11 @@ async function scanExpiryNotices(){
     // 3 days window: sub ends in 2.5вЂ“3.5 days
     const u3=db.prepare('SELECT id,username,email,sub_until FROM users WHERE banned=0 AND inf=0 AND frozen=0 AND sub_until>? AND sub_until<? AND id NOT IN (SELECT user_id FROM sub_notices WHERE kind=?)').all(now+2.5*DAY,now+3.5*DAY,'3d');
     for(const u of u3){
-      try{db.prepare('INSERT OR REPLACE INTO sub_notices(user_id,kind,ts) VALUES(?,?,?)').run(u.id,'3d',now);addNotif(u.id,'РџРѕРґРїРёСЃРєР° РёСЃС‚РµРєР°РµС‚ С‡РµСЂРµР· ~3 РґРЅСЏ');}catch(e){console.error('notice3',e.message)}
+      try{db.prepare('INSERT OR REPLACE INTO sub_notices(user_id,kind,ts) VALUES(?,?,?)').run(u.id,'3d',now);addNotif(u.id,'Подписка истекает через ~3 дня');}catch(e){console.error('notice3',e.message)}
     }
     const u1=db.prepare('SELECT id,username,email,sub_until FROM users WHERE banned=0 AND inf=0 AND frozen=0 AND sub_until>? AND sub_until<? AND id NOT IN (SELECT user_id FROM sub_notices WHERE kind=?)').all(now,now+1.5*DAY,'1d');
     for(const u of u1){
-      try{db.prepare('INSERT OR REPLACE INTO sub_notices(user_id,kind,ts) VALUES(?,?,?)').run(u.id,'1d',now);addNotif(u.id,'РџРѕРґРїРёСЃРєР° РёСЃС‚РµРєР°РµС‚ Р·Р°РІС‚СЂР°');}catch(e){console.error('notice1',e.message)}
+      try{db.prepare('INSERT OR REPLACE INTO sub_notices(user_id,kind,ts) VALUES(?,?,?)').run(u.id,'1d',now);addNotif(u.id,'Подписка истекает завтра');}catch(e){console.error('notice1',e.message)}
     }
   }catch(e){console.error('scanExpiry',e.message)}
 }
@@ -269,12 +269,12 @@ const active=u=>!u.frozen&&!!(u.inf||u.sub_until>Date.now());
 function addKeys(days,devices,n,inf,note='',prefix='FOREV',product='',tariff=''){const keys=[],st=db.prepare('INSERT INTO keys(code,days,devices,inf,created,note,product,tariff) VALUES(?,?,?,?,?,?,?,?)');for(let i=0;i<n;i++){const c=prefix+'-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');st.run(c,days,devices,inf?1:0,Date.now(),note,product,tariff);keys.push(c)}return keys}
 function addSubHistory(uid,days,source,details=''){db.prepare('INSERT INTO sub_history(user_id,days,source,details,ts) VALUES(?,?,?,?,?)').run(uid,days,source,details,Date.now())}
 function addNotif(uid,text){db.prepare('INSERT INTO notifications(user_id,text,ts) VALUES(?,?,?)').run(uid,text.slice(0,300),Date.now())}
-// ========== РЎРёСЃС‚РµРјР° РёРґРµРЅС‚РёС„РёРєР°С†РёРё IP (multi-signal) ==========
-// РЎРѕР±РёСЂР°РµРј: conn IP, РІСЃСЋ С†РµРїРѕС‡РєСѓ XFF/CF, client/real_ip РѕС‚ Р»РѕР°РґРµСЂР°, WebRTC/STUN СЃ Р±СЂР°СѓР·РµСЂР°.
-// Р›СЋР±РѕР№ РїСѓР±Р»РёС‡РЅС‹Р№ IP, СЃ РєРѕС‚РѕСЂРѕРіРѕ СѓР¶Рµ Р±СЂР°Р»Рё trial, Р±Р»РѕРєРёСЂСѓРµС‚ РїРѕРІС‚РѕСЂРЅС‹Р№ trial РЅР°РІСЃРµРіРґР°.
+// ========== Система идентификации IP (multi-signal) ==========
+// Собираем: conn IP, всю цепочку XFF/CF, client/real_ip от лоадера, WebRTC/STUN с браузера.
+// Любой публичный IP, с которого уже брали trial, блокирует повторный trial навсегда.
 function normIp(raw){
   let v=String(raw||'').trim().replace(/^::ffff:/i,'');
-  // СѓР±СЂР°С‚СЊ РїРѕСЂС‚ Сѓ IPv4 host:port
+  // убрать порт у IPv4 host:port
   if(/^\d+\.\d+\.\d+\.\d+:\d+$/.test(v)) v=v.split(':')[0];
   // [ipv6]:port
   if(v.startsWith('[')){const m=v.match(/^\[([^\]]+)\]/); if(m) v=m[1];}
@@ -291,7 +291,7 @@ function isPrivateOrLocalIp(ip){
 function isValidPublicIp(ip){
   const v=normIp(ip);
   if(!v||isPrivateOrLocalIp(v)) return false;
-  // РіСЂСѓР±Р°СЏ РІР°Р»РёРґР°С†РёСЏ IPv4 / IPv6
+  // грубая валидация IPv4 / IPv6
   if(/^\d{1,3}(\.\d{1,3}){3}$/.test(v)){
     const parts=v.split('.').map(Number);
     if(parts.some(n=>n>255)) return false;
@@ -300,8 +300,8 @@ function isValidPublicIp(ip){
   if(v.includes(':') && /^[0-9a-fA-F:]+$/.test(v) && v.length>=3) return true;
   return false;
 }
-// Р РµР°Р»СЊРЅС‹Р№ IP РєР»РёРµРЅС‚Р°. Р›РѕР°РґРµСЂ С…РѕРґРёС‚ С‡РµСЂРµР· Cloudflare Worker-РїСЂРѕРєСЃРё,
-// РїРѕСЌС‚РѕРјСѓ РїСЂРёРѕСЂРёС‚РµС‚: X-Client-IP (СЃС‚Р°РІРёС‚ РЅР°С€ РІРѕСЂРєРµСЂ) -> CF-Connecting-IP -> XFF -> СЃРѕРєРµС‚.
+// Реальный IP клиента. Лоадер ходит через Cloudflare Worker-прокси,
+// поэтому приоритет: X-Client-IP (ставит наш воркер) -> CF-Connecting-IP -> XFF -> сокет.
 function reqIp(req){
   const h=(req&&req.headers)||{};
   const raw=String(h['x-client-ip']||'').trim()
@@ -310,7 +310,7 @@ function reqIp(req){
     || (req&&req.socket&&req.socket.remoteAddress)||'';
   return normIp(raw);
 }
-// Р’СЃРµ IP РёР· Р·Р°РіРѕР»РѕРІРєРѕРІ (С†РµРїРѕС‡РєР° РїСЂРѕРєСЃРё)
+// Все IP из заголовков (цепочка прокси)
 function headerIpChain(req){
   const h=(req&&req.headers)||{};
   const out=[];
@@ -334,7 +334,7 @@ function headerIpChain(req){
   for(const x of out){if(!seen.has(x.ip)){seen.add(x.ip);uniq.push(x);}}
   return uniq;
 }
-// IP РёР· body РєР»РёРµРЅС‚Р° (WebRTC, Р»РѕР°РґРµСЂ, СЂСѓС‡РЅС‹Рµ РїРѕР»СЏ)
+// IP из body клиента (WebRTC, лоадер, ручные поля)
 function bodyIpList(b){
   const out=[];
   if(!b||typeof b!=='object') return out;
@@ -370,7 +370,7 @@ function ipv4Subnet24(ip){
   const p=v.split('.');
   return p[0]+'.'+p[1]+'.'+p[2]+'.0/24';
 }
-// РџРѕР»РЅС‹Р№ РЅР°Р±РѕСЂ СЃРёРіРЅР°Р»РѕРІ: IP + durable visitor id + server tid + fp components
+// Полный набор сигналов: IP + durable visitor id + server tid + fp components
 function collectIdentity(req, body, connIp){
   const b=body||{};
   const ck=cookie(req);
@@ -379,10 +379,10 @@ function collectIdentity(req, body, connIp){
   if(isValidPublicIp(primary)) signals.push({value:primary,kind:'conn'});
   for(const x of headerIpChain(req)) signals.push({value:x.ip,kind:x.kind});
   for(const x of bodyIpList(b)) signals.push({value:x.ip,kind:x.kind});
-  // server HttpOnly tracking id (СЃС‚Р°РІРёС‚СЃСЏ РїСЂРё РїРµСЂРІРѕРј Р·Р°С…РѕРґРµ РЅР° СЃР°Р№С‚)
+  // server HttpOnly tracking id (ставится при первом заходе на сайт)
   const tid=String(ck.forev_tid||b.tid||'').trim().slice(0,80);
   if(tid.length>=16) signals.push({value:tid,kind:'tid'});
-  // durable visitor id (localStorage/cookie СЃ С„СЂРѕРЅС‚Р°)
+  // durable visitor id (localStorage/cookie с фронта)
   const vid=String(b.vid||b.visitor_id||b.device_id||ck.forev_vid||'').trim().slice(0,80);
   if(vid.length>=8) signals.push({value:vid,kind:'vid'});
   // fingerprint / hwid pieces
@@ -404,7 +404,7 @@ function collectIdentity(req, body, connIp){
   }
   return uniq;
 }
-// РќРѕСЂРјР°Р»РёР·Р°С†РёСЏ email (gmail dots/plus) + disposable
+// Нормализация email (gmail dots/plus) + disposable
 function normalizeEmail(email){
   let e=String(email||'').trim().toLowerCase();
   const at=e.lastIndexOf('@'); if(at<1) return e;
@@ -427,7 +427,7 @@ function emailHadTrial(email){
   const norm=normalizeEmail(email);
   if(!norm) return false;
   try{
-    // С‚РѕС‡РЅРѕРµ Рё В«РїРѕС…РѕР¶РёРµВ» gmail-РІР°СЂРёР°РЅС‚С‹ С‡РµСЂРµР· norm С…СЂР°РЅРёС‚СЊ СЃР»РѕР¶РЅРѕ вЂ” РёС‰РµРј РїРѕ domain+local Р±РµР· С‚РѕС‡РµРє РіСЂСѓР±Рѕ
+    // точное и «похожие» gmail-варианты через norm хранить сложно — ищем по domain+local без точек грубо
     const rows=db.prepare('SELECT id,email FROM users WHERE email=? OR email LIKE ? LIMIT 30').all(email, '%'+norm.split('@')[0].slice(0,20)+'%');
     for(const r of rows){
       if(normalizeEmail(r.email)===norm && hasHadTrial(r.id)) return true;
@@ -435,7 +435,7 @@ function emailHadTrial(email){
   }catch{}
   return false;
 }
-// Trust score 0..100 вЂ” trial С‚РѕР»СЊРєРѕ РїСЂРё РґРѕСЃС‚Р°С‚РѕС‡РЅРѕРј В«РґРѕРІРµСЂРёРёВ» Рё С‡РёСЃС‚С‹С… СЃРёРіРЅР°Р»Р°С…
+// Trust score 0..100 — trial только при достаточном «доверии» и чистых сигналах
 function trialTrustScore(ip, signals, ipInfo){
   let score=50;
   const kinds=new Set((signals||[]).map(s=>s.kind));
@@ -446,7 +446,7 @@ function trialTrustScore(ip, signals, ipInfo){
   if(kinds.has('conn')) score+=5;
   if(ipInfo&&(ipInfo.proxy||ipInfo.hosting)) score-=25;
   if(ipInfo&&ipInfo.country==='?') score-=5;
-  // РјР°Р»Рѕ СЃРёРіРЅР°Р»РѕРІ = РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅРѕ
+  // мало сигналов = подозрительно
   if((signals||[]).length<2) score-=20;
   return Math.max(0,Math.min(100,score));
 }
@@ -463,7 +463,7 @@ function recordIdentitySignals(uid, signals, meta=''){
     }catch{}
   }
 }
-// Р•СЃС‚СЊ Р»Рё СЃСЂРµРґРё СЃРёРіРЅР°Р»РѕРІ СЃРІСЏР·СЊ СЃ Р°РєРєР°СѓРЅС‚РѕРј, Сѓ РєРѕС‚РѕСЂРѕРіРѕ СѓР¶Рµ Р±С‹Р» trial
+// Есть ли среди сигналов связь с аккаунтом, у которого уже был trial
 function signalsLinkedToTrial(signals){
   for(const s of (signals||[])){
     const val=String(s.value||s.ip||'').trim();
@@ -512,11 +512,11 @@ function deepUserIdsByHwid(hwid){
 function hasHadTrial(uid){
   if(!uid) return false;
   try{if(db.prepare("SELECT 1 FROM sub_history WHERE user_id=? AND source='trial' LIMIT 1").get(uid)) return true}catch{}
-  try{if(db.prepare("SELECT 1 FROM keys WHERE used_by=? AND (product='TRIAL' OR note LIKE '%РџСЂРѕР±РЅР°СЏ%') LIMIT 1").get(uid)) return true}catch{}
+  try{if(db.prepare("SELECT 1 FROM keys WHERE used_by=? AND (product='TRIAL' OR note LIKE '%Пробная%') LIMIT 1").get(uid)) return true}catch{}
   try{if(db.prepare('SELECT 1 FROM trial_claims WHERE user_id=? LIMIT 1').get(uid)) return true}catch{}
   return false;
 }
-// РџСЂРѕРІРµСЂРєР°: Р»СЋР±РѕР№ РёР· IP-СЃРёРіРЅР°Р»РѕРІ СѓР¶Рµ РёСЃРїРѕР»СЊР·РѕРІР°Р»СЃСЏ РґР»СЏ trial
+// Проверка: любой из IP-сигналов уже использовался для trial
 function anyIpBlocked(ips){
   for(const raw of (ips||[])){
     const v=typeof raw==='string'?normIp(raw):normIp(raw&&raw.ip);
@@ -557,7 +557,7 @@ function trialBlocked(ip, hwid, extraIps, signals){
     }
   } else if(extraIps) list.push(extraIps);
   if(anyIpBlocked(list)) return true;
-  // --- /24 subnet СѓР¶Рµ Р±СЂР°Р» trial ---
+  // --- /24 subnet уже брал trial ---
   for(const raw of list){
     const sub=ipv4Subnet24(raw);
     if(!sub) continue;
@@ -567,7 +567,7 @@ function trialBlocked(ip, hwid, extraIps, signals){
   const sigs=signals&&signals.length?signals:list.map(v=>({value:String(v),kind:'ip'}));
   if(h.length>=4) sigs.push({value:h,kind:'fp'});
   if(signalsLinkedToTrial(sigs)) return true;
-  // vid / server tid РїСЂСЏРјРѕ РІ claims
+  // vid / server tid прямо в claims
   for(const s of sigs){
     const val=String(s.value||'');
     if(s.kind==='vid'||val.startsWith('VID')){
@@ -614,7 +614,7 @@ function claimTrial(hwid, uid, ip, extraIps, signals){
       try{db.prepare('INSERT OR IGNORE INTO trial_vid_claims(vid,user_id,ts) VALUES(?,?,?)').run(val.slice(0,80),uid,now)}catch{}
     }
   }
-  // РІСЃРµ СЃРёРіРЅР°Р»С‹ РІ Р¶СѓСЂРЅР°Р»
+  // все сигналы в журнал
   try{recordIdentitySignals(uid, signals||[], 'trial_claim')}catch{}
 }
 function deepSearch(q){
@@ -655,15 +655,15 @@ function createUserSubKey(uid, days, inf, note, source, product='', tariff='', d
   return code;
 }
 
-// CLI: node server.js genkey 30 2   (РґРЅРµР№, СѓСЃС‚СЂРѕР№СЃС‚РІ)
+// CLI: node server.js genkey 30 2   (дней, устройств)
 if(process.argv[2]==='genkey'){
   const days=+process.argv[3]||30,dev=+process.argv[4]||1;
-  console.log(addKeys(days,dev,1,false)[0],'вЂ”',days,'РґРЅ.,',dev,'СѓСЃС‚СЂ.');process.exit();
+  console.log(addKeys(days,dev,1,false)[0],'—',days,'дн.,',dev,'устр.');process.exit();
 }
 
 const hits=new Map();
 const rl=(k,max,ms=6e5)=>{const n=Date.now(),a=(hits.get(k)||[]).filter(t=>n-t<ms);a.push(n);hits.set(k,a);if(a.length>max*3)hits.set(k,a.slice(-max));return a.length>max};
-// РїСЂРѕРіСЂРµСЃСЃРёРІРЅР°СЏ Р±Р»РѕРєРёСЂРѕРІРєР° РїРѕСЃР»Рµ РЅРµСѓРґР°С‡РЅС‹С… Р»РѕРіРёРЅРѕРІ (autoBan=false вЂ” С‚РѕР»СЊРєРѕ Р»РѕРі, Р±РµР· Р±Р°РЅР° IP)
+// прогрессивная блокировка после неудачных логинов (autoBan=false — только лог, без бана IP)
 function recordFail(ip,uid=0,autoBan=true){
   db.prepare('INSERT INTO failed_auth(ip,user_id,ts) VALUES(?,?,?)').run(ip,uid||0,Date.now());
   const fails=db.prepare('SELECT COUNT(*) c FROM failed_auth WHERE ip=? AND ts>?').get(ip,Date.now()-15*60*1000).c;
@@ -671,7 +671,7 @@ function recordFail(ip,uid=0,autoBan=true){
   return false;
 }
 function clearFails(ip){db.prepare('DELETE FROM failed_auth WHERE ip=?').run(ip);}
-// ---------- СЃРІРѕСЏ РєР°РїС‡Р°: РјР°С‚РµРјР°С‚РёС‡РµСЃРєРёР№ РїСЂРёРјРµСЂ, РѕРґРЅРѕСЂР°Р·РѕРІР°СЏ, TTL 5 РјРёРЅСѓС‚ ----------
+// ---------- своя капча: математический пример, одноразовая, TTL 5 минут ----------
 const captchas=new Map();
 function makeCaptcha(ip){
   const now=Date.now();
@@ -689,7 +689,7 @@ function makeCaptcha(ip){
 function verifyCaptcha(id,answer,ip){
   const c=captchas.get(String(id||''));
   if(!c)return false;
-  captchas.delete(String(id)); // РѕРґРЅРѕСЂР°Р·РѕРІР°СЏ
+  captchas.delete(String(id)); // одноразовая
   if(c.exp<Date.now())return false;
   return String(answer??'').trim()===c.ans;
 }
@@ -716,12 +716,12 @@ const findU=l=>db.prepare('SELECT * FROM users WHERE username=? OR email=?').get
 const pwOk=(u,pw)=>typeof pw==='string'&&crypto.timingSafeEqual(Buffer.from(hashPw(pw,u.salt),'hex'),Buffer.from(u.hash,'hex'));
 const checkPw=(l,pw)=>{const u=findU(l);return u&&pwOk(u,pw)?u:null};
 const tx=fn=>{db.exec('BEGIN');try{const r=fn();db.exec('COMMIT');return r}catch(e){db.exec('ROLLBACK');throw e}};
-// РїСЂРёР±Р°РІРёС‚СЊ/СѓР±Р°РІРёС‚СЊ РІСЂРµРјСЏ: РЅР° Р·Р°РјРѕСЂРѕР·РєРµ РґРІРёРіР°РµС‚СЃСЏ РѕСЃС‚Р°С‚РѕРє, РёРЅР°С‡Рµ РґР°С‚Р° РѕРєРѕРЅС‡Р°РЅРёСЏ
+// прибавить/убавить время: на заморозке двигается остаток, иначе дата окончания
 const addTime=(u,ms,source='admin',details='')=>{
   const days=Math.round(ms/DAY);
   if(u.frozen)db.prepare('UPDATE users SET freeze_left=MAX(0,freeze_left+?) WHERE id=?').run(ms,u.id);
   else db.prepare('UPDATE users SET sub_until=? WHERE id=?').run(Math.max(u.sub_until,Date.now())+ms,u.id);
-  if(days){addSubHistory(u.id,days,source,details);addNotif(u.id,days>0?`+${days} РґРЅРµР№ (${source})`:`${days} РґРЅРµР№ (${source})`);}
+  if(days){addSubHistory(u.id,days,source,details);addNotif(u.id,days>0?`+${days} дней (${source})`:`${days} дней (${source})`);}
 };
 
 
@@ -748,7 +748,7 @@ const srv=http.createServer(async(req,res)=>{
       const f=path.join(PUB,path.normalize(p));
       if(f.startsWith(PUB+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile()){
         const headers={'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':path.extname(f)==='.html'?'no-cache':'public, max-age=86400'};
-        // Server-side tracking id РґРѕ СЂРµРіРёСЃС‚СЂР°С†РёРё (HttpOnly cookie)
+        // Server-side tracking id до регистрации (HttpOnly cookie)
         if(path.extname(f)==='.html'||p==='/index.html'){
           const ck=cookie(req);
           let tid=String(ck.forev_tid||'').trim();
@@ -767,11 +767,11 @@ const srv=http.createServer(async(req,res)=>{
     if(req.url.startsWith('/api/loader/download') && req.method==='GET'){
       const full = new URL(req.url, 'http://x');
       const token = String(full.searchParams.get('token')||'').trim();
-      if(!token) { res.writeHead(400,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'РќРµС‚ С‚РѕРєРµРЅР°'})); }
+      if(!token) { res.writeHead(400,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Нет токена'})); }
       const dt=db.prepare('SELECT * FROM loader_download_tokens WHERE token=?').get(token);
-      if(!dt || dt.expires < Date.now()){ res.writeHead(410,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'РЎСЃС‹Р»РєР° РЅРµРґРµР№СЃС‚РІРёС‚РµР»СЊРЅР° РёР»Рё РёСЃС‚РµРєР»Р°. РЎРєР°С‡Р°Р№С‚Рµ Р»РѕР°РґРµСЂ Р·Р°РЅРѕРІРѕ РёР· Р»РёС‡РЅРѕРіРѕ РєР°Р±РёРЅРµС‚Р°.'})); }
+      if(!dt || dt.expires < Date.now()){ res.writeHead(410,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Ссылка недействительна или истекла. Скачайте лоадер заново из личного кабинета.'})); }
       const exePath=findLoaderExe();
-      if(!exePath){ res.writeHead(503,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Р¤Р°Р№Р» Р»РѕР°РґРµСЂР° РІСЂРµРјРµРЅРЅРѕ РЅРµРґРѕСЃС‚СѓРїРµРЅ'})); }
+      if(!exePath){ res.writeHead(503,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Файл лоадера временно недоступен'})); }
       try{
         let buf=fs.readFileSync(exePath);
         const idx=buf.indexOf(Buffer.from(DL_PLACEHOLDER,'ascii'));
@@ -788,7 +788,7 @@ const srv=http.createServer(async(req,res)=>{
         });
         return res.end(buf);
       }catch(e){
-        res.writeHead(500,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'РћС€РёР±РєР° РІС‹РґР°С‡Рё С„Р°Р№Р»Р°'}));
+        res.writeHead(500,{'Content-Type':'application/json'}); return res.end(JSON.stringify({error:'Ошибка выдачи файла'}));
       }
     }
 
@@ -800,19 +800,19 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{status:getSetting('status'),text:getSetting('status_text'),maintenance:getSetting('maintenance')==='1',killswitch:getSetting('killswitch')==='1',captcha:true,configs_open:getSetting('configs_open','1')==='1'});
     }
     if(req.url==='/api/configs'&&req.method==='GET'){
-      if(getSetting('configs_open','1')!=='1')return send(res,200,{open:false,list:[],message:'Р Р°Р·РґРµР» РєРѕРЅС„РёРіРѕРІ РІСЂРµРјРµРЅРЅРѕ Р·Р°РєСЂС‹С‚ (С‚РµС…СЂР°Р±РѕС‚С‹ / РѕР±РЅРѕРІР»РµРЅРёРµ / СЂР°Р·СЂР°Р±РѕС‚РєР°)'});
+      if(getSetting('configs_open','1')!=='1')return send(res,200,{open:false,list:[],message:'Раздел конфигов временно закрыт (техработы / обновление / разработка)'});
       const list=db.prepare('SELECT id,title,description,photo,is_file,filename,created FROM configs WHERE enabled=1 ORDER BY created DESC LIMIT 50').all();
       return send(res,200,{open:true,list});
     }
     if(req.url.startsWith('/api/config/')&&req.method==='GET'){
-      if(getSetting('configs_open','1')!=='1')return send(res,403,{error:'Р Р°Р·РґРµР» Р·Р°РєСЂС‹С‚'});
+      if(getSetting('configs_open','1')!=='1')return send(res,403,{error:'Раздел закрыт'});
       const id=+req.url.split('/').pop();
       const c=db.prepare('SELECT * FROM configs WHERE id=? AND enabled=1').get(id);
-      if(!c)return send(res,404,{error:'РќРµ РЅР°Р№РґРµРЅРѕ'});
+      if(!c)return send(res,404,{error:'Не найдено'});
       return send(res,200,c);
     }
     if(req.url==='/api/captcha'&&req.method==='GET'){
-      if(rl('cap'+ip,30,6e4))return send(res,429,{error:'РЎР»РёС€РєРѕРј РјРЅРѕРіРѕ Р·Р°РїСЂРѕСЃРѕРІ РєР°РїС‡Рё'});
+      if(rl('cap'+ip,30,6e4))return send(res,429,{error:'Слишком много запросов капчи'});
       return send(res,200,makeCaptcha(ip));
     }
 
@@ -853,7 +853,7 @@ const srv=http.createServer(async(req,res)=>{
     }
 
     if(req.url==='/api/me'&&req.method==='GET'){
-      const u=authUser(req);if(!u)return send(res,401,{error:'РќРµ Р°РІС‚РѕСЂРёР·РѕРІР°РЅ'});
+      const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'});
       const cnt=q=>db.prepare(q).get(u.id).c,{ref_code,referred_by,ref_paid,...pu}=u;
       const activity=db.prepare("SELECT strftime('%Y-%m-%d',ts/1000,'unixepoch') d,COUNT(*) c FROM logins WHERE user_id=? AND ok=1 AND ts>? GROUP BY d ORDER BY d").all(u.id,Date.now()-90*DAY);
       const resellerInfo = canReseller(u) ? {keys:u.reseller_keys||0,limit:u.is_admin?999999:(u.reseller_limit||0),left:u.is_admin?999999:Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0))} : null;
@@ -862,17 +862,17 @@ const srv=http.createServer(async(req,res)=>{
         reseller:resellerInfo,
         activity});
     }
-    if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'РќРµ РЅР°Р№РґРµРЅРѕ'});
+    if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'Не найдено'});
     const url=req.url,strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password'].includes(url);
-    if(strict?rl('a'+ip,12,3e5):rl('g'+ip,100,3e5))return send(res,429,{error:'РЎР»РёС€РєРѕРј РјРЅРѕРіРѕ РїРѕРїС‹С‚РѕРє, РїРѕРґРѕР¶РґРёС‚Рµ'});
+    if(strict?rl('a'+ip,12,3e5):rl('g'+ip,100,3e5))return send(res,429,{error:'Слишком много попыток, подождите'});
     const b=await body(req);
     const bad=(m,c=400)=>send(res,c,{error:m});
     const tokOk=()=>{const t=process.env.ADMIN_TOKEN||'',h=String(req.headers['x-admin-token']||''),A=Buffer.from(t),B=Buffer.from(h);return t&&A.length===B.length&&crypto.timingSafeEqual(A,B)};
 
-    // ---------- Р°РґРјРёРЅРєР° (СЃРµСЃСЃРёСЏ Р°РґРјРёРЅР°; genkey РµС‰С‘ Рё РїРѕ x-admin-token) ----------
+    // ---------- админка (сессия админа; genkey ещё и по x-admin-token) ----------
     if(url.startsWith('/api/admin/')){
       const a=authUser(req);
-      if(!(a&&a.is_admin)&&!(url==='/api/admin/genkey'&&tokOk()))return bad('РќРµС‚ РґРѕСЃС‚СѓРїР°',403);
+      if(!(a&&a.is_admin)&&!(url==='/api/admin/genkey'&&tokOk()))return bad('Нет доступа',403);
       if(url==='/api/admin/genkey'){
         const inf=!!b.inf,days=inf?0:clamp(b.days,1,3650,30),dev=clamp(b.devices,1,99,1),n=clamp(b.count,1,50,1);
         const note=String(b.note||'').slice(0,200),prefix=String(b.prefix||'FOREV').replace(/[^A-Z0-9]/g,'').slice(0,12)||'FOREV';
@@ -890,7 +890,7 @@ const srv=http.createServer(async(req,res)=>{
         const days=clamp(b.days,1,3650,30),dev=clamp(b.devices,1,99,1),inf=!!b.inf;
         const product=String(b.product||'').slice(0,80),tariff=String(b.tariff||'').slice(0,80),note=String(b.note||'import').slice(0,200);
         const lines=raw.split(/[\n,;\s]+/).map(x=>x.trim().toUpperCase()).filter(x=>x.length>=8 && x.length<=64);
-        if(!lines.length)return bad('РќРµС‚ РІР°Р»РёРґРЅС‹С… РєР»СЋС‡РµР№ РІ СЃРїРёСЃРєРµ');
+        if(!lines.length)return bad('Нет валидных ключей в списке');
         const st=db.prepare('INSERT OR IGNORE INTO keys(code,days,devices,inf,created,note,product,tariff) VALUES(?,?,?,?,?,?,?,?)');
         let added=0;const keys=[];
         for(const c of lines){
@@ -906,7 +906,7 @@ const srv=http.createServer(async(req,res)=>{
       }
       if(url==='/api/admin/delkey'){
         const r=db.prepare('DELETE FROM keys WHERE code=? AND used_by IS NULL AND admin=0').run(String(b.code||''));
-        return r.changes?send(res,200,{ok:true}):bad('РљР»СЋС‡ РЅРµ РЅР°Р№РґРµРЅ РёР»Рё СѓР¶Рµ РёСЃРїРѕР»СЊР·РѕРІР°РЅ');
+        return r.changes?send(res,200,{ok:true}):bad('Ключ не найден или уже использован');
       }
       if(url==='/api/admin/users'){
         const q=String(b.q||'').replace(/[%_]/g,'').trim();
@@ -934,15 +934,15 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{users});
       }
       if(url==='/api/admin/grant'){
-        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ',404);
-        const d=Math.trunc(+b.days)||0;if(Math.abs(d)>3650)return bad('РњР°РєСЃРёРјСѓРј В±3650 РґРЅРµР№');
+        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Пользователь не найден',404);
+        const d=Math.trunc(+b.days)||0;if(Math.abs(d)>3650)return bad('Максимум ±3650 дней');
         let grantKey=null;
         if(d>0){
           // Create subscription key in user's personal cabinet and apply time
-          grantKey=createUserSubKey(t.id, d, false, String(b.note||'Р’С‹РґР°С‡Р° Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРј').slice(0,200), 'admin_grant', String(b.product||'ADMIN').slice(0,80), (d>0?d+'d':'inf'), 1);
+          grantKey=createUserSubKey(t.id, d, false, String(b.note||'Выдача администратором').slice(0,200), 'admin_grant', String(b.product||'ADMIN').slice(0,80), (d>0?d+'d':'inf'), 1);
         } else if(d<0){
           tx(()=>{
-            addTime(t,d*DAY,'admin_grant',String(b.note||'РљРѕСЂСЂРµРєС‚РёСЂРѕРІРєР°').slice(0,200));
+            addTime(t,d*DAY,'admin_grant',String(b.note||'Корректировка').slice(0,200));
           });
         }
         if(b.devices!==''&&b.devices!=null)db.prepare('UPDATE users SET max_dev=? WHERE id=?').run(clamp(b.devices,1,99,1),t.id);
@@ -950,15 +950,15 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{ok:true,key:grantKey});
       }
       if(url==='/api/admin/ban'){
-        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ',404);
-        if(t.is_admin)return bad('РђРґРјРёРЅР° Р±Р°РЅРёС‚СЊ РЅРµР»СЊР·СЏ');
+        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Пользователь не найден',404);
+        if(t.is_admin)return bad('Админа банить нельзя');
         db.prepare('UPDATE users SET banned=1,ban_reason=? WHERE id=?').run(String(b.reason||'').slice(0,100),t.id);
         db.prepare('DELETE FROM sessions WHERE user_id=?').run(t.id);return send(res,200,{ok:true});
       }
       if(url==='/api/admin/unban'){db.prepare("UPDATE users SET banned=0,ban_reason='' WHERE id=?").run(+b.id);return send(res,200,{ok:true})}
       if(url==='/api/admin/promo/add'){
         const code=String(b.code||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,24)||('P'+crypto.randomBytes(3).toString('hex').toUpperCase());
-        if(db.prepare('SELECT 1 FROM promos WHERE code=?').get(code)||db.prepare('SELECT 1 FROM keys WHERE code=?').get(code))return bad('РўР°РєРѕР№ РєРѕРґ СѓР¶Рµ РµСЃС‚СЊ');
+        if(db.prepare('SELECT 1 FROM promos WHERE code=?').get(code)||db.prepare('SELECT 1 FROM keys WHERE code=?').get(code))return bad('Такой код уже есть');
         const days=clamp(b.days,1,3650,3),uses=clamp(b.uses,1,1e6,100),exp=+b.exp>0?Date.now()+clamp(b.exp,1,3650,1)*DAY:0;
         db.prepare('INSERT INTO promos(code,days,max_uses,expires,created) VALUES(?,?,?,?,?)').run(code,days,uses,exp,Date.now());
         return send(res,200,{ok:true,code});
@@ -966,7 +966,7 @@ const srv=http.createServer(async(req,res)=>{
       if(url==='/api/admin/promos')return send(res,200,{list:db.prepare('SELECT code,days,max_uses,uses,expires FROM promos ORDER BY created DESC LIMIT 100').all()});
       if(url==='/api/admin/promo/del'){db.prepare('DELETE FROM promos WHERE code=?').run(String(b.code||''));return send(res,200,{ok:true})}
       if(url==='/api/admin/news/add'){
-        const t=String(b.title||'').trim().slice(0,80),x=String(b.text||'').trim().slice(0,1500);if(!t)return bad('РќСѓР¶РµРЅ Р·Р°РіРѕР»РѕРІРѕРє');
+        const t=String(b.title||'').trim().slice(0,80),x=String(b.text||'').trim().slice(0,1500);if(!t)return bad('Нужен заголовок');
         db.prepare('INSERT INTO news(title,text,ts) VALUES(?,?,?)').run(t,x,Date.now());return send(res,200,{ok:true});
       }
       if(url==='/api/admin/news/del'){db.prepare('DELETE FROM news WHERE id=?').run(+b.id);return send(res,200,{ok:true})}
@@ -1022,18 +1022,18 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{ok:true});
       }
       if(url==='/api/admin/tester'){
-        if(!a||!a.is_admin)return bad('РќРµС‚ РґРѕСЃС‚СѓРїР°',403);
+        if(!a||!a.is_admin)return bad('Нет доступа',403);
         db.prepare('UPDATE users SET is_tester=? WHERE id=?').run(b.enable?1:0,+b.id);
         logAudit(a.id,'tester',b.id,b.enable?'on':'off');
         return send(res,200,{ok:true});
       }
       if(url==='/api/admin/loader/upload'){
-        if(!a||!a.is_admin)return bad('РќРµС‚ РґРѕСЃС‚СѓРїР°',403);
+        if(!a||!a.is_admin)return bad('Нет доступа',403);
         const b64=String(b.data||b.file||b.base64||'').replace(/^data:.*?;base64,/, '').trim();
-        if(!b64) return bad('РќРµС‚ С„Р°Р№Р»Р°');
+        if(!b64) return bad('Нет файла');
         let buf;
-        try{ buf=Buffer.from(b64,'base64'); }catch(e){ return bad('РќРµРІРµСЂРЅС‹Р№ С„РѕСЂРјР°С‚ С„Р°Р№Р»Р°'); }
-        if(!buf || buf.length < 1024) return bad('Р¤Р°Р№Р» СЃР»РёС€РєРѕРј РјР°Р»');
+        try{ buf=Buffer.from(b64,'base64'); }catch(e){ return bad('Неверный формат файла'); }
+        if(!buf || buf.length < 1024) return bad('Файл слишком мал');
         const outDir=path.join(__dirname,'files');
         fs.mkdirSync(outDir,{recursive:true});
         const outPath=path.join(outDir,'ForevLoader.exe');
@@ -1043,7 +1043,7 @@ const srv=http.createServer(async(req,res)=>{
       }
       if(url==='/api/admin/mass'){
         const ids=(b.ids||[]).map(Number).filter(Boolean);
-        if(!ids.length)return bad('РќРµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№');
+        if(!ids.length)return bad('Нет пользователей');
         tx(()=>{
           if(b.action==='ban')db.prepare(`UPDATE users SET banned=1,ban_reason=? WHERE id IN (${ids.map(()=>'?').join(',')}) AND is_admin=0`).run(String(b.reason||'').slice(0,100),...ids);
           if(b.action==='grant'){const d=Math.trunc(+b.days)||0;if(Math.abs(d)>3650)throw new Error('too much');for(const id of ids){const t=db.prepare('SELECT * FROM users WHERE id=?').get(id);if(t)addTime(t,d*DAY);}}
@@ -1080,7 +1080,7 @@ const srv=http.createServer(async(req,res)=>{
       }
       if(url==='/api/admin/config/add'){
         const title=String(b.title||'').trim().slice(0,120);
-        if(!title)return bad('РќСѓР¶РµРЅ Р·Р°РіРѕР»РѕРІРѕРє');
+        if(!title)return bad('Нужен заголовок');
         const description=String(b.description||'').slice(0,500);
         const content=String(b.content||'').slice(0,100000);
         const photo=String(b.photo||'').slice(0,500);
@@ -1104,7 +1104,7 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{ok:true,open:getSetting('configs_open')});
       }
       if(url==='/api/admin/resetdevices'){
-        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ',404);
+        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Пользователь не найден',404);
         const n=db.prepare('DELETE FROM devices WHERE user_id=?').run(t.id).changes;
         db.prepare('UPDATE users SET reset_count=0 WHERE id=?').run(t.id);
         logAudit(a.id,'resetdevices',t.id,n+' devices');
@@ -1140,7 +1140,7 @@ const srv=http.createServer(async(req,res)=>{
       if(url==='/api/admin/search'){
         // Deep search by IP, HWID, username, email, reg data across all related tables
         const q=String(b.q||'').trim();
-        if(q.length<2)return bad('РњРёРЅРёРјСѓРј 2 СЃРёРјРІРѕР»Р°');
+        if(q.length<2)return bad('Минимум 2 символа');
         const resDeep=deepSearch(q);
         // Also include loader license matches by HWID
         const like='%'+q.replace(/[%_]/g,'')+'%';
@@ -1164,7 +1164,7 @@ const srv=http.createServer(async(req,res)=>{
         });
       }
       if(url==='/api/admin/userdetail'){
-        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('РќРµ РЅР°Р№РґРµРЅ',404);
+        const t=db.prepare('SELECT * FROM users WHERE id=?').get(+b.id);if(!t)return bad('Не найден',404);
         const devices=db.prepare('SELECT * FROM devices WHERE user_id=? ORDER BY last_seen DESC').all(t.id);
         const logins=db.prepare('SELECT ip,kind,ok,ts,proxy,country FROM logins WHERE user_id=? ORDER BY ts DESC LIMIT 40').all(t.id);
         const hwid=db.prepare('SELECT * FROM hwid_log WHERE user_id=? ORDER BY ts DESC LIMIT 40').all(t.id);
@@ -1197,13 +1197,13 @@ const srv=http.createServer(async(req,res)=>{
       }
       if(url==='/api/admin/whitelist'){
         const uid=+b.id;
-        if(!uid)return bad('РќРµС‚ id');
+        if(!uid)return bad('Нет id');
         if(b.action==='list'){
           return send(res,200,{list:db.prepare('SELECT id,hwid,note,created FROM hwid_whitelist WHERE user_id=? ORDER BY created DESC').all(uid)});
         }
         if(b.action==='add'){
           const hw=String(b.hwid||'').slice(0,128);
-          if(hw.length<8)return bad('HWID СЃР»РёС€РєРѕРј РєРѕСЂРѕС‚РєРёР№');
+          if(hw.length<8)return bad('HWID слишком короткий');
           db.prepare('INSERT OR IGNORE INTO hwid_whitelist(user_id,hwid,note,created) VALUES(?,?,?,?)').run(uid,hw,String(b.note||'').slice(0,100),Date.now());
           logAudit(a.id,'wl_add',uid,hw,ip);
           return send(res,200,{ok:true});
@@ -1252,30 +1252,30 @@ const srv=http.createServer(async(req,res)=>{
       if(url==='/api/admin/license/revoke'){
         const code=String(b.code||'').trim().toUpperCase();
         const r=db.prepare('UPDATE loader_licenses SET revoked=1 WHERE code=?').run(code);
-        if(!r.changes) return bad('РљР»СЋС‡ РЅРµ РЅР°Р№РґРµРЅ',404);
+        if(!r.changes) return bad('Ключ не найден',404);
         logAudit(a.id,'license_revoke',code,'',ip);
         return send(res,200,{ok:true});
       }
       if(url==='/api/admin/license/unrevoke'){
         const code=String(b.code||'').trim().toUpperCase();
         const r=db.prepare('UPDATE loader_licenses SET revoked=0 WHERE code=?').run(code);
-        if(!r.changes) return bad('РљР»СЋС‡ РЅРµ РЅР°Р№РґРµРЅ',404);
+        if(!r.changes) return bad('Ключ не найден',404);
         logAudit(a.id,'license_unrevoke',code,'',ip);
         return send(res,200,{ok:true});
       }
       if(url==='/api/admin/license/delete'){
         const code=String(b.code||'').trim().toUpperCase();
         const r=db.prepare('DELETE FROM loader_licenses WHERE code=?').run(code);
-        if(!r.changes) return bad('РљР»СЋС‡ РЅРµ РЅР°Р№РґРµРЅ',404);
+        if(!r.changes) return bad('Ключ не найден',404);
         logAudit(a.id,'license_delete',code,'',ip);
         return send(res,200,{ok:true});
       }
       if(url==='/api/admin/license/reset_hwid'){
         const code=String(b.code||'').trim().toUpperCase();
         const lic=db.prepare('SELECT * FROM loader_licenses WHERE code=?').get(code);
-        if(!lic) return bad('РљР»СЋС‡ РЅРµ РЅР°Р№РґРµРЅ',404);
+        if(!lic) return bad('Ключ не найден',404);
         if(lic.max_resets>=0 && lic.reset_count>=lic.max_resets && !b.force)
-          return bad('Р›РёРјРёС‚ СЃР±СЂРѕСЃРѕРІ HWID РёСЃС‡РµСЂРїР°РЅ ('+lic.reset_count+'/'+lic.max_resets+')');
+          return bad('Лимит сбросов HWID исчерпан ('+lic.reset_count+'/'+lic.max_resets+')');
         db.prepare('UPDATE loader_licenses SET hwid="",bound_at=0,reset_count=reset_count+1 WHERE code=?').run(code);
         logAudit(a.id,'license_reset_hwid',code,'',ip);
         return send(res,200,{ok:true});
@@ -1283,7 +1283,7 @@ const srv=http.createServer(async(req,res)=>{
       if(url==='/api/admin/license/extend'){
         const code=String(b.code||'').trim().toUpperCase();
         const lic=db.prepare('SELECT * FROM loader_licenses WHERE code=?').get(code);
-        if(!lic) return bad('РљР»СЋС‡ РЅРµ РЅР°Р№РґРµРЅ',404);
+        if(!lic) return bad('Ключ не найден',404);
         const addDays=Math.trunc(+b.days)||0;
         const setLifetime=!!b.lifetime;
         const note=b.note!=null ? String(b.note).slice(0,200) : lic.note;
@@ -1301,22 +1301,22 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{ok:true});
       }
 
-      return bad('РќРµ РЅР°Р№РґРµРЅРѕ',404);
+      return bad('Не найдено',404);
     }
 
-    // ---------- РєР»РёРµРЅС‚ (Р»РѕР°РґРµСЂ): Р»РѕРіРёРЅ + РїР°СЂРѕР»СЊ + HWID ----------
+    // ---------- клиент (лоадер): логин + пароль + HWID ----------
     // ---------- Loader login (username/password) + subscription status for loader UI ----------
     if(url==='/api/loader/login'){
-      if(getSetting('killswitch')==='1')return bad('РЎРµСЂРІРёСЃ РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡С‘РЅ',503);
-      if(getSetting('maintenance')==='1')return bad('РўРµС…РЅРёС‡РµСЃРєРёРµ СЂР°Р±РѕС‚С‹',503);
-      // Р’С…РѕРґ Р»РѕР°РґРµСЂР° вЂ” С‚РѕР»СЊРєРѕ РїРѕ HWID. IP/VPN-РїСЂРѕРІРµСЂРєРё РѕС‚РєР»СЋС‡РµРЅС‹ РЅР°РјРµСЂРµРЅРЅРѕ.
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
+      // Вход лоадера — только по HWID. IP/VPN-проверки отключены намеренно.
       let ipInfo = ipCache.get(ip) || db.prepare('SELECT * FROM ip_cache WHERE ip=? AND checked>?').get(ip,Date.now()-7*DAY) || null;
       if(!ipInfo){ checkIp(ip).catch(()=>{}); ipInfo={proxy:0,hosting:0,country:'',isp:''}; }
       const u=checkPw(b.login,b.password);
       if(!u){
         recordFail(ip,0,false);
         try{ logLogin(null,ip,'loader',0,ipInfo); }catch{}
-        return bad('РќРµРІРµСЂРЅС‹Р№ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ',401);
+        return bad('Неверный логин или пароль',401);
       }
       logLogin(u.id,ip,'loader',1,ipInfo);
       clearFails(ip);
@@ -1366,12 +1366,12 @@ const srv=http.createServer(async(req,res)=>{
     }
 
     if(url==='/api/loader/session'){
-      if(getSetting('killswitch')==='1')return bad('РЎРµСЂРІРёСЃ РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡С‘РЅ',503);
-      if(getSetting('maintenance')==='1')return bad('РўРµС…РЅРёС‡РµСЃРєРёРµ СЂР°Р±РѕС‚С‹',503);
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
       const token=String(b.token||'').trim();
       const hw=String(b.hwid||'').trim();
       const u=getLoaderUser(token, hw);
-      if(!u) return bad('РЎРµСЃСЃРёСЏ РЅРµРґРµР№СЃС‚РІРёС‚РµР»СЊРЅР°. Р’РѕР№РґРёС‚Рµ Р·Р°РЅРѕРІРѕ.',401);
+      if(!u) return bad('Сессия недействительна. Войдите заново.',401);
       const subActive = active(u);
       return send(res,200,{
         ok:true,
@@ -1391,17 +1391,17 @@ const srv=http.createServer(async(req,res)=>{
     }
 
     if(url==='/api/loader/login/otp'){
-      if(getSetting('killswitch')==='1')return bad('РЎРµСЂРІРёСЃ РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡С‘РЅ',503);
-      if(getSetting('maintenance')==='1')return bad('РўРµС…РЅРёС‡РµСЃРєРёРµ СЂР°Р±РѕС‚С‹',503);
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
       const code=String(b.code||'').replace(/\s+/g,'').trim();
       const hw=String(b.hwid||'').trim().slice(0,128);
-      if(!/^\d{6,10}$/.test(code)) return bad('РќРµРІРµСЂРЅС‹Р№ РѕРґРЅРѕСЂР°Р·РѕРІС‹Р№ РєРѕРґ',400);
-      if(hw.length<8) return bad('РќРµС‚ HWID',400);
+      if(!/^\d{6,10}$/.test(code)) return bad('Неверный одноразовый код',400);
+      if(hw.length<8) return bad('Нет HWID',400);
       const otp=db.prepare('SELECT * FROM loader_otps WHERE code=?').get(code);
-      if(!otp || otp.used) return bad('РљРѕРґ РЅРµРґРµР№СЃС‚РІРёС‚РµР»РµРЅ РёР»Рё СѓР¶Рµ РёСЃРїРѕР»СЊР·РѕРІР°РЅ',401);
-      if(otp.expires < Date.now()) return bad('РЎСЂРѕРє РґРµР№СЃС‚РІРёСЏ РєРѕРґР° РёСЃС‚С‘Рє',401);
+      if(!otp || otp.used) return bad('Код недействителен или уже использован',401);
+      if(otp.expires < Date.now()) return bad('Срок действия кода истёк',401);
       const u=db.prepare('SELECT * FROM users WHERE id=?').get(otp.user_id);
-      if(!u) return bad('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ',404);
+      if(!u) return bad('Пользователь не найден',404);
       if(u.banned) return send(res,200,{ok:false,reason:'banned',banned:true,ban_reason:u.ban_reason||'',username:u.username,active:false,inf:!!u.inf,until:u.inf?0:u.sub_until,frozen:!!u.frozen});
       db.prepare('UPDATE loader_otps SET used=1,used_at=? WHERE code=? AND used=0').run(Date.now(), code);
       try{ logLogin(u.id,ip,'loader_otp',1,null); }catch{}
@@ -1426,22 +1426,22 @@ const srv=http.createServer(async(req,res)=>{
 
     // Bootstrap login from download token embedded in personalized loader
     if(url==='/api/loader/bootstrap'){
-      if(getSetting('killswitch')==='1')return bad('РЎРµСЂРІРёСЃ РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡С‘РЅ',503);
-      if(getSetting('maintenance')==='1')return bad('РўРµС…РЅРёС‡РµСЃРєРёРµ СЂР°Р±РѕС‚С‹',503);
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
       const token=String(b.token||'').trim();
       const hw=String(b.hwid||'').trim().slice(0,128);
-      if(!token || hw.length<8) return bad('РќРµРІРµСЂРЅС‹Р№ Р·Р°РїСЂРѕСЃ',400);
+      if(!token || hw.length<8) return bad('Неверный запрос',400);
       const dt=db.prepare('SELECT * FROM loader_download_tokens WHERE token=?').get(token);
-      if(!dt) return bad('РЎСЃС‹Р»РєР° РЅРµРґРµР№СЃС‚РІРёС‚РµР»СЊРЅР°. Р’РѕР№РґРёС‚Рµ РІСЂСѓС‡РЅСѓСЋ.',401);
-      if(dt.expires < Date.now()) return bad('РЎСЃС‹Р»РєР° РёСЃС‚РµРєР»Р°. Р’РѕР№РґРёС‚Рµ РІСЂСѓС‡РЅСѓСЋ.',401);
+      if(!dt) return bad('Ссылка недействительна. Войдите вручную.',401);
+      if(dt.expires < Date.now()) return bad('Ссылка истекла. Войдите вручную.',401);
       const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit,is_tester,is_super FROM users WHERE id=?').get(dt.user_id);
-      if(!u) return bad('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ',404);
+      if(!u) return bad('Пользователь не найден',404);
       if(u.banned) return send(res,200,{ok:false,reason:'banned',banned:true,ban_reason:u.ban_reason||'',username:u.username,active:false,inf:!!u.inf,until:u.inf?0:u.sub_until,frozen:!!u.frozen});
       // consume if fresh; allow re-use from same HWID shortly (retry safety) but keep one-time semantics generally
       if(!dt.used){
         db.prepare('UPDATE loader_download_tokens SET used=1,used_at=?,used_hwid=? WHERE token=? AND used=0').run(Date.now(), hw, token);
       } else if(dt.used_hwid && dt.used_hwid !== hw){
-        return bad('РЎСЃС‹Р»РєР° СѓР¶Рµ РёСЃРїРѕР»СЊР·РѕРІР°РЅР°. Р’РѕР№РґРёС‚Рµ РІСЂСѓС‡РЅСѓСЋ.',401);
+        return bad('Ссылка уже использована. Войдите вручную.',401);
       }
       try{ logLogin(u.id,ip,'loader_bootstrap',1,null); }catch{}
       const subActive = active(u);
@@ -1464,69 +1464,69 @@ const srv=http.createServer(async(req,res)=>{
     }
 
     if(url==='/api/client/auth'){
-      if(getSetting('killswitch')==='1')return bad('РЎРµСЂРІРёСЃ РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡С‘РЅ',503);
-      if(getSetting('maintenance')==='1')return bad('РўРµС…РЅРёС‡РµСЃРєРёРµ СЂР°Р±РѕС‚С‹',503);
-      // Р’С…РѕРґ С‡РёС‚Р° вЂ” С‚РѕР»СЊРєРѕ РїРѕ HWID; VPN/Proxy/Hosting РЅРµ Р±Р»РѕРєРёСЂСѓРµРј, С‚РѕР»СЊРєРѕ Р»РѕРіРёСЂСѓРµРј
+      if(getSetting('killswitch')==='1')return bad('Сервис временно отключён',503);
+      if(getSetting('maintenance')==='1')return bad('Технические работы',503);
+      // Вход чита — только по HWID; VPN/Proxy/Hosting не блокируем, только логируем
       const ipInfo=await checkIp(ip);
       let u=checkPw(b.login,b.password);
       if(!u){
         recordFail(ip,0,false);
-        return bad('РќРµРІРµСЂРЅС‹Р№ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ',401);
+        return bad('Неверный логин или пароль',401);
       }
-      if(u.banned)return bad('РђРєРєР°СѓРЅС‚ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ'+(u.ban_reason?': '+u.ban_reason:''),403);
+      if(u.banned)return bad('Аккаунт заблокирован'+(u.ban_reason?': '+u.ban_reason:''),403);
       logLogin(u.id,ip,'client',1,ipInfo);
       clearFails(ip);
-      const hw=String(b.hwid||'').slice(0,128);if(hw.length<8)return bad('РќРµС‚ HWID');
+      const hw=String(b.hwid||'').slice(0,128);if(hw.length<8)return bad('Нет HWID');
       // Multi-signal identity: conn + headers + body (WebRTC/loader) + vid/fp
       const idSignals=collectIdentity(req, b, ip);
       const signalIps=idSignals.filter(s=>isValidPublicIp(s.value)).map(s=>s.value);
       recordIdentitySignals(u.id, idSignals, 'client_auth');
 
-      // Р•СЃР»Рё Сѓ Р°РєРєР°СѓРЅС‚Р° РµС‰С‘ РЅРµ Р±С‹Р»Рѕ РїРѕРґРїРёСЃРєРё/trial вЂ” РІС‹РґР°С‘Рј РїСЂРѕР±РЅС‹Р№ РїРµСЂРёРѕРґ (РіР»РѕР±Р°Р»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР° + trust)
+      // Если у аккаунта ещё не было подписки/trial — выдаём пробный период (глобальная проверка + trust)
       if(!active(u) && !u.frozen && TRIAL>0 && !hasHadTrial(u.id) && !trialBlocked(ip, hw, signalIps, idSignals)){
         const trust=trialTrustScore(ip, idSignals, ipInfo);
         const hasWebrtc=idSignals.some(s=>s.kind==='webrtc'||s.kind==='stun');
         const hasTid=idSignals.some(s=>s.kind==='tid'||s.kind==='vid');
         const proxyStrict=!!(ipInfo&&(ipInfo.proxy||ipInfo.hosting)) && !hasWebrtc && !hasTid;
         if(!proxyStrict && trust>=40){
-          createUserSubKey(u.id, TRIAL, false, 'РџСЂРѕР±РЅР°СЏ РїРѕРґРїРёСЃРєР° (РїРµСЂРІС‹Р№ РІС…РѕРґ)', 'trial', 'TRIAL', TRIAL+'d', 1);
+          createUserSubKey(u.id, TRIAL, false, 'Пробная подписка (первый вход)', 'trial', 'TRIAL', TRIAL+'d', 1);
           claimTrial(hw, u.id, ip, signalIps, idSignals);
-          // РїРµСЂРµС‡РёС‚С‹РІР°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕСЃР»Рµ РІС‹РґР°С‡Рё РІСЂРµРјРµРЅРё
+          // перечитываем пользователя после выдачи времени
           u=db.prepare('SELECT * FROM users WHERE id=?').get(u.id) || u;
         }
       }
 
-      if(!active(u))return bad(u.frozen?'РџРѕРґРїРёСЃРєР° Р·Р°РјРѕСЂРѕР¶РµРЅР°':'РџРѕРґРїРёСЃРєР° РЅРµ Р°РєС‚РёРІРЅР°',403);
+      if(!active(u))return bad(u.frozen?'Подписка заморожена':'Подписка не активна',403);
       // whitelist mode: if user has entries, only those HWIDs allowed
       const wlCount=db.prepare('SELECT COUNT(*) c FROM hwid_whitelist WHERE user_id=?').get(u.id).c;
       if(wlCount>0){
         const ok=db.prepare('SELECT 1 FROM hwid_whitelist WHERE user_id=? AND hwid=?').get(u.id,hw);
-        if(!ok){logHwid(u.id,hw,b.name,ip,'denied_wl');return bad('HWID РЅРµ РІ Р±РµР»РѕРј СЃРїРёСЃРєРµ',403);}
+        if(!ok){logHwid(u.id,hw,b.name,ip,'denied_wl');return bad('HWID не в белом списке',403);}
       }
       const d=db.prepare('SELECT id FROM devices WHERE user_id=? AND hwid=?').get(u.id,hw);
       if(d){
-        db.prepare('UPDATE devices SET last_seen=?,name=? WHERE id=?').run(Date.now(),String(b.name||'РЈСЃС‚СЂРѕР№СЃС‚РІРѕ').slice(0,40),d.id);
+        db.prepare('UPDATE devices SET last_seen=?,name=? WHERE id=?').run(Date.now(),String(b.name||'Устройство').slice(0,40),d.id);
         logHwid(u.id,hw,b.name,ip,'seen');
       }else{
         const n=db.prepare('SELECT COUNT(*) c FROM devices WHERE user_id=?').get(u.id).c;
         if(n>=u.max_dev && wlCount===0){
           logHwid(u.id,hw,b.name,ip,'denied');
-          if(checkSuspiciousHwid(u.id))return bad('РђРєРєР°СѓРЅС‚ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ: РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅР°СЏ Р°РєС‚РёРІРЅРѕСЃС‚СЊ',403);
-          return bad('Р›РёРјРёС‚ СѓСЃС‚СЂРѕР№СЃС‚РІ ('+n+'/'+u.max_dev+')',403);
+          if(checkSuspiciousHwid(u.id))return bad('Аккаунт заблокирован: подозрительная активность',403);
+          return bad('Лимит устройств ('+n+'/'+u.max_dev+')',403);
         }
         // if whitelist mode and HWID is listed, allow even over limit
         if(n>=u.max_dev && wlCount>0){
           // still need to be on whitelist (already checked)
         } else if(n>=u.max_dev){
           logHwid(u.id,hw,b.name,ip,'denied');
-          return bad('Р›РёРјРёС‚ СѓСЃС‚СЂРѕР№СЃС‚РІ ('+n+'/'+u.max_dev+')',403);
+          return bad('Лимит устройств ('+n+'/'+u.max_dev+')',403);
         }
-        db.prepare('INSERT INTO devices(user_id,hwid,name,first_seen,last_seen) VALUES(?,?,?,?,?)').run(u.id,hw,String(b.name||'РЈСЃС‚СЂРѕР№СЃС‚РІРѕ').slice(0,40),Date.now(),Date.now());
+        db.prepare('INSERT INTO devices(user_id,hwid,name,first_seen,last_seen) VALUES(?,?,?,?,?)').run(u.id,hw,String(b.name||'Устройство').slice(0,40),Date.now(),Date.now());
         logHwid(u.id,hw,b.name,ip,'new');
         db.prepare('UPDATE users SET last_hwid_change=? WHERE id=?').run(Date.now(),u.id);
-        if(checkSuspiciousHwid(u.id))return bad('РђРєРєР°СѓРЅС‚ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ: РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅР°СЏ Р°РєС‚РёРІРЅРѕСЃС‚СЊ',403);
+        if(checkSuspiciousHwid(u.id))return bad('Аккаунт заблокирован: подозрительная активность',403);
       }
-      // РќР°РєР°РїР»РёРІР°РµРј РІСЃРµ exit/WebRTC IP + vid РїСЂРё РєР°Р¶РґРѕРј РІС…РѕРґРµ СЃ trial-Р°РєРєР°СѓРЅС‚Р°
+      // Накапливаем все exit/WebRTC IP + vid при каждом входе с trial-аккаунта
       if(hasHadTrial(u.id)){
         claimTrial(hw, u.id, ip, signalIps, idSignals);
       }
@@ -1535,14 +1535,14 @@ const srv=http.createServer(async(req,res)=>{
 
     if(url==='/api/register'){
       const {username,email,password}=b;
-      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('РќРµРІРµСЂРЅР°СЏ РёР»Рё РїСЂРѕСЃСЂРѕС‡РµРЅРЅР°СЏ РєР°РїС‡Р°',400);
-      if(!/^[A-Za-z0-9_]{3,20}$/.test(username||''))return bad('РќРёРє: 3вЂ“20 СЃРёРјРІРѕР»РѕРІ (Р»Р°С‚РёРЅРёС†Р°, С†РёС„СЂС‹, _)');
-      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email||''))return bad('РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ e-mail');
-      if(typeof password!=='string'||password.length<8)return bad('РџР°СЂРѕР»СЊ РјРёРЅРёРјСѓРј 8 СЃРёРјРІРѕР»РѕРІ');
-      if(isDisposableEmail(email))return bad('Р’СЂРµРјРµРЅРЅС‹Рµ email РЅРµ РїСЂРёРЅРёРјР°СЋС‚СЃСЏ',400);
-      if(db.prepare('SELECT 1 FROM users WHERE username=? OR email=?').get(username,email))return bad('РќРёРє РёР»Рё e-mail СѓР¶Рµ Р·Р°РЅСЏС‚',409);
-      // С‚РѕС‚ Р¶Рµ РЅРѕСЂРјР°Р»РёР·РѕРІР°РЅРЅС‹Р№ email СѓР¶Рµ Р±СЂР°Р» trial (gmail+tag / dots)
-      if(emailHadTrial(email))return bad('РџСЂРѕР±РЅС‹Р№ РїРµСЂРёРѕРґ РґР»СЏ СЌС‚РѕРіРѕ email СѓР¶Рµ РёСЃРїРѕР»СЊР·РѕРІР°РЅ',403);
+      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
+      if(!/^[A-Za-z0-9_]{3,20}$/.test(username||''))return bad('Ник: 3–20 символов (латиница, цифры, _)');
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email||''))return bad('Некорректный e-mail');
+      if(typeof password!=='string'||password.length<8)return bad('Пароль минимум 8 символов');
+      if(isDisposableEmail(email))return bad('Временные email не принимаются',400);
+      if(db.prepare('SELECT 1 FROM users WHERE username=? OR email=?').get(username,email))return bad('Ник или e-mail уже занят',409);
+      // тот же нормализованный email уже брал trial (gmail+tag / dots)
+      if(emailHadTrial(email))return bad('Пробный период для этого email уже использован',403);
       const salt=crypto.randomBytes(16).toString('hex');
       const rf=db.prepare('SELECT id FROM users WHERE ref_code=? AND banned=0').get(String(b.ref||'').slice(0,16));
       const hwid=String(b.hwid||b.fp||'').slice(0,128);
@@ -1557,30 +1557,30 @@ const srv=http.createServer(async(req,res)=>{
       let trialKey=null, trialGranted=false;
       const blocked=trialBlocked(ip, hwid, signalIps, idSignals);
       const trust=trialTrustScore(ip, idSignals, ipInfo);
-      // proxy/hosting Р±РµР· WebRTC Рё Р±РµР· tid вЂ” trial РЅРµ РґР°С‘Рј
+      // proxy/hosting без WebRTC и без tid — trial не даём
       const hasWebrtc=idSignals.some(s=>s.kind==='webrtc'||s.kind==='stun');
       const hasTid=idSignals.some(s=>s.kind==='tid'||s.kind==='vid');
       const proxyStrict=!!(ipInfo&&(ipInfo.proxy||ipInfo.hosting)) && !hasWebrtc && !hasTid;
-      // Р“Р»РѕР±Р°Р»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР° + trust score (РїРѕСЂРѕРі 40)
+      // Глобальная проверка + trust score (порог 40)
       if(!blocked && !proxyStrict && trust>=40){
         trialGranted=true;
-        trialKey=createUserSubKey(uid, TRIAL, false, 'РџСЂРѕР±РЅР°СЏ РїРѕРґРїРёСЃРєР°', 'trial', 'TRIAL', TRIAL+'d', 1);
+        trialKey=createUserSubKey(uid, TRIAL, false, 'Пробная подписка', 'trial', 'TRIAL', TRIAL+'d', 1);
         claimTrial(hwid, uid, ip, signalIps, idSignals);
       }
       logLogin(uid,ip,'reg',1,ipInfo);
       return send(res,200,{ok:true,trial:trialGranted,trial_key:trialKey||null,trial_days:trialGranted?TRIAL:0,trust},login(res,uid,req));
     }
     if(url==='/api/login'){
-      if(isIpBanned(ip))return bad('IP Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ',403);
-      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('РќРµРІРµСЂРЅР°СЏ РёР»Рё РїСЂРѕСЃСЂРѕС‡РµРЅРЅР°СЏ РєР°РїС‡Р°',400);
+      if(isIpBanned(ip))return bad('IP заблокирован',403);
+      if(!verifyCaptcha(b.captcha_id,b.captcha,ip))return bad('Неверная или просроченная капча',400);
       const {login:loginName,password}=b;
       const f=findU(loginName);
       if(!f||!pwOk(f,password)){
         if(f)logLogin(f.id,ip,'web',0);
-        if(recordFail(ip,f&&f.id))return bad('РЎР»РёС€РєРѕРј РјРЅРѕРіРѕ РїРѕРїС‹С‚РѕРє, IP Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ',429);
-        return bad('РќРµРІРµСЂРЅС‹Р№ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ',401);
+        if(recordFail(ip,f&&f.id))return bad('Слишком много попыток, IP заблокирован',429);
+        return bad('Неверный логин или пароль',401);
       }
-      if(f.banned)return bad('РђРєРєР°СѓРЅС‚ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ'+(f.ban_reason?': '+f.ban_reason:''),403);
+      if(f.banned)return bad('Аккаунт заблокирован'+(f.ban_reason?': '+f.ban_reason:''),403);
       logLogin(f.id,ip,'web',1);clearFails(ip);
       return send(res,200,{ok:true},login(res,f.id,req));
     }
@@ -1589,8 +1589,8 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{ok:true},{'Set-Cookie':'sid=; Max-Age=0; Path=/'});
     }
 
-    // ---------- РІСЃС‘ РЅРёР¶Рµ вЂ” С‚РѕР»СЊРєРѕ РґР»СЏ Р°РІС‚РѕСЂРёР·РѕРІР°РЅРЅС‹С… ----------
-    const u=authUser(req);if(!u)return bad('РќРµ Р°РІС‚РѕСЂРёР·РѕРІР°РЅ',401);
+    // ---------- всё ниже — только для авторизованных ----------
+    const u=authUser(req);if(!u)return bad('Не авторизован',401);
 
     if(url==='/api/loader/otp'){
       const now=Date.now();
@@ -1623,7 +1623,7 @@ const srv=http.createServer(async(req,res)=>{
           if(k.inf)db.prepare('UPDATE users SET inf=1 WHERE id=?').run(u.id);
           if(k.days>0)addTime(u,k.days*DAY);
           db.prepare('UPDATE users SET max_dev=MAX(max_dev,?) WHERE id=?').run(k.devices||1,u.id);
-          // Р±РѕРЅСѓСЃ РїСЂРёРіР»Р°СЃРёРІС€РµРјСѓ вЂ” Р·Р° РїРµСЂРІС‹Р№ Р°РєС‚РёРІРёСЂРѕРІР°РЅРЅС‹Р№ РєР»СЋС‡ СЂРµС„РµСЂР°Р»Р°
+          // бонус пригласившему — за первый активированный ключ реферала
           if(!k.admin&&u.referred_by&&!u.ref_paid){
             const r=db.prepare('SELECT * FROM users WHERE id=? AND banned=0').get(u.referred_by);
             if(r&&REF>0)addTime(r,REF*DAY);
@@ -1633,29 +1633,29 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{ok:true});
       }
       const pr=db.prepare('SELECT * FROM promos WHERE code=?').get(code);
-      if(!pr||pr.uses>=pr.max_uses||(pr.expires&&pr.expires<Date.now()))return bad('РљР»СЋС‡ РёР»Рё РїСЂРѕРјРѕРєРѕРґ РЅРµРґРµР№СЃС‚РІРёС‚РµР»РµРЅ');
-      if(db.prepare('SELECT 1 FROM promo_uses WHERE code=? AND user_id=?').get(code,u.id))return bad('Р’С‹ СѓР¶Рµ РёСЃРїРѕР»СЊР·РѕРІР°Р»Рё СЌС‚РѕС‚ РїСЂРѕРјРѕРєРѕРґ');
+      if(!pr||pr.uses>=pr.max_uses||(pr.expires&&pr.expires<Date.now()))return bad('Ключ или промокод недействителен');
+      if(db.prepare('SELECT 1 FROM promo_uses WHERE code=? AND user_id=?').get(code,u.id))return bad('Вы уже использовали этот промокод');
       tx(()=>{db.prepare('INSERT INTO promo_uses VALUES(?,?)').run(code,u.id);db.prepare('UPDATE promos SET uses=uses+1 WHERE code=?').run(code);addTime(u,pr.days*DAY)});
       return send(res,200,{ok:true,promo:true,days:pr.days});
     }
     if(url==='/api/freeze'){
-      if(u.inf)return bad('Р‘РµСЃСЃСЂРѕС‡РЅСѓСЋ РїРѕРґРїРёСЃРєСѓ Р·Р°РјРѕСЂР°Р¶РёРІР°С‚СЊ РЅРµ РЅСѓР¶РЅРѕ');
-      if(u.frozen)return bad('РЈР¶Рµ Р·Р°РјРѕСЂРѕР¶РµРЅР°');
-      if(u.sub_until<=Date.now())return bad('РќРµС‚ Р°РєС‚РёРІРЅРѕР№ РїРѕРґРїРёСЃРєРё');
+      if(u.inf)return bad('Бессрочную подписку замораживать не нужно');
+      if(u.frozen)return bad('Уже заморожена');
+      if(u.sub_until<=Date.now())return bad('Нет активной подписки');
       const cd=u.last_unfreeze+FZ_COOL*DAY-Date.now();
-      if(cd>0)return bad('РЎР»РµРґСѓСЋС‰Р°СЏ Р·Р°РјРѕСЂРѕР·РєР° С‡РµСЂРµР· '+Math.ceil(cd/DAY)+' РґРЅ.');
+      if(cd>0)return bad('Следующая заморозка через '+Math.ceil(cd/DAY)+' дн.');
       db.prepare('UPDATE users SET frozen=1,freeze_left=?,frozen_at=? WHERE id=?').run(u.sub_until-Date.now(),Date.now(),u.id);
       return send(res,200,{ok:true});
     }
     if(url==='/api/unfreeze'){
-      if(!u.frozen)return bad('РџРѕРґРїРёСЃРєР° РЅРµ Р·Р°РјРѕСЂРѕР¶РµРЅР°');
+      if(!u.frozen)return bad('Подписка не заморожена');
       db.prepare('UPDATE users SET frozen=0,sub_until=?,freeze_left=0,last_unfreeze=? WHERE id=?').run(Date.now()+u.freeze_left,Date.now(),u.id);
       return send(res,200,{ok:true});
     }
     if(url==='/api/password'){
       const row=db.prepare('SELECT * FROM users WHERE id=?').get(u.id);
-      if(!pwOk(row,b.old))return bad('РўРµРєСѓС‰РёР№ РїР°СЂРѕР»СЊ РЅРµРІРµСЂРЅС‹Р№');
-      if(typeof b.new!=='string'||b.new.length<8)return bad('РќРѕРІС‹Р№ РїР°СЂРѕР»СЊ РјРёРЅРёРјСѓРј 8 СЃРёРјРІРѕР»РѕРІ');
+      if(!pwOk(row,b.old))return bad('Текущий пароль неверный');
+      if(typeof b.new!=='string'||b.new.length<8)return bad('Новый пароль минимум 8 символов');
       const salt=crypto.randomBytes(16).toString('hex');
       db.prepare('UPDATE users SET hash=?,salt=? WHERE id=?').run(hashPw(b.new,salt),salt,u.id);
       db.prepare('DELETE FROM sessions WHERE user_id=? AND token!=?').run(u.id,cookie(req).sid||'');
@@ -1673,24 +1673,24 @@ const srv=http.createServer(async(req,res)=>{
     }
     if(url==='/api/session/del'){
       const id=String(b.id||'');
-      if(!id)return bad('РќРµС‚ id');
+      if(!id)return bad('Нет id');
       // match by token prefix for safety (we only expose first 12 chars)
       const rows=db.prepare('SELECT token FROM sessions WHERE user_id=? AND expires>?').all(u.id,Date.now());
       const match=rows.find(r=>r.token.startsWith(id)||r.token===id);
-      if(!match)return bad('РЎРµСЃСЃРёСЏ РЅРµ РЅР°Р№РґРµРЅР°',404);
-      if(match.token===(cookie(req).sid||''))return bad('РќРµР»СЊР·СЏ Р·Р°РІРµСЂС€РёС‚СЊ С‚РµРєСѓС‰СѓСЋ СЃРµСЃСЃРёСЋ С‚Р°Рє вЂ” РёСЃРїРѕР»СЊР·СѓР№С‚Рµ В«Р’С‹Р№С‚РёВ»');
+      if(!match)return bad('Сессия не найдена',404);
+      if(match.token===(cookie(req).sid||''))return bad('Нельзя завершить текущую сессию так — используйте «Выйти»');
       db.prepare('DELETE FROM sessions WHERE token=?').run(match.token);
       return send(res,200,{ok:true});
     }
     if(url==='/api/logins')return send(res,200,{list:db.prepare('SELECT ip,kind,ok,ts FROM logins WHERE user_id=? ORDER BY ts DESC LIMIT 8').all(u.id)});
     if(url==='/api/news')return send(res,200,{list:db.prepare('SELECT id,title,text,ts FROM news ORDER BY ts DESC LIMIT 6').all()});
 
-    // ---------- С‚РёРєРµС‚С‹ (РІР»Р°РґРµР»РµС† РёР»Рё Р°РґРјРёРЅ) ----------
+    // ---------- тикеты (владелец или админ) ----------
     const tk=id=>{const t=db.prepare('SELECT t.*,x.username FROM tickets t JOIN users x ON x.id=t.user_id WHERE t.id=?').get(+id);return t&&(t.user_id===u.id||u.is_admin)?t:null};
     if(url==='/api/ticket/new'){
       const subj=String(b.subject||'').trim().slice(0,80),text=String(b.text||'').trim().slice(0,2000);
-      if(!subj||!text)return bad('Р—Р°РїРѕР»РЅРёС‚Рµ С‚РµРјСѓ Рё СЃРѕРѕР±С‰РµРЅРёРµ');
-      if(db.prepare("SELECT COUNT(*) c FROM tickets WHERE user_id=? AND status!='closed'").get(u.id).c>=5)return bad('РЎР»РёС€РєРѕРј РјРЅРѕРіРѕ РѕС‚РєСЂС‹С‚С‹С… С‚РёРєРµС‚РѕРІ (5)');
+      if(!subj||!text)return bad('Заполните тему и сообщение');
+      if(db.prepare("SELECT COUNT(*) c FROM tickets WHERE user_id=? AND status!='closed'").get(u.id).c>=5)return bad('Слишком много открытых тикетов (5)');
       const n=Date.now(),r=db.prepare('INSERT INTO tickets(user_id,subject,status,created,updated) VALUES(?,?,?,?,?)').run(u.id,subj,'open',n,n);
       db.prepare('INSERT INTO ticket_msgs(ticket_id,admin,text,ts) VALUES(?,?,?,?)').run(Number(r.lastInsertRowid),0,text,n);
       return send(res,200,{ok:true});
@@ -1701,19 +1701,19 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{list});
     }
     if(url==='/api/ticket/get'){
-      const t=tk(b.id);if(!t)return bad('РўРёРєРµС‚ РЅРµ РЅР°Р№РґРµРЅ',404);
+      const t=tk(b.id);if(!t)return bad('Тикет не найден',404);
       return send(res,200,{ticket:{id:t.id,subject:t.subject,status:t.status,username:t.username},msgs:db.prepare('SELECT admin,text,ts FROM ticket_msgs WHERE ticket_id=? ORDER BY id').all(t.id)});
     }
     if(url==='/api/ticket/reply'){
       const t=tk(b.id),text=String(b.text||'').trim().slice(0,2000);
-      if(!t)return bad('РўРёРєРµС‚ РЅРµ РЅР°Р№РґРµРЅ',404);if(t.status==='closed')return bad('РўРёРєРµС‚ Р·Р°РєСЂС‹С‚');if(!text)return bad('РџСѓСЃС‚РѕРµ СЃРѕРѕР±С‰РµРЅРёРµ');
+      if(!t)return bad('Тикет не найден',404);if(t.status==='closed')return bad('Тикет закрыт');if(!text)return bad('Пустое сообщение');
       const adm=u.is_admin&&t.user_id!==u.id?1:0;
       db.prepare('INSERT INTO ticket_msgs(ticket_id,admin,text,ts) VALUES(?,?,?,?)').run(t.id,adm,text,Date.now());
       db.prepare('UPDATE tickets SET status=?,updated=? WHERE id=?').run(adm?'answered':'open',Date.now(),t.id);
       return send(res,200,{ok:true});
     }
     if(url==='/api/ticket/close'){
-      const t=tk(b.id);if(!t)return bad('РўРёРєРµС‚ РЅРµ РЅР°Р№РґРµРЅ',404);
+      const t=tk(b.id);if(!t)return bad('Тикет не найден',404);
       db.prepare("UPDATE tickets SET status='closed',updated=? WHERE id=?").run(Date.now(),t.id);return send(res,200,{ok:true});
     }
     if(url==='/api/users/search'){
@@ -1725,12 +1725,12 @@ const srv=http.createServer(async(req,res)=>{
     if(url==='/api/gift'){
       const to=db.prepare('SELECT * FROM users WHERE username=?').get(String(b.to||'').trim());
       const d=Math.floor(+b.days);
-      if(!to)return bad('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ');
-      if(to.id===u.id)return bad('РќРµР»СЊР·СЏ РґР°СЂРёС‚СЊ СЃР°РјРѕРјСѓ СЃРµР±Рµ');
-      if(!(d>=1&&d<=3650))return bad('РЈРєР°Р¶РёС‚Рµ РєРѕР»РёС‡РµСЃС‚РІРѕ РґРЅРµР№ (1вЂ“3650)');
-      if(u.frozen)return bad('РЎРЅР°С‡Р°Р»Р° СЂР°Р·РјРѕСЂРѕР·СЊС‚Рµ РїРѕРґРїРёСЃРєСѓ');
-      if(!u.inf&&d*DAY>u.sub_until-Date.now())return bad('РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РґРЅРµР№ РЅР° РїРѕРґРїРёСЃРєРµ');
-      if(to.inf)return bad('РЈ РїРѕР»СѓС‡Р°С‚РµР»СЏ Р±РµСЃСЃСЂРѕС‡РЅР°СЏ РїРѕРґРїРёСЃРєР°');
+      if(!to)return bad('Пользователь не найден');
+      if(to.id===u.id)return bad('Нельзя дарить самому себе');
+      if(!(d>=1&&d<=3650))return bad('Укажите количество дней (1–3650)');
+      if(u.frozen)return bad('Сначала разморозьте подписку');
+      if(!u.inf&&d*DAY>u.sub_until-Date.now())return bad('Недостаточно дней на подписке');
+      if(to.inf)return bad('У получателя бессрочная подписка');
       tx(()=>{
         if(!u.inf)db.prepare('UPDATE users SET sub_until=sub_until-? WHERE id=?').run(d*DAY,u.id);
         addTime(to,d*DAY);
@@ -1747,7 +1747,7 @@ const srv=http.createServer(async(req,res)=>{
     }
     if(url==='/api/device/del'){
       const usr=db.prepare('SELECT reset_count,max_resets FROM users WHERE id=?').get(u.id);
-      if((usr.reset_count||0)>=(usr.max_resets||3))return bad('Р”РѕСЃС‚РёРіРЅСѓС‚ Р»РёРјРёС‚ СЃР±СЂРѕСЃРѕРІ СѓСЃС‚СЂРѕР№СЃС‚РІ ('+(usr.max_resets||3)+')');
+      if((usr.reset_count||0)>=(usr.max_resets||3))return bad('Достигнут лимит сбросов устройств ('+(usr.max_resets||3)+')');
       const dev=db.prepare('SELECT hwid,name FROM devices WHERE id=? AND user_id=?').get(+b.id,u.id);
       const r=db.prepare('DELETE FROM devices WHERE id=? AND user_id=?').run(+b.id,u.id);
       if(r.changes){
@@ -1759,13 +1759,13 @@ const srv=http.createServer(async(req,res)=>{
     }
     if(url==='/api/nick'){
       const nick=String(b.username||'').trim();
-      if(!/^[A-Za-z0-9_]{3,20}$/.test(nick))return bad('РќРёРє: 3вЂ“20 СЃРёРјРІРѕР»РѕРІ (Р»Р°С‚РёРЅРёС†Р°, С†РёС„СЂС‹, _)');
-      if(db.prepare('SELECT 1 FROM users WHERE username=? AND id!=?').get(nick,u.id))return bad('РќРёРє Р·Р°РЅСЏС‚');
+      if(!/^[A-Za-z0-9_]{3,20}$/.test(nick))return bad('Ник: 3–20 символов (латиница, цифры, _)');
+      if(db.prepare('SELECT 1 FROM users WHERE username=? AND id!=?').get(nick,u.id))return bad('Ник занят');
       db.prepare('UPDATE users SET username=? WHERE id=?').run(nick,u.id);
       return send(res,200,{ok:true,username:nick});
     }
     if(url==='/api/delete'){
-      if(u.is_admin)return bad('РђРґРјРёРЅР° СѓРґР°Р»РёС‚СЊ РЅРµР»СЊР·СЏ');
+      if(u.is_admin)return bad('Админа удалить нельзя');
       tx(()=>{
         db.prepare('DELETE FROM sessions WHERE user_id=?').run(u.id);
         db.prepare('DELETE FROM devices WHERE user_id=?').run(u.id);
@@ -1775,10 +1775,10 @@ const srv=http.createServer(async(req,res)=>{
     }
     if(url==='/api/exchange'){
       const days=clamp(b.days,1,365,30);
-      if(u.inf)return bad('Р‘РµСЃСЃСЂРѕС‡РЅР°СЏ РїРѕРґРїРёСЃРєР°');
-      if(u.frozen)return bad('РџРѕРґРїРёСЃРєР° Р·Р°РјРѕСЂРѕР¶РµРЅР°');
+      if(u.inf)return bad('Бессрочная подписка');
+      if(u.frozen)return bad('Подписка заморожена');
       const left=Math.max(0,u.sub_until-Date.now());
-      if(left<days*DAY)return bad('РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РґРЅРµР№');
+      if(left<days*DAY)return bad('Недостаточно дней');
       const key=makeKey();
       tx(()=>{
         db.prepare('UPDATE users SET sub_until=sub_until-? WHERE id=?').run(days*DAY,u.id);
@@ -1809,10 +1809,10 @@ const srv=http.createServer(async(req,res)=>{
     }
     // ---- Reseller panel ----
     if(url==='/api/reseller/genkey'){
-      if(!canReseller(u))return bad('РќРµС‚ РґРѕСЃС‚СѓРїР° СЂРµСЃРµР»Р»РµСЂР°',403);
+      if(!canReseller(u))return bad('Нет доступа реселлера',403);
       const unlimited = !!(u.is_admin || isSuper(u));
       const left = unlimited ? 999999 : Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0));
-      if(left<=0)return bad('Р›РёРјРёС‚ РєР»СЋС‡РµР№ РёСЃС‡РµСЂРїР°РЅ');
+      if(left<=0)return bad('Лимит ключей исчерпан');
       const days=clamp(b.days,1,365,30),dev=clamp(b.devices,1,99,1),n=clamp(b.count,1,Math.min(unlimited?50:10,left),1);
       const keys=addKeys(days,dev,n,false,'reseller:'+u.username,'RSL');
       if(!unlimited) db.prepare('UPDATE users SET reseller_keys=reseller_keys+? WHERE id=?').run(n,u.id);
@@ -1821,7 +1821,7 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{keys,left:unlimited?999999:left-n,days,devices:dev});
     }
     if(url==='/api/reseller/keys'){
-      if(!canReseller(u))return bad('РќРµС‚ РґРѕСЃС‚СѓРїР°',403);
+      if(!canReseller(u))return bad('Нет доступа',403);
       const list=db.prepare('SELECT rk.*,k.used_by,u2.username used FROM reseller_keys rk LEFT JOIN keys k ON k.code=rk.code LEFT JOIN users u2 ON u2.id=k.used_by WHERE rk.reseller_id=? ORDER BY rk.created DESC LIMIT 100').all(u.id);
       const unlimited = !!(u.is_admin || isSuper(u));
       return send(res,200,{list,keys:u.reseller_keys||0,limit:unlimited?999999:(u.reseller_limit||0),left:unlimited?999999:Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0))});
@@ -1839,8 +1839,8 @@ const srv=http.createServer(async(req,res)=>{
       const list=db.prepare("SELECT strftime('%Y-%m-%d',ts/1000,'unixepoch') d,COUNT(*) c FROM logins WHERE user_id=? AND ok=1 AND ts>? GROUP BY d ORDER BY d").all(u.id,from);
       return send(res,200,{list,days});
     }
-    bad('РќРµ РЅР°Р№РґРµРЅРѕ',404);
-  }catch(e){send(res,400,{error:'РћС€РёР±РєР° Р·Р°РїСЂРѕСЃР°'})}
+    bad('Не найдено',404);
+  }catch(e){send(res,400,{error:'Ошибка запроса'})}
 
 });
 const PORT = process.env.PORT || 3000;
@@ -1848,4 +1848,4 @@ srv.listen(PORT, '0.0.0.0', () => console.log('FOREV EXT: http://0.0.0.0:' + POR
 srv.keepAliveTimeout = 65e3;
 srv.headersTimeout = 66e3;
 
-require('./keepalive')(); // Р°РЅС‚Рё-СЃРѕРЅ, РЅР°СЃС‚СЂР°РёРІР°РµС‚СЃСЏ С‡РµСЂРµР· PING_URL
+require('./keepalive')(); // анти-сон, настраивается через PING_URL
