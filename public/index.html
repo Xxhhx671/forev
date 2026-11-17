@@ -260,6 +260,92 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 
 /* === FRV Redesign polish === */
 
+/* ===== Logo + refined typography & animations ===== */
+.logo{
+  display:flex;align-items:center;gap:11px;cursor:pointer;
+  user-select:none;
+}
+.logo-mark{
+  width:28px;height:28px;position:relative;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;
+}
+.logo-mark i{
+  display:block;background:rgba(255,255,255,.85);
+  border-radius:1px;
+  box-shadow:0 0 6px rgba(59,158,255,.5);
+  animation:logoPulse 3.2s ease-in-out infinite;
+}
+.logo-mark i:nth-child(1){animation-delay:0s}
+.logo-mark i:nth-child(2){animation-delay:.2s;background:var(--r);box-shadow:0 0 8px var(--r)}
+.logo-mark i:nth-child(3){animation-delay:.4s}
+.logo-mark i:nth-child(4){animation-delay:.6s}
+@keyframes logoPulse{
+  0%,100%{opacity:.7;transform:scale(1)}
+  50%{opacity:1;transform:scale(1.08)}
+}
+.logo-text{
+  font-weight:900;font-style:italic;font-size:22px;letter-spacing:4px;
+  background:linear-gradient(100deg,#fff 30%,#8ec8ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.logo:hover .logo-mark i{animation-duration:1.4s}
+
+/* Section titles */
+.secHead h2, .sec h2{
+  font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-0.5px;
+  margin-bottom:10px;line-height:1.15;
+}
+.secHead h2 b, .sec h2 b{
+  color:var(--r);
+  font-weight:800;
+}
+.secHead p, .sec > p{
+  color:var(--m);font-size:15px;max-width:520px;line-height:1.6;
+}
+
+/* Reveal animation refinements */
+.rv{
+  opacity:0;transform:translateY(22px);
+  transition:opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1);
+}
+.rv.on{
+  opacity:1;transform:none;
+}
+.rv.done{transition:none}
+
+/* Feature cards cleaner */
+.fcard{
+  padding:22px 20px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(12,12,18,.7);
+  transition:border-color .3s, transform .3s, background .3s;
+}
+.fcard:hover{
+  border-color:rgba(59,158,255,.25);
+  background:rgba(18,18,28,.85);
+  transform:translateY(-3px);
+}
+.fnum{
+  font-size:11px;font-weight:700;letter-spacing:2px;
+  color:var(--r);margin-bottom:10px;opacity:.85;
+}
+.fcard h3{font-size:16px;font-weight:700;margin-bottom:8px;color:#f0f0f5}
+.fcard p{font-size:13.5px;color:var(--m);line-height:1.55;margin:0}
+
+/* Cleaner buttons */
+.btn{
+  transition:transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s, border-color .22s, background .22s;
+}
+.btn-primary:active{transform:translateY(0) scale(.98)}
+
+/* Subtle text selection */
+::selection{background:rgba(59,158,255,.35);color:#fff}
+
+/* Remove overly flashy effects */
+.hero-title{text-shadow:none}
+.hero-title span{filter:none}
+
+
 /* ========== NEW HERO & GLOBAL REDESIGN ========== */
 .hero{
   min-height:100vh;
@@ -334,17 +420,22 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
   pointer-events:none;z-index:-1;filter:blur(40px);
 }
 .features-band{
-  display:flex;flex-wrap:wrap;justify-content:center;gap:12px 28px;
-  padding:22px 5vw;border-top:1px solid rgba(255,255,255,.05);
-  border-bottom:1px solid rgba(255,255,255,.05);
-  background:linear-gradient(90deg,transparent,rgba(59,158,255,.04),transparent);
+  display:flex;flex-wrap:wrap;justify-content:center;gap:14px 32px;
+  padding:20px 5vw;
+  border-top:1px solid rgba(255,255,255,.04);
+  border-bottom:1px solid rgba(255,255,255,.04);
+  background:rgba(255,255,255,.015);
 }
 .band-item{
-  font-size:13px;color:#b0b0bc;display:flex;align-items:center;gap:8px;
+  font-size:13px;color:#a8a8b4;
+  display:flex;align-items:center;gap:9px;
+  letter-spacing:.2px;
 }
-.band-item i{
-  width:6px;height:6px;border-radius:50%;
-  background:var(--r);box-shadow:0 0 8px var(--r);display:inline-block;
+.band-item .dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--r);
+  box-shadow:0 0 6px rgba(59,158,255,.6);
+  flex-shrink:0;
 }
 /* Global card improvements */
 .card,.box,.modal-box,.dash{
@@ -408,7 +499,10 @@ header{backdrop-filter:blur(12px)!important}
   <div class="pbar"><i></i></div>
 </div>
 <header>
-<div class="logo" onclick="go('top')"><span style="font-weight:900;letter-spacing:5px;font-style:italic;font-size:24px;background:linear-gradient(90deg,#fff,#7ec8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 12px rgba(59,158,255,.4))">FRV</span></div>
+<div class="logo" onclick="go('top')">
+  <div class="logo-mark"><i></i><i></i><i></i><i></i></div>
+  <span class="logo-text">FRV</span>
+</div>
 <div style="display:flex;align-items:center;gap:10px">
 <button id="langBtn" onclick="toggleLang()" style="background:#0a0a0a;border:1px solid var(--b);color:#fff;padding:8px 12px;font-weight:800;font-size:12px;letter-spacing:1px;cursor:pointer">EN</button>
 <button class="bg" id="bgr" aria-label="Меню" onclick="tm()"><i></i><i></i><i></i></button>
@@ -446,10 +540,10 @@ header{backdrop-filter:blur(12px)!important}
 </section>
 
 <div class="features-band">
-  <div class="band-item"><i></i> Админка и генерация ключей</div>
-  <div class="band-item"><i></i> Поиск по IP / HWID</div>
-  <div class="band-item"><i></i> Ключи в личном кабинете</div>
-  <div class="band-item"><i></i> Пробный период один раз</div>
+  <div class="band-item"><span class="dot"></span>Админка и генерация ключей</div>
+  <div class="band-item"><span class="dot"></span>Поиск по IP / HWID</div>
+  <div class="band-item"><span class="dot"></span>Ключи в личном кабинете</div>
+  <div class="band-item"><span class="dot"></span>Пробный период один раз</div>
 </div>
 
 <section id="feat" class="sec">
