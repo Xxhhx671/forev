@@ -1,1 +1,13 @@
-{"name":"forev-ext","version":"1.0.0","scripts":{"start":"node server.js"},"engines":{"node":">=22.5"},"dependencies":{}}
+{
+  "name": "forev-ext",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start:node": "node server.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

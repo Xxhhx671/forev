@@ -606,8 +606,9 @@ function countTo(el,n){const s=performance.now();(function t(now){const k=Math.m
 /* Авторизация */
 /* повтор при обрыве соединения (Safari: «Load failed») и при пробуждении Render (502/503/504) */
 const wait=ms=>new Promise(k=>setTimeout(k,ms));
-const api=async(u,d,n=0)=>{let r;
- try{r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})})}
+const API_BASE=(window.API_BASE||'').replace(/\/$/,'');
+const api=async(u,d,n=0)=>{let r; const _u=(u&&u[0]==='/'?API_BASE+u:u);
+ try{r=await fetch(_u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})})}
  catch{if(n<3){await wait(600*(n+1));return api(u,d,n+1)}throw new Error('Нет связи с сервером, попробуйте ещё раз')}
  if([502,503,504].includes(r.status)&&n<3){await wait(1500);return api(u,d,n+1)}
  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Ошибка сервера ('+r.status+')');return j};
@@ -624,7 +625,7 @@ function eye(){const f=$('f3');f.type=f.type==='password'?'text':'password'}
 let captchaId='';
 async function loadCaptcha(){
   try{
-    const r=await fetch('/api/captcha');const j=await r.json();
+    const r=await fetch(API_BASE+'/api/captcha');const j=await r.json();
     if(!r.ok)throw new Error(j.error||'Капча недоступна');
     captchaId=j.id;$('capQ').textContent=j.question;$('capA').value='';
   }catch(e){$('capQ').textContent='?';captchaId='';console.error(e)}
@@ -870,7 +871,7 @@ async function showConfigs(){
   }
   box.style.display='flex';
   try{
-    const r=await fetch('/api/configs').then(x=>x.json());
+    const r=await fetch(API_BASE+'/api/configs').then(x=>x.json());
     if(!r.open){$('cfgList').innerHTML='<p style="color:var(--m)">'+esc(r.message||'Раздел временно закрыт')+'</p>';return}
     if(!r.list.length){$('cfgList').innerHTML='<p>Конфигов пока нет.</p>';return}
     $('cfgList').innerHTML=r.list.map(c=>`<div class="it" style="cursor:pointer" onclick="openCfg(${c.id})"><div><b>${esc(c.title)}</b><small>${esc(c.description||'')}</small></div>${c.photo?`<img src="${esc(c.photo)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px">`:''}</div>`).join('');
@@ -878,7 +879,7 @@ async function showConfigs(){
 }
 async function openCfg(id){
   try{
-    const c=await fetch('/api/config/'+id).then(x=>x.json());
+    const c=await fetch(API_BASE+'/api/config/'+id).then(x=>x.json());
     if(c.error)return toast(c.error,1);
     let html=`<h3>${esc(c.title)}</h3><p>${esc(c.description||'')}</p>`;
     if(c.photo)html+=`<img src="${esc(c.photo)}" style="max-width:100%;border-radius:8px;margin:12px 0">`;
@@ -906,7 +907,7 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
   if(u.reseller){$('resellerCard').style.display='';$('rslLim').textContent=u.reseller.limit;$('rslUsed').textContent=u.reseller.keys;$('rslLeft').textContent=u.reseller.left;loadRslKeys()}else{$('resellerCard').style.display='none'}
  }
  setTimeout(obs,50)}
-async function loadStatus(){try{const r=await fetch('/api/status');const s=await r.json();const el=$('prodstatus');if(el)el.innerHTML=`Статус: <b>${esc(s.status||'online')}</b> — ${esc(s.text||'')}${s.maintenance?' <span style="color:var(--r)">(техработы)</span>':''}${s.killswitch?' <span style="color:red">(отключён)</span>':''}`;}catch{}}
+async function loadStatus(){try{const r=await fetch(API_BASE+'/api/status');const s=await r.json();const el=$('prodstatus');if(el)el.innerHTML=`Статус: <b>${esc(s.status||'online')}</b> — ${esc(s.text||'')}${s.maintenance?' <span style="color:var(--r)">(техработы)</span>':''}${s.killswitch?' <span style="color:red">(отключён)</span>':''}`;}catch{}}
 
 
 async function downloadLoader(){
@@ -946,7 +947,7 @@ async function loadMyKeys(){
   }catch(e){el.innerHTML='<p style="color:var(--r)">'+esc(e.message||'Ошибка загрузки ключей')+'</p>'}
 }
 
-async function init(){for(let n=0;n<4;n++){try{const r=await fetch('/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render();if(user)loadMyKeys();loadStatus()}
+async function init(){for(let n=0;n<4;n++){try{const r=await fetch(API_BASE+'/api/me');user=r.ok?await r.json():null;break}catch{await wait(700*(n+1))}}render();if(user)loadMyKeys();loadStatus()}
 /* кабинет: заморозка, подарки, устройства, админка */
 const D=864e5,esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fd=t=>new Date(t).toLocaleDateString('ru');
 const cp=t=>navigator.clipboard.writeText(t).then(()=>toast('Скопировано'),()=>toast('Не удалось скопировать',1));
@@ -1035,7 +1036,7 @@ async function stt(){try{const r=await api('/api/admin/stats'),L={users:'Пол�
 async function loadSet(){try{const r=await api('/api/admin/settings',{action:'get'});$('setinfo').innerHTML=`Kill-switch: ${r.killswitch==='1'?'ВКЛ':'выкл'} · Техработы: ${r.maintenance==='1'?'ВКЛ':'выкл'} · Блок VPN: отключён (вход лоадера только по HWID) · Статус: ${esc(r.status)} — ${esc(r.status_text)}`;}catch(e){toast(e.message,1)}}
 async function toggleSet(k){try{const cur=await api('/api/admin/settings',{action:'get'});await api('/api/admin/settings',{[k]:cur[k]!=='1'});loadSet();toast('Обновлено')}catch(e){toast(e.message,1)}}
 async function setStatus(){try{await api('/api/admin/settings',{status:'custom',status_text:$('sttxt').value});loadSet();toast('Статус обновлён')}catch(e){toast(e.message,1)}}
-async function doBackup(){try{const r=await fetch('/api/admin/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='forev-backup.db';a.click();toast('Бэкап скачан')}catch(e){toast('Ошибка бэкапа',1)}}
+async function doBackup(){try{const r=await fetch(API_BASE+'/api/admin/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='forev-backup.db';a.click();toast('Бэкап скачан')}catch(e){toast('Ошибка бэкапа',1)}}
 async function loadAud(){try{const r=await api('/api/admin/audit');$('audl').innerHTML=r.list.map(x=>`<div class="it"><div><b>${esc(x.action)}</b> → ${esc(x.target||'')} <small>${esc(x.username||'system')} · ${new Date(x.ts).toLocaleString('ru')} · ${esc(x.details||'')} ${x.ip?'· IP '+esc(x.ip):''}</small></div></div>`).join('')||'<p>Пусто</p>'}catch(e){toast(e.message,1)}}
 let chartInst;
 async function loadChart(){try{const r=await api('/api/admin/chart',{days:30});
@@ -1074,7 +1075,7 @@ async function cdl(c){try{await api('/api/admin/coupon/del',{code:c});loadCoup()
 async function loadIp(){try{const r=await api('/api/admin/iplist');$('iplst').innerHTML=r.list.map(x=>`<div class="it"><div>${esc(x.ip)} <small>${x.type} · ${esc(x.reason||'')}</small></div><button class="xs" onclick="delIp('${esc(x.ip)}')">×</button></div>`).join('')||'<p>Пусто</p>'}catch{}}
 async function addIp(){try{await api('/api/admin/iplist',{action:'add',ip:$('ipadd').value,type:$('iptype').value});$('ipadd').value='';loadIp()}catch(e){toast(e.message,1)}}
 async function delIp(ip){try{await api('/api/admin/iplist',{action:'del',ip});loadIp()}catch(e){toast(e.message,1)}}
-async function doExport(){try{const r=await fetch('/api/admin/export',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='users.csv';a.click()}catch(e){toast('Ошибка',1)}}
+async function doExport(){try{const r=await fetch(API_BASE+'/api/admin/export',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='users.csv';a.click()}catch(e){toast('Ошибка',1)}}
 async function resetDev(id){if(!confirm('Сбросить все устройства пользователя?'))return;try{await api('/api/admin/resetdevices',{id});toast('Устройства сброшены');ul()}catch(e){toast(e.message,1)}}
 async function showHist(id){try{const r=await api('/api/admin/history',{id});alert(r.list.map(h=>`${new Date(h.ts).toLocaleString('ru')}: ${h.days}д (${h.source})`).join('\n')||'Пусто')}catch(e){toast(e.message,1)}}
 
