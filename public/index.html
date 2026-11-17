@@ -40,8 +40,8 @@ body{background:var(--bg)!important;color:var(--fg)!important;transition:backgro
 .kv{font-size:13px}
 }
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--fg);font:16px/1.6 'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+html{scroll-behavior:smooth;overflow-x:hidden;max-width:100%}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 'Segoe UI',system-ui,sans-serif;overflow-x:hidden;max-width:100%}
 body.lock,body:not(.ready){overflow:hidden}
 button{font:inherit;color:inherit}
 #cv{position:fixed;inset:0;z-index:0}
@@ -149,7 +149,7 @@ footer{text-align:center;color:var(--m);padding:36px;font-size:13px;border-top:1
 .x{position:absolute;right:14px;top:14px;width:36px;height:36px;border:1px solid var(--b);background:none;cursor:pointer;transition:border-color .3s,transform .3s}
 .x:hover{border-color:var(--r);transform:rotate(90deg)}
 .x svg{width:14px;height:14px;stroke:#fff;stroke-width:2;stroke-linecap:round}
-.tabs{display:grid;grid-template-columns:1fr 1fr;position:relative;background:#111;padding:3px;margin:4px 46px 26px 0}
+.tabs{display:grid;grid-template-columns:1fr;position:relative;background:#111;padding:3px;margin:4px 46px 26px 0}
 .tabs i{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);background:var(--r);transition:transform .4s cubic-bezier(.7,0,.2,1)}
 .tabs.r i{transform:translateX(100%)}
 .tabs button{position:relative;background:none;border:0;padding:11px;cursor:pointer;font-weight:800;color:#999;text-transform:uppercase;letter-spacing:1px;font-size:13px;transition:color .3s}
@@ -267,7 +267,7 @@ h2{letter-spacing:1px}.tagl{font-size:15px}
 }
 .logo-mark{
   width:28px;height:28px;position:relative;
-  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;
+  display:grid;grid-template-columns:1fr;grid-template-rows:1fr 1fr;gap:3px;
 }
 .logo-mark i{
   display:block;background:rgba(255,255,255,.85);
@@ -513,13 +513,11 @@ header{backdrop-filter:blur(12px)!important}
   border:1px solid rgba(120,190,255,.6);
   animation:frvGlow 1.8s ease-in-out infinite,pi 1s ease both}
 #pre .pre-logo{
-  background:linear-gradient(100deg,#fff 0%,#7cc4ff 25%,#3b9eff 50%,#fff 75%,#7cc4ff 100%);
-  background-size:250% 100%;
-  -webkit-background-clip:text!important;background-clip:text!important;
-  -webkit-text-fill-color:transparent!important;color:transparent!important;
-  text-shadow:none!important;
-  animation:frvShine 2.8s linear infinite,pi 1s ease both;
-  filter:drop-shadow(0 0 22px rgba(59,158,255,.7))}
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  text-shadow:0 0 30px rgba(59,158,255,.5)!important;
+  animation:pi 1s ease both;
+  opacity:.95;}
 
 /* ================= FRV v3 — clean design layer ================= */
 :root{--r:#3b9eff;--r2:#1a6fd4;--ink:#eef2fa;--mut:#8b94a8;--line:rgba(255,255,255,.08);--glass:rgba(14,18,28,.62);--rad:18px;
@@ -690,13 +688,14 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 /* ===== NEW HERO REDESIGN ===== */
 #land .hero{
   display:grid!important;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:1fr;
   align-items:center!important;
   min-height:100svh;
   padding:120px 5vw 80px!important;
   gap:48px!important;
   max-width:1240px;
   position:relative;
+  overflow:hidden;
 }
 .hero-bg-grid{
   position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -714,14 +713,14 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
   position:absolute;pointer-events:none;border-radius:50%;filter:blur(80px);
 }
 .hero-orb-1{
-  width:500px;height:500px;
-  top:-100px;left:-100px;
+  width:min(500px,80vw);height:min(500px,80vw);
+  top:-100px;left:max(-100px,-20vw);
   background:radial-gradient(circle,rgba(59,158,255,.18) 0%,transparent 70%);
   animation:orbFloat1 12s ease-in-out infinite;
 }
 .hero-orb-2{
-  width:400px;height:400px;
-  bottom:-50px;right:-50px;
+  width:min(400px,70vw);height:min(400px,70vw);
+  bottom:-50px;right:max(-50px,-10vw);
   background:radial-gradient(circle,rgba(100,120,255,.12) 0%,transparent 70%);
   animation:orbFloat2 15s ease-in-out infinite;
 }
@@ -960,6 +959,7 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
   background:conic-gradient(from 0deg,transparent 60%,rgba(59,158,255,.3) 80%,transparent 100%);
   animation:ringRotate 12s linear infinite;
   filter:blur(2px);
+  overflow:hidden;
 }
 @keyframes ringRotate{to{transform:rotate(360deg)}}
 
@@ -1011,7 +1011,7 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 <main>
 <div class="hero-bg-grid"></div>
 
-<div id="land">
+<div id="land" style="overflow:hidden;position:relative">
 <section class="hero" id="top">
   <!-- BG effects -->
   <div class="hero-orb hero-orb-1"></div>
@@ -1047,33 +1047,7 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
       <div class="hf"><span>02</span> Подписка ключом</div>
       <div class="hf"><span>03</span> HWID защита</div>
     </div>
-  </div>
-
-  <div class="hero-visual">
-    <div class="visual-ring"></div>
-    <div class="visual-frame">
-      <div class="visual-corner tl"></div>
-      <div class="visual-corner tr"></div>
-      <div class="visual-corner bl"></div>
-      <div class="visual-corner br"></div>
-      <div class="visual-scan"></div>
-      <img src="/frv-character.webp" alt="FRV" loading="lazy">
-      <div class="visual-glow"></div>
-    </div>
-    <div class="hero-stat-card hero-stat-card-1">
-      <div class="stat-label">Статус сервера</div>
-      <div class="stat-value" style="font-size:16px;color:#2ee68a">
-        <span class="stat-icon-dot"></span>ONLINE
-      </div>
-      <div class="stat-sub">Всё работает штатно</div>
-    </div>
-    <div class="hero-stat-card hero-stat-card-2">
-      <div class="stat-label">Защита</div>
-      <div class="stat-value">HWID</div>
-      <div class="stat-sub">Привязка к устройству</div>
-    </div>
-  </div>
-</section>
+  </div></section>
 
 <div class="features-band">
   <div class="band-item"><span class="dot"></span>Админка и генерация ключей</div>
