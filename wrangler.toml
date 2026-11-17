@@ -1,4 +1,4 @@
-name = "forev-ext"
+name = "forev-ext1"
 compatibility_date = "2025-01-01"
 
 # Static site deployment (frontend). Deploy with: npx wrangler deploy
