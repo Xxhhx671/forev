@@ -811,7 +811,7 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 
 /* Actions */
 .hero-actions{
-  animation:fadeSlideUp .9s .5s both;
+  animation:fadeSlideUp .6s .1s forwards;
 }
 .btn-primary{
   position:relative;overflow:hidden;
@@ -833,7 +833,7 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 
 /* Features pills */
 .hero-features{
-  animation:fadeSlideUp .9s .6s both;
+  animation:fadeSlideUp .6s .15s forwards;
 }
 .hf{
   display:flex;align-items:center;gap:8px;
@@ -972,6 +972,11 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 }
 
 @keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+/* Always show hero elements even if animation glitches */
+.hero-badge,.hero-title-new,.hero-desc-new,.status-line,.hero-actions,.hero-features,.features-band{
+  opacity:1!important;transform:none!important;
+  animation-fill-mode:forwards!important;
+}
 
 @media(max-width:960px){
   #land .hero{grid-template-columns:1fr!important;text-align:center!important;padding-top:110px!important;gap:36px!important}
@@ -1019,10 +1024,6 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
   <div class="hero-orb hero-orb-3"></div>
 
   <div class="hero-content">
-    <div class="hero-badge">
-      <span class="dot-live"></span>
-      CS2 EXTERNAL &bull; HWID LICENSE
-    </div>
 
     <h1 class="hero-title-new">
       <span class="line1"><span class="char" style="animation-delay:.3s">F</span><span class="char" style="animation-delay:.35s">R</span><span class="char" style="animation-delay:.4s">V</span></span>
@@ -1030,8 +1031,6 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
     </h1>
 
     <p class="hero-desc-new">Мощный external для Counter-Strike 2. Подписки, лицензии, привязка HWID и полный контроль из личного кабинета.</p>
-
-    <div id="prodstatus" class="status-line">Загрузка данных...</div>
 
     <div class="hero-actions">
       <button class="btn btn-primary" onclick="openM('reg')">
