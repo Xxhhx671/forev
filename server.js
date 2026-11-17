@@ -680,8 +680,8 @@ function makeCaptcha(ip){
   const a=crypto.randomInt(2,20),b=crypto.randomInt(2,20),op=['+','-','*'][crypto.randomInt(0,3)];
   let ans,q;
   if(op==='+'){ans=a+b;q=a+' + '+b}
-  else if(op==='-'){const x=Math.max(a,b),y=Math.min(a,b);ans=x-y;q=x+' в€’ '+y}
-  else{const x=crypto.randomInt(2,10),y=crypto.randomInt(2,10);ans=x*y;q=x+' Г— '+y}
+  else if(op==='-'){const x=Math.max(a,b),y=Math.min(a,b);ans=x-y;q=x+' - '+y}
+  else{const x=crypto.randomInt(2,10),y=crypto.randomInt(2,10);ans=x*y;q=x+' × '+y}
   const id=crypto.randomBytes(12).toString('hex');
   captchas.set(id,{ans:String(ans),exp:now+3e5,ip});
   return {id,question:q+' = ?'};
