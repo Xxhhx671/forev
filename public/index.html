@@ -2,6 +2,7 @@
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>FOREV EXT — CS2</title><link rel="icon" href="/favicon.png">
+<script>window.API_BASE = window.API_BASE || "https://forev-ext-production.up.railway.app";</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <style>
@@ -606,7 +607,7 @@ function countTo(el,n){const s=performance.now();(function t(now){const k=Math.m
 /* Авторизация */
 /* повтор при обрыве соединения (Safari: «Load failed») и при пробуждении Render (502/503/504) */
 const wait=ms=>new Promise(k=>setTimeout(k,ms));
-const API_BASE=(window.API_BASE||'').replace(/\/$/,'');
+const API_BASE=(window.API_BASE||window.__FOREV_API_BASE__||'').replace(/\/$/,'');
 const api=async(u,d,n=0)=>{let r; const _u=(u&&u[0]==='/'?API_BASE+u:u);
  try{r=await fetch(_u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})})}
  catch{if(n<3){await wait(600*(n+1));return api(u,d,n+1)}throw new Error('Нет связи с сервером, попробуйте ещё раз')}
