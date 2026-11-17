@@ -686,6 +686,306 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 .ld-fields input:focus{border-color:rgba(59,158,255,.6);box-shadow:0 0 0 3px rgba(59,158,255,.15)}
 @media(max-width:560px){.ld-fields{grid-template-columns:1fr}}
 .agal{grid-template-columns:repeat(5,minmax(0,1fr))}
+
+/* ===== NEW HERO REDESIGN ===== */
+#land .hero{
+  display:grid!important;
+  grid-template-columns:1fr 1fr;
+  align-items:center!important;
+  min-height:100svh;
+  padding:120px 5vw 80px!important;
+  gap:48px!important;
+  max-width:1240px;
+  position:relative;
+}
+.hero-bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(59,158,255,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(59,158,255,.04) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
+  -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
+  animation:gridShift 20s linear infinite;
+}
+@keyframes gridShift{to{background-position:60px 60px}}
+
+.hero-orb{
+  position:absolute;pointer-events:none;border-radius:50%;filter:blur(80px);
+}
+.hero-orb-1{
+  width:500px;height:500px;
+  top:-100px;left:-100px;
+  background:radial-gradient(circle,rgba(59,158,255,.18) 0%,transparent 70%);
+  animation:orbFloat1 12s ease-in-out infinite;
+}
+.hero-orb-2{
+  width:400px;height:400px;
+  bottom:-50px;right:-50px;
+  background:radial-gradient(circle,rgba(100,120,255,.12) 0%,transparent 70%);
+  animation:orbFloat2 15s ease-in-out infinite;
+}
+.hero-orb-3{
+  width:200px;height:200px;
+  top:40%;right:40%;
+  background:radial-gradient(circle,rgba(59,158,255,.1) 0%,transparent 70%);
+  animation:orbFloat3 8s ease-in-out infinite;
+}
+@keyframes orbFloat1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(.95)}}
+@keyframes orbFloat2{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,20px) scale(1.08)}}
+@keyframes orbFloat3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,-15px) scale(1.2);opacity:.6}}
+
+/* Badge */
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 16px;border-radius:99px;
+  background:rgba(59,158,255,.08);
+  border:1px solid rgba(59,158,255,.25);
+  font-size:11px;font-weight:800;letter-spacing:.2em;
+  color:#7cc4ff;text-transform:uppercase;
+  margin-bottom:28px;
+  animation:fadeSlideUp .8s .1s both;
+  position:relative;overflow:hidden;
+}
+.hero-badge::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(59,158,255,.15),transparent);
+  animation:badgeSweep 3s ease-in-out infinite;
+}
+.hero-badge .dot-live{
+  width:7px;height:7px;border-radius:50%;background:#2ee68a;
+  box-shadow:0 0 8px #2ee68a88;
+  animation:dotPulse 2s ease-in-out infinite;
+}
+@keyframes dotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}
+@keyframes badgeSweep{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* Title */
+.hero-title-new{
+  font-size:clamp(52px,8vw,96px)!important;
+  font-weight:900!important;
+  line-height:.95!important;
+  letter-spacing:-.03em!important;
+  margin:0 0 24px!important;
+  font-family:var(--fd)!important;
+  animation:fadeSlideUp .9s .2s both;
+}
+.hero-title-new .line1{
+  display:block;color:#fff;
+  position:relative;
+}
+.hero-title-new .line1 .char{
+  display:inline-block;
+  animation:charDrop 1s cubic-bezier(.2,.8,.2,1) both;
+}
+.hero-title-new .line2{
+  display:block;
+  background:linear-gradient(100deg,#3b9eff,#7dd4ff 50%,#c2e8ff);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  position:relative;
+}
+.hero-title-new .line2::after{
+  content:'';position:absolute;
+  bottom:-8px;left:0;
+  height:3px;width:0;
+  background:linear-gradient(90deg,#3b9eff,transparent);
+  border-radius:2px;
+  animation:lineGrow 1s .9s cubic-bezier(.2,.8,.2,1) forwards;
+}
+@keyframes lineGrow{to{width:60%}}
+@keyframes charDrop{from{opacity:0;transform:translateY(-30px) scaleY(1.2)}to{opacity:1;transform:none}}
+
+/* Description */
+.hero-desc-new{
+  font-size:17px!important;line-height:1.75!important;
+  color:rgba(200,210,230,.75)!important;
+  max-width:480px!important;
+  margin:0 0 32px!important;
+  animation:fadeSlideUp .9s .35s both;
+}
+
+/* Status */
+.status-line{
+  animation:fadeSlideUp .9s .45s both!important;
+}
+
+/* Actions */
+.hero-actions{
+  animation:fadeSlideUp .9s .5s both;
+}
+.btn-primary{
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#4aa6ff,#1f70d6)!important;
+  box-shadow:0 8px 32px rgba(59,158,255,.4)!important;
+  transition:transform .2s,box-shadow .2s!important;
+}
+.btn-primary:hover{
+  transform:translateY(-2px)!important;
+  box-shadow:0 14px 42px rgba(59,158,255,.6)!important;
+}
+.btn-primary::after{
+  content:'';position:absolute;
+  top:0;left:-100%;width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);
+  animation:btnShine 4s ease-in-out infinite;
+}
+@keyframes btnShine{0%,100%{left:-100%}60%{left:160%}}
+
+/* Features pills */
+.hero-features{
+  animation:fadeSlideUp .9s .6s both;
+}
+.hf{
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:600;
+  color:rgba(190,210,240,.9);
+  padding:8px 14px;border-radius:12px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  transition:border-color .25s,background .25s;
+}
+.hf:hover{border-color:rgba(59,158,255,.3);background:rgba(59,158,255,.06)}
+.hf span{
+  font-size:10px;font-weight:800;letter-spacing:.1em;
+  color:#3b9eff;background:rgba(59,158,255,.12);
+  padding:2px 6px;border-radius:6px;
+}
+
+/* Visual side */
+.hero-visual{
+  animation:visualIn 1.2s .3s cubic-bezier(.2,.8,.2,1) both;
+  position:relative;
+}
+@keyframes visualIn{from{opacity:0;transform:translateX(40px) scale(.96)}to{opacity:1;transform:none}}
+.visual-frame{
+  position:relative;border-radius:28px!important;
+  background:radial-gradient(circle at 40% 30%,rgba(59,158,255,.18),rgba(0,0,0,.8) 70%)!important;
+  border:1px solid rgba(59,158,255,.2)!important;
+  box-shadow:0 50px 100px rgba(0,0,0,.7),0 0 100px rgba(59,158,255,.15),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  overflow:hidden;
+  transition:transform .6s cubic-bezier(.2,.8,.2,1),box-shadow .6s;
+}
+.visual-frame:hover{
+  transform:translateY(-8px) rotate(.5deg)!important;
+  box-shadow:0 70px 120px rgba(0,0,0,.8),0 0 120px rgba(59,158,255,.25),inset 0 1px 0 rgba(255,255,255,.1)!important;
+}
+.visual-frame::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,.85) 100%);
+  z-index:1;pointer-events:none;
+}
+.visual-frame::after{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(59,158,255,.8),transparent);
+  animation:topLineScan 3s ease-in-out infinite;
+}
+@keyframes topLineScan{0%,100%{opacity:.4;transform:scaleX(.3)}50%{opacity:1;transform:scaleX(1)}}
+
+.visual-frame img{
+  width:100%;display:block;
+  animation:imgFloat 8s ease-in-out 1.5s infinite;
+  position:relative;z-index:0;
+}
+@keyframes imgFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+.visual-glow{
+  position:absolute!important;inset:-20%!important;
+  background:radial-gradient(ellipse at 50% 60%,rgba(59,158,255,.35),transparent 65%)!important;
+  filter:blur(40px)!important;
+  z-index:-1!important;
+  animation:glowPulse 5s ease-in-out infinite;
+}
+@keyframes glowPulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+
+/* Scan line effect on visual */
+.visual-scan{
+  position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(59,158,255,.7),transparent);
+  z-index:2;
+  animation:scanLine 4s ease-in-out 2s infinite;
+  opacity:0;
+}
+@keyframes scanLine{
+  0%{top:0;opacity:0}
+  5%{opacity:1}
+  95%{opacity:1}
+  100%{top:100%;opacity:0}
+}
+
+/* Corner decorations */
+.visual-corner{
+  position:absolute;width:20px;height:20px;z-index:3;pointer-events:none;
+}
+.visual-corner.tl{top:10px;left:10px;border-top:2px solid rgba(59,158,255,.8);border-left:2px solid rgba(59,158,255,.8);border-radius:4px 0 0 0;}
+.visual-corner.tr{top:10px;right:10px;border-top:2px solid rgba(59,158,255,.8);border-right:2px solid rgba(59,158,255,.8);border-radius:0 4px 0 0;}
+.visual-corner.bl{bottom:10px;left:10px;border-bottom:2px solid rgba(59,158,255,.8);border-left:2px solid rgba(59,158,255,.8);border-radius:0 0 0 4px;}
+.visual-corner.br{bottom:10px;right:10px;border-bottom:2px solid rgba(59,158,255,.8);border-right:2px solid rgba(59,158,255,.8);border-radius:0 0 4px 0;}
+
+/* Stats floating card */
+.hero-stat-card{
+  position:absolute;
+  background:rgba(10,14,22,.92);
+  border:1px solid rgba(59,158,255,.25);
+  border-radius:16px;
+  padding:14px 18px;
+  backdrop-filter:blur(16px);
+  box-shadow:0 20px 50px rgba(0,0,0,.5);
+  z-index:5;
+  min-width:160px;
+  animation:statCardIn .8s cubic-bezier(.2,.8,.2,1) both;
+}
+.hero-stat-card-1{
+  top:-20px;right:-20px;
+  animation-delay:.8s;
+  animation:statCardIn .8s .8s cubic-bezier(.2,.8,.2,1) both, statFloat1 6s 1.6s ease-in-out infinite;
+}
+.hero-stat-card-2{
+  bottom:20px;left:-30px;
+  animation:statCardIn .8s 1s cubic-bezier(.2,.8,.2,1) both, statFloat2 7s 1.8s ease-in-out infinite;
+}
+@keyframes statCardIn{from{opacity:0;transform:scale(.8) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes statFloat1{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes statFloat2{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+.stat-label{font-size:11px;font-weight:700;letter-spacing:.12em;color:#7cc4ff;text-transform:uppercase;margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:900;color:#fff;line-height:1}
+.stat-sub{font-size:11px;color:rgba(140,160,190,.7);margin-top:3px}
+.stat-icon-dot{width:8px;height:8px;border-radius:50%;background:#2ee68a;box-shadow:0 0 10px #2ee68a;display:inline-block;margin-right:6px}
+
+/* Gradient ring behind visual */
+.visual-ring{
+  position:absolute;inset:-8%;z-index:-2;
+  border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 60%,rgba(59,158,255,.3) 80%,transparent 100%);
+  animation:ringRotate 12s linear infinite;
+  filter:blur(2px);
+}
+@keyframes ringRotate{to{transform:rotate(360deg)}}
+
+/* Features band new style */
+.features-band{
+  display:flex!important;flex-wrap:wrap!important;gap:10px!important;
+  padding:0 5vw 50px!important;
+  max-width:1240px!important;margin:0 auto!important;
+  animation:fadeSlideUp .8s .7s both;
+}
+
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+@media(max-width:960px){
+  #land .hero{grid-template-columns:1fr!important;text-align:center!important;padding-top:110px!important;gap:36px!important}
+  #land .hero-content{text-align:center}
+  #land .hero-actions,#land .hero-features{justify-content:center}
+  .hero-stat-card-1{top:-10px;right:0}
+  .hero-stat-card-2{bottom:0;left:0}
+  .hero-title-new{font-size:clamp(44px,11vw,70px)!important}
+}
+@media(max-width:600px){
+  .hero-stat-card{display:none}
+  .hero-title-new .line2::after{display:none}
+}
+
 </style>
 
 </head><body>
@@ -709,35 +1009,80 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 <aside id="menu"><div id="ml"></div><div class="mf">FRV © 2026<br>Сервис для Counter-Strike 2</div></aside>
 
 <main>
+<div class="hero-bg-grid"></div>
 
 <div id="land">
 <section class="hero" id="top">
+  <!-- BG effects -->
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-orb hero-orb-3"></div>
+
   <div class="hero-content">
-    <div class="badge">CS2 EXTERNAL • HWID LICENSE</div>
-    <h1 class="hero-title">FRV<br><span>CONTROL</span></h1>
-    <p class="hero-desc">Мощный external для Counter-Strike 2. Подписки, лицензии, привязка HWID и полный контроль из личного кабинета.</p>
+    <div class="hero-badge">
+      <span class="dot-live"></span>
+      CS2 EXTERNAL &bull; HWID LICENSE
+    </div>
+
+    <h1 class="hero-title-new">
+      <span class="line1"><span class="char" style="animation-delay:.3s">F</span><span class="char" style="animation-delay:.35s">R</span><span class="char" style="animation-delay:.4s">V</span></span>
+      <span class="line2">CONTROL</span>
+    </h1>
+
+    <p class="hero-desc-new">Мощный external для Counter-Strike 2. Подписки, лицензии, привязка HWID и полный контроль из личного кабинета.</p>
+
     <div id="prodstatus" class="status-line">Загрузка данных...</div>
+
     <div class="hero-actions">
-      <button class="btn btn-primary" onclick="openM('reg')">Создать аккаунт</button>
+      <button class="btn btn-primary" onclick="openM('reg')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        Создать аккаунт
+      </button>
       <button class="btn btn-ghost" onclick="openM('log')">Войти</button>
       <button class="btn btn-ghost" onclick="go('feat')">Возможности</button>
     </div>
+
     <div class="hero-features">
       <div class="hf"><span>01</span> Триал при регистрации</div>
       <div class="hf"><span>02</span> Подписка ключом</div>
       <div class="hf"><span>03</span> HWID защита</div>
     </div>
   </div>
+
   <div class="hero-visual">
+    <div class="visual-ring"></div>
     <div class="visual-frame">
+      <div class="visual-corner tl"></div>
+      <div class="visual-corner tr"></div>
+      <div class="visual-corner bl"></div>
+      <div class="visual-corner br"></div>
+      <div class="visual-scan"></div>
       <img src="/frv-character.webp" alt="FRV" loading="lazy">
       <div class="visual-glow"></div>
+    </div>
+    <div class="hero-stat-card hero-stat-card-1">
+      <div class="stat-label">Статус сервера</div>
+      <div class="stat-value" style="font-size:16px;color:#2ee68a">
+        <span class="stat-icon-dot"></span>ONLINE
+      </div>
+      <div class="stat-sub">Всё работает штатно</div>
+    </div>
+    <div class="hero-stat-card hero-stat-card-2">
+      <div class="stat-label">Защита</div>
+      <div class="stat-value">HWID</div>
+      <div class="stat-sub">Привязка к устройству</div>
     </div>
   </div>
 </section>
 
 <div class="features-band">
   <div class="band-item"><span class="dot"></span>Админка и генерация ключей</div>
+  <div class="band-item"><span class="dot"></span>Поиск по IP / HWID</div>
+  <div class="band-item"><span class="dot"></span>Ключи в личном кабинете</div>
+  <div class="band-item"><span class="dot"></span>Пробный период один раз</div>
+</div>
+
+
   <div class="band-item"><span class="dot"></span>Поиск по IP / HWID</div>
   <div class="band-item"><span class="dot"></span>Ключи в личном кабинете</div>
   <div class="band-item"><span class="dot"></span>Пробный период один раз</div>
