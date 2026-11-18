@@ -163,7 +163,7 @@ const fst=document.createElement('style');fst.textContent=`
 const flFmt=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
 let flPrice=0;
 const flAfter=()=>{lastLoad=0;loadFl()};
-async function loadFl(){if(!user)return;try{const d=await post('/api/fl/info');const el=$('flB');if(el)drawFl(d);if(user){user.fl=d.fl;user.fl_balance=d.fl}const a=$('flAmt');if(a)a.textContent=flFmt(d.fl)+' FL'}catch(e){const el=$('flB');if(el)el.innerHTML='<small>Не удалось загрузить FL</small>'}}
+async function loadFl(){if(!user)return;try{const d=await post('/api/fl/info');const el=$('flB');if(el)drawFl(d);if(user){user.fl=d.fl;user.fl_balance=d.fl}const a=$('flAmt');if(a)a.textContent=(d.fl!=null?d.fl:0)+' FL';const flEl=$('flBalance');if(flEl)flEl.style.display='inline-flex'}catch(e){const el=$('flB');if(el)el.innerHTML='<small>Не удалось загрузить FL</small>'}}
 function drawFl(d){
  const el=$('flB');if(!el)return;
  const ev={};['flTo','flAm','flDays','flGTo','flGAm'].forEach(k=>{const e=$(k);if(e)ev[k]=e.value});
@@ -290,33 +290,22 @@ const fst2=document.createElement('style');fst2.textContent=`
 .pf-x{position:absolute;top:10px;right:10px;width:34px;height:34px;border:0;border-radius:10px;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;z-index:2}
 `;document.head.appendChild(fst2);
 
-function injectForum(){
- if($('xForum')||!user)return;
- const g=$$('#cab .grid');if(!g)return;
- // add tab
- const tabs=$('cabTabs');
- if(tabs&&!tabs.querySelector('[data-tab="forum"]')){
-  const b=document.createElement('button');b.type='button';b.dataset.tab='forum';b.textContent='Форум';b.onclick=()=>switchCabTab('forum');tabs.appendChild(b);
- }
- if(!$('xForumPanel')){
-  const panel=H(`<div id="xForumPanel" class="card w" style="display:none;grid-column:1/-1"><h3>Форум</h3><div id="fmRoot"><small>Загрузка…</small></div></div>`);
-  const flp=$('xFlPanel');(flp||g).before(panel);
- }
-}
-const _switch=window.switchCabTab;
+function injectForum(){/* forum lives on #forumPage */ }
 window.switchCabTab=function(tab){
- injectForum();
- const g=$$('#cab .grid'), fl=$('xFlPanel'), fm=$('xForumPanel'), tabs=$('cabTabs');
- if(tab==='fl'){if(g)g.style.display='none';if(fl)fl.style.display='block';if(fm)fm.style.display='none';loadFl()}
- else if(tab==='forum'){if(g)g.style.display='none';if(fl)fl.style.display='none';if(fm)fm.style.display='block';loadForum()}
- else{if(g)g.style.display='grid';if(fl)fl.style.display='none';if(fm)fm.style.display='none'}
+ const g=$$('#cab .grid'), fl=$('xFlPanel'), tabs=$('cabTabs');
+ const fp=$('forumPage');
+ if(tab==='forum'){if(typeof openForum==='function')openForum();return}
+ if(fp)fp.style.display='none';
+ if(tab==='fl'){if(g)g.style.display='none';if(fl)fl.style.display='block';$('cab').style.display='block';$('land').style.display='none';loadFl()}
+ else{if(g)g.style.display='grid';if(fl)fl.style.display='none';$('cab').style.display='block'}
  if(tabs)[...tabs.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
 };
+window.openFlTab=function(){if(!user)return;inject();if(typeof goCab==='function')goCab();switchCabTab('fl')};
 let fmCat='global',fmStaff=false;
 async function loadForum(){
  const root=$('fmRoot');if(!root)return;
  try{
-  const r=await fetch(API_BASE+'/api/forum/cats',{cache:'no-store'}).then(x=>x.json());
+  const r=await fetch(API_BASE+'/api/forum/cats',{cache:'no-store',credentials:'include'}).then(x=>x.json());
   fmStaff=!!r.staff;
   const groups={};(r.cats||[]).forEach(c=>{(groups[c.group]=groups[c.group]||[]).push(c)});
   let nav='';Object.keys(groups).forEach(g=>{nav+=`<h5>${esc(g)}</h5>`+groups[g].map(c=>`<button type="button" data-c="${c.id}" class="${c.id===fmCat?'on':''}" onclick="fmOpenCat('${c.id}')">${esc(c.name)}${c.staff?'<span class="staff-tag">staff</span>':''} <small style="opacity:.5">${c.count||0}</small></button>`).join('')});
@@ -328,7 +317,7 @@ window.fmOpenCat=async id=>{
  fmCat=id;document.querySelectorAll('.fm-nav button').forEach(b=>b.classList.toggle('on',b.dataset.c===id));
  const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
  try{
-  const r=await fetch(API_BASE+'/api/forum/list?cat='+encodeURIComponent(id),{cache:'no-store'}).then(x=>x.json());
+  const r=await fetch(API_BASE+'/api/forum/list?cat='+encodeURIComponent(id),{cache:'no-store',credentials:'include'}).then(x=>x.json());
   const canPost=!r.meta.staff||r.staff;
   let html=canPost?`<div style="margin-bottom:12px"><input id="fmT" placeholder="Заголовок" style="width:100%;margin-bottom:6px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><textarea id="fmB" placeholder="Текст поста…" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;resize:vertical"></textarea><button class="btn sm" style="margin-top:6px" onclick="fmCreate()">Опубликовать</button></div>`:`<p style="font-size:13px;color:var(--m);margin-bottom:12px">Раздел staff-only — посты может писать только администратор (код EmirDI1804).</p>`;
   html+=(r.list||[]).map(p=>`<div class="fm-post" onclick="fmView(${p.id})"><b>${esc(p.title)}</b><small>@${esc(p.username)} · ${dt(p.ts)} · ${p.replies} отв.</small><div style="margin-top:6px;font-size:13px;color:#9aa3b5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div></div>`).join('')||'<small>Пока пусто</small>';
@@ -339,7 +328,7 @@ window.fmCreate=async()=>{try{await post('/api/forum/create',{cat:fmCat,title:$(
 window.fmView=async id=>{
  const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
  try{
-  const r=await fetch(API_BASE+'/api/forum/post?id='+id,{cache:'no-store'}).then(x=>x.json());
+  const r=await fetch(API_BASE+'/api/forum/post?id='+id,{cache:'no-store',credentials:'include'}).then(x=>x.json());
   const p=r.post;
   main.innerHTML=`<button class="btn sm ghost" onclick="fmOpenCat('${esc(p.cat)}')">← Назад</button>
    <h3 style="margin:12px 0 4px">${esc(p.title)}</h3>
@@ -360,7 +349,7 @@ window.openUserProfile=async function(name){
  ov.onclick=e=>{if(e.target===ov)ov.remove()};
  document.body.appendChild(ov);
  try{
-  const r=await fetch(API_BASE+'/api/profile/view?u='+encodeURIComponent(name),{cache:'no-store'}).then(x=>{if(!x.ok)throw new Error('Не найден');return x.json()});
+  const r=await fetch(API_BASE+'/api/profile/view?u='+encodeURIComponent(name),{cache:'no-store',credentials:'include'}).then(x=>{if(!x.ok)throw new Error('Не найден');return x.json()});
   const u=r.user;
   const ban=u.banner?`style="background-image:url('${esc(u.banner).replace(/'/g,'')}')"`:'';
   const av=u.avatar?`<img src="${esc(u.avatar)}" alt="">`:(u.username[0]||'?').toUpperCase();
