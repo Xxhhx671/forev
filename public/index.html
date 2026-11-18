@@ -208,7 +208,101 @@ footer{text-align:center;color:var(--m);padding:36px;font-size:13px;border-top:1
 .scroll{border-radius:14px}.scroll::after,.pbar,.pbar i{border-radius:2px}
 #toast{border-radius:14px;border-left-width:1px}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-.bdg{display:inline-block;margin-top:6px;padding:3px 12px;border-radius:99px;background:var(--r)22;border:1px solid var(--r)66;color:var(--r);font-size:12px;font-weight:800;letter-spacing:2px}
+/* ===== 3D ANIMATED BADGES ===== */
+.bdg{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:6px;padding:4px 14px 4px 10px;border-radius:99px;
+  font-size:11px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;
+  position:relative;cursor:default;
+  transform-style:preserve-3d;
+  transition:transform .3s cubic-bezier(.2,.8,.2,1);
+}
+.bdg:hover{transform:translateY(-2px) scale(1.05) rotateX(8deg)}
+/* ADMIN — red glow */
+#adb,.bdg.admin{
+  background:linear-gradient(135deg,rgba(255,45,80,.18),rgba(255,45,80,.06));
+  border:1px solid rgba(255,45,80,.55);
+  color:#ff6b8a;
+  box-shadow:0 2px 12px rgba(255,45,80,.25),0 0 0 1px rgba(255,45,80,.1) inset,0 1px 0 rgba(255,120,140,.3) inset;
+  animation:bdgPulse 3s ease-in-out infinite;
+}
+#adb::before,.bdg.admin::before{
+  content:'⬡';margin-right:3px;font-size:9px;
+  animation:bdgSpin 4s linear infinite;display:inline-block;
+}
+/* SUPER — gold */
+.bdg.super{
+  background:linear-gradient(135deg,rgba(255,180,0,.18),rgba(255,180,0,.06));
+  border:1px solid rgba(255,200,30,.55);
+  color:#ffd060;
+  box-shadow:0 2px 12px rgba(255,180,0,.3),0 1px 0 rgba(255,220,80,.35) inset;
+  animation:bdgPulse 3s ease-in-out infinite;animation-delay:.4s;
+}
+.bdg.super::before{content:'◆';margin-right:3px;font-size:9px;animation:bdgSpin 5s linear infinite;display:inline-block}
+/* TESTER — purple */
+.bdg.tester{
+  background:linear-gradient(135deg,rgba(140,80,255,.18),rgba(140,80,255,.06));
+  border:1px solid rgba(160,100,255,.5);
+  color:#c084fc;
+  box-shadow:0 2px 10px rgba(140,80,255,.25),0 1px 0 rgba(180,120,255,.3) inset;
+}
+.bdg.tester::before{content:'◈';margin-right:3px;font-size:9px;animation:bdgBounce 2s ease-in-out infinite;display:inline-block}
+/* RESELLER — cyan */
+.bdg.reseller{
+  background:linear-gradient(135deg,rgba(0,210,180,.15),rgba(0,210,180,.05));
+  border:1px solid rgba(0,220,190,.5);
+  color:#2ee8d4;
+  box-shadow:0 2px 10px rgba(0,210,180,.2),0 1px 0 rgba(80,240,210,.3) inset;
+}
+.bdg.reseller::before{content:'◉';margin-right:3px;font-size:9px;animation:bdgBounce 2.5s ease-in-out infinite;display:inline-block}
+/* BANNED — dark */
+.bdg.banned{
+  background:rgba(80,80,80,.15);border:1px solid rgba(100,100,100,.4);color:#888;
+}
+.bdg.banned::before{content:'✕';margin-right:3px;font-size:9px;display:inline-block}
+
+@keyframes bdgPulse{0%,100%{box-shadow:0 2px 12px rgba(255,45,80,.25),0 0 0 1px rgba(255,45,80,.1) inset}50%{box-shadow:0 2px 20px rgba(255,45,80,.45),0 0 0 2px rgba(255,45,80,.2) inset}}
+@keyframes bdgSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes bdgBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+
+/* ===== 3D DIAMOND & CROWN ICONS ===== */
+.ic-3d{
+  background:linear-gradient(135deg,rgba(59,158,255,.18),rgba(30,100,220,.08))!important;
+  border:1px solid rgba(59,158,255,.3)!important;
+  box-shadow:0 4px 20px rgba(59,158,255,.2),0 1px 0 rgba(120,200,255,.3) inset!important;
+  animation:icFloat 4s ease-in-out infinite;
+}
+.diamond-icon{
+  width:28px;height:28px;
+  filter:drop-shadow(0 0 6px rgba(59,158,255,.7)) drop-shadow(0 2px 4px rgba(0,0,80,.5));
+  animation:diamondSpin 6s ease-in-out infinite;
+  transform-origin:center;
+}
+@keyframes icFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes diamondSpin{0%,100%{transform:rotateY(0deg) scale(1)}25%{transform:rotateY(15deg) scale(1.05)}75%{transform:rotateY(-15deg) scale(1.05)}}
+
+/* Crown badge (for super/admin in profile) */
+.crown-icon{
+  display:inline-block;width:20px;height:20px;vertical-align:middle;margin-right:4px;
+  filter:drop-shadow(0 0 5px rgba(255,210,0,.8));
+  animation:crownBob 2.5s ease-in-out infinite;
+}
+@keyframes crownBob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
+
+/* FL balance chip in header */
+#flBalance{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 12px;border-radius:10px;
+  background:linear-gradient(135deg,rgba(255,210,0,.12),rgba(255,180,0,.06));
+  border:1px solid rgba(255,210,0,.35);
+  color:#ffd060;font-size:12px;font-weight:800;letter-spacing:.5px;
+  cursor:default;transition:.25s;
+  box-shadow:0 2px 10px rgba(255,180,0,.15);
+  animation:flGlow 3s ease-in-out infinite;
+}
+#flBalance:hover{background:rgba(255,210,0,.18);border-color:rgba(255,210,0,.55);transform:translateY(-1px)}
+#flBalance svg{width:14px;height:14px;fill:none;stroke:#ffd060;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@keyframes flGlow{0%,100%{box-shadow:0 2px 10px rgba(255,180,0,.15)}50%{box-shadow:0 2px 18px rgba(255,180,0,.35)}}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;min-height:4px}.chips span{padding:7px 14px;border-radius:99px;background:#121212;border:1px solid var(--b);cursor:pointer;font-size:13px;transition:.25s}.chips span:hover{border-color:var(--r);color:var(--r)}.chips small{color:var(--m)}
 .lst{display:flex;flex-direction:column;gap:8px;margin-top:14px}
 .it{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 14px;background:#0f0f0f;border:1px solid var(--b);border-radius:12px;font-size:14px}.it small{display:block;color:var(--m)}
@@ -1209,6 +1303,10 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
   <span class="logo-text">FRV</span>
 </div>
 <div style="display:flex;align-items:center;gap:10px">
+<div id="flBalance" style="display:none" title="FL — внутренняя валюта сервиса">
+  <svg viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 23 9.5 17.5 15 19 22.5 12 19 5 22.5 6.5 15 1 9.5 8.5 8.5"/></svg>
+  <span id="flAmt">0 FL</span>
+</div>
 <button id="langBtn" onclick="toggleLang()" style="background:#0a0a0a;border:1px solid var(--b);color:#fff;padding:8px 12px;font-weight:800;font-size:12px;letter-spacing:1px;cursor:pointer">EN</button>
 <button class="bg" id="bgr" aria-label="Меню" onclick="tm()"><i></i><i></i><i></i></button>
 </div>
@@ -1283,11 +1381,43 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
 </div>
 
 <section id="cab">
-<div class="prof rv"><div class="av" id="av"></div><div><h2 id="cu"></h2><p id="ce"></p><span class="bdg" id="adb" style="display:none">ADMIN</span></div></div>
+<div class="prof rv"><div class="av" id="av"></div><div><h2 id="cu"></h2><p id="ce"></p><span class="bdg admin" id="adb" style="display:none"><svg class="crown-icon" viewBox="0 0 24 24" fill="none" stroke="#ffd060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="cg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffe066"/><stop offset="100%" stop-color="#ff9800"/></linearGradient></defs><polygon points="2 20 5 8 12 15 19 8 22 20" fill="url(#cg)" stroke="#ffd060" stroke-width="1.2" opacity=".9"/><circle cx="5" cy="8" r="1.5" fill="#fff" opacity=".8"/><circle cx="19" cy="8" r="1.5" fill="#fff" opacity=".8"/><circle cx="12" cy="15" r="1" fill="#fff" opacity=".6"/></svg>ADMIN</span><div id="userBadgesRow" style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div></div>
 <div id="notifbox" class="lst" style="margin-bottom:16px"></div>
 <div class="grid">
 <div class="card rv"><svg class="ring" viewBox="0 0 80 80"><circle cx="40" cy="40" r="34"/><circle id="rg" cx="40" cy="40" r="34"/></svg><div class="rt"><b id="dl">0</b><small id="dls">дн.</small></div>
-<div class="ic"><svg viewBox="0 0 24 24"><path class="dr a" pathLength="1" d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></svg></div><h3>Подписка</h3>
+<div class="ic ic-3d">
+  <svg viewBox="0 0 24 24" class="diamond-icon">
+    <!-- Diamond gem 3D -->
+    <defs>
+      <linearGradient id="dg1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#7dd6ff" stop-opacity="1"/>
+        <stop offset="40%" stop-color="#3b9eff" stop-opacity="1"/>
+        <stop offset="100%" stop-color="#1a5fd4" stop-opacity="1"/>
+      </linearGradient>
+      <linearGradient id="dg2" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#a8e8ff" stop-opacity=".9"/>
+        <stop offset="100%" stop-color="#3b9eff" stop-opacity=".5"/>
+      </linearGradient>
+      <linearGradient id="dg3" x1="100%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#1a5fd4" stop-opacity=".8"/>
+        <stop offset="100%" stop-color="#0d3080" stop-opacity=".6"/>
+      </linearGradient>
+    </defs>
+    <!-- top belt -->
+    <polygon points="12,2 19,8 5,8" fill="url(#dg2)" stroke="rgba(120,200,255,.4)" stroke-width=".3"/>
+    <!-- left face -->
+    <polygon points="5,8 2,13 12,22" fill="url(#dg3)" stroke="rgba(80,160,255,.3)" stroke-width=".3"/>
+    <!-- right face -->
+    <polygon points="19,8 22,13 12,22" fill="url(#dg1)" stroke="rgba(120,200,255,.35)" stroke-width=".3"/>
+    <!-- center face -->
+    <polygon points="5,8 12,22 19,8" fill="url(#dg1)" stroke="rgba(160,220,255,.4)" stroke-width=".3"/>
+    <!-- top left belt -->
+    <polygon points="2,13 5,8 12,22" fill="#1a4fa0" stroke="rgba(60,120,220,.4)" stroke-width=".3" opacity=".7"/>
+    <!-- shine -->
+    <polygon points="12,2 15,7 12,8 9,7" fill="rgba(255,255,255,.55)"/>
+    <line x1="8" y1="8" x2="10" y2="12" stroke="rgba(255,255,255,.3)" stroke-width=".5"/>
+  </svg>
+</div><h3>Подписка</h3>
 <div class="st"><i class="dot" id="dot"></i><span id="cs"></span></div><p id="cs2"></p>
 <p id="fzh" style="font-size:13px;margin-top:8px"></p><div class="row"><button class="btn sm" id="bfz" onclick="fz(1)" style="display:none">Заморозить</button><button class="btn sm" id="buf" onclick="fz(0)" style="display:none">Разморозить</button></div></div>
 <div class="card rv" style="--d:.08s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="12" cy="8" r="4"/><path class="dr" pathLength="1" d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><h3>Аккаунт</h3>
@@ -1912,7 +2042,10 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
   $('cs').textContent=u.inf?'Бессрочная':u.frozen?'Заморожена':u.active?'Активна':'Не активна';
   $('cs2').textContent=u.inf?'Без ограничения по времени.':u.frozen?'Таймер на паузе, осталось '+d+' дн.':u.active?'До '+fd(u.sub_until):'Активируйте ключ, чтобы получить доступ.';
   $('bfz').style.display=u.active&&!u.inf?'':'none';$('buf').style.display=u.frozen?'':'none';
-  $('adm').style.display=u.is_admin?'':'none';$('adb').style.display=u.is_admin?'inline-block':'none';$('dls').textContent=u.inf?'навсегда':'дн.';
+  $('adm').style.display=u.is_admin?'':'none';$('adb').style.display=u.is_admin?'inline-flex':'none';$('dls').textContent=u.inf?'навсегда':'дн.';
+  const flEl=$('flBalance');if(flEl){flEl.style.display=u?'inline-flex':'none';$('flAmt').textContent=(u.fl_balance||0)+' FL';}
+  // render role badges in profile
+  const br=$('userBadgesRow');if(br){br.innerHTML='';if(u.is_super)br.innerHTML+='<span class="bdg super"><svg style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#ffd060" stroke-width="2"><polygon points="12 2 15.5 8.5 23 9.5 17.5 15 19 22.5 12 19 5 22.5 6.5 15 1 9.5 8.5 8.5" fill="rgba(255,210,0,.4)"/></svg>SUPER</span>';if(u.is_tester)br.innerHTML+='<span class="bdg tester">TESTER</span>';if(u.is_reseller)br.innerHTML+='<span class="bdg reseller">RESELLER</span>';}
   setTimeout(()=>{u.inf?$('dl').textContent='∞':countTo($('dl'),d);$('rg').style.strokeDashoffset=u.inf?0:213.6*(1-Math.min(d/30,1))},300);
   loadDev();loadGifts();loadLg();loadNews();tlist(0);refUI(u);fzUI(u);loadUserTop();loadNotifs();loadSessions();
   // profile / theme / activity / reseller
@@ -1983,7 +2116,7 @@ async function lk(){try{const r=await api('/api/admin/keys');$('kl').innerHTML=r
 async function dk(c){try{await api('/api/admin/delkey',{code:c});lk()}catch(e){toast(e.message,1)}}
 let uT;function ul(){clearTimeout(uT);uT=setTimeout(async()=>{try{const r=await api('/api/admin/users',{q:$('uq').value});
  $('ulst').innerHTML=r.users.map(x=>{
-  const badges = (x.is_admin?' • admin':'') + (x.is_super?' • super':'') + (x.is_tester?' • tester':'') + (x.is_reseller?' • reseller':'') + (x.banned?' • banned':'') + (x.suspicious?' <span class="badge-s">suspicious</span>':'');
+  const badges = (x.is_admin?' <span class="bdg admin">ADMIN</span>':'') + (x.is_super?' <span class="bdg super">SUPER</span>':'') + (x.is_tester?' <span class="bdg tester">TESTER</span>':'') + (x.is_reseller?' <span class="bdg reseller">RESELLER</span>':'') + (x.banned?' <span class="bdg banned">BANNED</span>':'') + (x.suspicious?' <span class="badge-s">suspicious</span>':'');
   const sub = x.inf ? 'inf' : (x.frozen ? 'frozen' : (x.active ? ('до '+fd(x.sub_until)) : 'нет подписки'));
   const rlim = Number(x.reseller_limit||0), rkeys = Number(x.reseller_keys||0), rleft = Math.max(0, rlim - rkeys);
   const rinfo = x.is_reseller ? `<br><small>Реселлер: лимит ${rlim} • создано ${rkeys} • осталось ${rleft}</small>` : '';
