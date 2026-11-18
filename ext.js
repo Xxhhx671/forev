@@ -25,18 +25,46 @@ const api={
  totpOn:id=>!!(row(id)||{}).totp_on,
  totpCheck:(id,code)=>{const r=row(id);return !!(r&&r.totp_on&&codeOk(r.totp_secret,code))},
  pend:uid=>{const t=crypto.randomBytes(16).toString('hex');pend.set(t,{uid,exp:Date.now()+3e5,n:0});return t},
- onLogin:(uid,ip)=>{try{const had=db.prepare('SELECT COUNT(*) c FROM logins WHERE user_id=? AND ok=1').get(uid).c,sn=db.prepare('SELECT 1 FROM logins WHERE user_id=? AND ok=1 AND ip=? LIMIT 1').get(uid,ip);if(had&&!sn)notify(uid,'Вход с нового IP: '+ip+'. Если это были не вы — смените пароль и включите 2FA.')}catch{}},
+ onLogin:(uid,ip)=>{flBonus(uid,ip);try{const had=db.prepare('SELECT COUNT(*) c FROM logins WHERE user_id=? AND ok=1').get(uid).c,sn=db.prepare('SELECT 1 FROM logins WHERE user_id=? AND ok=1 AND ip=? LIMIT 1').get(uid,ip);if(had&&!sn)notify(uid,'Вход с нового IP: '+ip+'. Если это были не вы — смените пароль и включите 2FA.')}catch{}},
  hwidCd:uid=>{const u=db.prepare('SELECT last_hwid_change l FROM users WHERE id=?').get(uid),d=+(get('hwid_cd_days')||7);return Math.max(0,((u&&u.l)||0)+d*DAY-Date.now())},
  isMod:uid=>{const r=row(uid);return !!(r&&(r.is_admin||r.role==='moderator'))}
 };
 const slim=s=>String(s||'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/\s+/g,' ').trim();
 const modLog=(a,act,t,d)=>db.prepare('INSERT INTO chat_log(admin_id,action,target,details,ts) VALUES(?,?,?,?,?)').run(a,act,String(t||''),String(d||'').slice(0,300),Date.now());
 
+// ---- FL: внутренняя валюта ----
+for(const c of ['fl INTEGER DEFAULT 0','fl_bonus_ts INTEGER DEFAULT 0',"nick_color TEXT DEFAULT ''","badge TEXT DEFAULT ''"])run('ALTER TABLE users ADD COLUMN '+c);
+db.exec(`CREATE TABLE IF NOT EXISTS fl_log(id INTEGER PRIMARY KEY,user_id INTEGER,delta INTEGER,reason TEXT,peer TEXT,ts INTEGER);
+CREATE INDEX IF NOT EXISTS fl_log_u ON fl_log(user_id,id);
+CREATE TABLE IF NOT EXISTS fl_items(user_id INTEGER,kind TEXT,item TEXT,ts INTEGER,PRIMARY KEY(user_id,kind,item));
+CREATE TABLE IF NOT EXISTS fl_bonus_ip(ip TEXT,user_id INTEGER,ts INTEGER);`);
+// каталог: id -> [название, hex, цена]  /  id -> [значок, название, цена]
+const FL_COLORS={red:['Красный','#ff5c6c',120],orange:['Оранжевый','#ff9f43',120],yellow:['Жёлтый','#ffd93d',120],green:['Зелёный','#4cd97b',120],cyan:['Голубой','#38d6e8',120],blue:['Синий','#5aa2ff',120],purple:['Фиолетовый','#b57bff',120],pink:['Розовый','#ff7eb6',120]};
+// значки рисуются на фронте (SVG по id), первый элемент не используется
+const FL_BADGES={star:['','Искра',150],moon:['','Луна',150],bolt:['','Молния',250],fire:['','Огонь',300],gem:['','Алмаз',500],crown:['','Корона',800]};
+const flNum=(k,d)=>{const v=get(k);return v===undefined||v===null||v===''||isNaN(+v)?d:+v};
+const flCfg=()=>({bonus:flNum('fl_login_bonus',12),day_price:flNum('fl_day_price',60),ip_limit:flNum('fl_ip_limit',1)?1:0});
+const flLog=(uid,delta,reason,peer)=>db.prepare('INSERT INTO fl_log(user_id,delta,reason,peer,ts) VALUES(?,?,?,?,?)').run(uid,delta,String(reason).slice(0,120),String(peer||'').slice(0,40),Date.now());
+const flAdd=(uid,n,reason,peer)=>{db.prepare('UPDATE users SET fl=fl+? WHERE id=?').run(n,uid);flLog(uid,n,reason,peer)};
+const flSpend=(uid,n,reason,peer)=>{const r=db.prepare('UPDATE users SET fl=fl-? WHERE id=? AND fl>=?').run(n,uid,n);if(!r.changes)return false;flLog(uid,-n,reason,peer);return true};
+const flBal=uid=>(db.prepare('SELECT fl FROM users WHERE id=?').get(uid)||{}).fl||0;
+// бонус за вход: раз в 24 ч; не больше одного аккаунта с одного IP за 24 ч (выключается: fl_ip_limit=0)
+const flBonus=(uid,ip)=>{try{
+ const b=flCfg().bonus;if(b<=0)return;const now=Date.now(),u=db.prepare('SELECT fl_bonus_ts t FROM users WHERE id=?').get(uid);if(!u||now-(u.t||0)<DAY)return;
+ if(flCfg().ip_limit&&ip&&db.prepare('SELECT 1 FROM fl_bonus_ip WHERE ip=? AND user_id!=? AND ts>? LIMIT 1').get(ip,uid,now-DAY))return;
+ db.prepare('UPDATE users SET fl_bonus_ts=? WHERE id=?').run(now,uid);db.prepare('DELETE FROM fl_bonus_ip WHERE ts<?').run(now-2*DAY);
+ db.prepare('INSERT INTO fl_bonus_ip(ip,user_id,ts) VALUES(?,?,?)').run(ip||'',uid,now);flAdd(uid,b,'Бонус за вход');notify(uid,'+'+b+' FL за вход');
+}catch{}};
+const flCat=k=>k==='color'?FL_COLORS:k==='badge'?FL_BADGES:null;
+const flPrice=(k,id)=>{const c=flCat(k),it=c&&Object.prototype.hasOwnProperty.call(c,id)?c[id]:null;return it?it[2]:0};
+const flHex=id=>Object.prototype.hasOwnProperty.call(FL_COLORS,id)?FL_COLORS[id][1]:'';
+const flBadgeId=id=>Object.prototype.hasOwnProperty.call(FL_BADGES,id)?id:'';
+
 // ---- GET ----
 api.get=(req,res,C)=>{
  const url=req.url.split('?')[0];
  if(url==='/api/public/info'){
-  const u=db.prepare('SELECT COUNT(*) c FROM users').get().c,a=db.prepare("SELECT COUNT(*) c FROM sub_history WHERE source NOT IN ('trial')").get().c;
+  const u=db.prepare('SELECT COUNT(*) c FROM users').get().c,a=db.prepare("SELECT COUNT(*) c FROM sub_history WHERE source NOT IN ('trial','fl')").get().c;
   return C.send(res,200,{counters:{users:u,activations:a},faq:db.prepare('SELECT id,q,a FROM faq ORDER BY id').all(),changelog:db.prepare('SELECT version,title,text,ts FROM changelog ORDER BY ts DESC LIMIT 15').all(),
    reviews:db.prepare('SELECT r.text,r.stars,r.ts,u.username FROM reviews r JOIN users u ON u.id=r.user_id WHERE r.approved=1 ORDER BY r.ts DESC LIMIT 12').all()}),true;
  }
@@ -44,9 +72,9 @@ api.get=(req,res,C)=>{
   const u=C.authUser(req);if(!u)return C.send(res,401,{error:'Не авторизован'},{'Cache-Control':'no-store'}),true;
   const now=Date.now();seen.set(u.id,now);for(const [k,v] of seen)if(now-v>45000)seen.delete(k);
   const after=Math.max(0,+(new URL(req.url,'http://x').searchParams.get('after'))||0),full=after===0,mod=api.isMod(u.id);
-  const sel='SELECT m.id,m.user_id uid,m.text,m.ts,m.to_user,m.reply_to,u.username,u.avatar,u.is_admin,u.role,t.username to_name,r.text rtext,ru.username runame FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id LEFT JOIN users t ON t.id=m.to_user LEFT JOIN chat_msgs r ON r.id=m.reply_to LEFT JOIN users ru ON ru.id=r.user_id WHERE (m.to_user=0 OR m.to_user=? OR m.user_id=? OR ?=1)';
+  const sel='SELECT m.id,m.user_id uid,m.text,m.ts,m.to_user,m.reply_to,u.username,u.avatar,u.is_admin,u.role,u.nick_color,u.badge,t.username to_name,r.text rtext,ru.username runame FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id LEFT JOIN users t ON t.id=m.to_user LEFT JOIN chat_msgs r ON r.id=m.reply_to LEFT JOIN users ru ON ru.id=r.user_id WHERE (m.to_user=0 OR m.to_user=? OR m.user_id=? OR ?=1)';
   const rows=(full?db.prepare('SELECT * FROM ('+sel+' ORDER BY m.id DESC LIMIT 100) ORDER BY id').all(u.id,u.id,mod?1:0):db.prepare(sel+' AND m.id>? ORDER BY m.id LIMIT 100').all(u.id,u.id,mod?1:0,after))
-   .map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin,role:r.role||'',to:r.to_user?r.to_name:'',reply:r.reply_to&&r.runame?{id:r.reply_to,username:r.runame,text:String(r.rtext||'').slice(0,80)}:null}));
+   .map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin,role:r.role||'',color:flHex(r.nick_color),badge:flBadgeId(r.badge),to:r.to_user?r.to_name:'',reply:r.reply_to&&r.runame?{id:r.reply_to,username:r.runame,text:String(r.rtext||'').slice(0,80)}:null}));
   const me=row(u.id);
   return C.send(res,200,{list:rows,full,last:db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs').get().m,me:u.id,me_name:u.username,admin:mod,online:seen.size,muted:me.chat_muted_until>now?me.chat_muted_until:0,banned:!!me.chat_banned,slow:+(get('chat_slow')||0)},{'Cache-Control':'no-store'}),true;
  }
@@ -93,7 +121,49 @@ api.post=(url,b,req,res,C)=>{
  if(url==='/api/config/rate'){const s=Math.min(5,Math.max(1,+b.stars|0));db.prepare('INSERT OR REPLACE INTO config_rate VALUES(?,?,?)').run(me.id,+b.id,s);return ok({ok:true})}
  // reviews
  if(url==='/api/review'){const t=slim(b.text).slice(0,300);if(t.length<10)return bad('Отзыв слишком короткий');db.prepare('INSERT OR REPLACE INTO reviews(user_id,text,stars,approved,ts) VALUES(?,?,?,0,?)').run(me.id,t,Math.min(5,Math.max(1,+b.stars|0||5)),Date.now());return ok({ok:true,msg:'Отзыв отправлен на модерацию'})}
- if(!url.startsWith('/api/admin/'))return false;
+ // ---- FL (пользователь) ----
+if(url==='/api/fl/info'){
+ flBonus(me.id,C.reqIp(req));
+ const f=db.prepare('SELECT fl,fl_bonus_ts,nick_color,badge FROM users WHERE id=?').get(me.id),cfg=flCfg();
+ const owned=new Set(db.prepare(`SELECT kind||'-'||item k FROM fl_items WHERE user_id=?`).all(me.id).map(x=>x.k));
+ return ok({fl:f.fl||0,bonus:cfg.bonus,next_bonus:cfg.bonus>0?Math.max(0,(f.fl_bonus_ts||0)+DAY-Date.now()):0,day_price:cfg.day_price,color:f.nick_color||'',badge:f.badge||'',
+  colors:Object.entries(FL_COLORS).map(([id,[name,hex,price]])=>({id,name,hex,price,owned:owned.has('color-'+id)})),
+  badges:Object.entries(FL_BADGES).map(([id,[,name,price]])=>({id,name,price,owned:owned.has('badge-'+id)})),
+  log:db.prepare('SELECT delta,reason,ts FROM fl_log WHERE user_id=? ORDER BY id DESC LIMIT 15').all(me.id),cfg:admin?cfg:undefined});
+}
+if(url==='/api/fl/transfer'){
+ const amt=Math.trunc(+b.amount),name=String(b.to||'').trim().replace(/^@/,'');
+ if(!(amt>=1&&amt<=1e6))return bad('Сумма перевода: от 1 до 1 000 000 FL');
+ const t=db.prepare('SELECT id,username,banned FROM users WHERE username=?').get(name);
+ if(!t||t.banned)return bad('Пользователь не найден');if(t.id===me.id)return bad('Нельзя переводить самому себе');
+ try{C.tx(()=>{if(!flSpend(me.id,amt,'Перевод → '+t.username,t.username))throw new Error('FLBAL');flAdd(t.id,amt,'Перевод ← '+me.username,me.username)})}
+ catch(e){if(e&&e.message==='FLBAL')return bad('Недостаточно FL');throw e}
+ notify(t.id,'+'+amt+' FL от '+me.username);return ok({ok:true,fl:flBal(me.id)});
+}
+if(url==='/api/fl/buy_days'){
+ const d=Math.trunc(+b.days),pr=flCfg().day_price;
+ if(pr<=0)return bad('Покупка дней за FL сейчас отключена');if(!(d>=1&&d<=90))return bad('Можно купить от 1 до 90 дней за раз');
+ const full=db.prepare('SELECT * FROM users WHERE id=?').get(me.id);if(full.inf)return bad('У вас бессрочная подписка');
+ const cost=d*pr;
+ try{C.tx(()=>{if(!flSpend(me.id,cost,'Дни подписки: '+d))throw new Error('FLBAL');C.addTime(full,d*DAY,'fl',cost+' FL')})}
+ catch(e){if(e&&e.message==='FLBAL')return bad('Недостаточно FL: нужно '+cost);throw e}
+ return ok({ok:true,fl:flBal(me.id),days:d});
+}
+if(url==='/api/fl/buy_item'){
+ const k=String(b.kind||''),id=String(b.id||''),price=flPrice(k,id);
+ if(!price)return bad('Такого товара нет');if(db.prepare('SELECT 1 FROM fl_items WHERE user_id=? AND kind=? AND item=?').get(me.id,k,id))return bad('Уже куплено');
+ try{C.tx(()=>{if(!flSpend(me.id,price,(k==='color'?'Цвет ника: ':'Бейдж: ')+flCat(k)[id][k==='color'?0:1]))throw new Error('FLBAL');
+   db.prepare('INSERT INTO fl_items(user_id,kind,item,ts) VALUES(?,?,?,?)').run(me.id,k,id,Date.now());
+   db.prepare(k==='color'?'UPDATE users SET nick_color=? WHERE id=?':'UPDATE users SET badge=? WHERE id=?').run(id,me.id)})}
+ catch(e){if(e&&e.message==='FLBAL')return bad('Недостаточно FL: нужно '+price);throw e}
+ return ok({ok:true,fl:flBal(me.id)});
+}
+if(url==='/api/fl/equip'){
+ const k=String(b.kind||''),id=String(b.id||'');if(!flCat(k))return bad('Неверный тип');
+ if(id&&!db.prepare('SELECT 1 FROM fl_items WHERE user_id=? AND kind=? AND item=?').get(me.id,k,id))return bad('Сначала купите');
+ db.prepare(k==='color'?'UPDATE users SET nick_color=? WHERE id=?':'UPDATE users SET badge=? WHERE id=?').run(id,me.id);return ok({ok:true});
+}
+if(!url.startsWith('/api/admin/'))return false;
 
  // ---- чат-модерация (админ или модератор) ----
  if(url.startsWith('/api/admin/chat/')){
@@ -112,6 +182,19 @@ api.post=(url,b,req,res,C)=>{
  }
  if(!admin)return false;
 
+ // ---- FL (админ) ----
+ if(url==='/api/admin/fl/give'){
+  const amt=Math.trunc(+b.amount);if(!amt||Math.abs(amt)>1e7)return bad('Сумма: не 0 и не больше 10 000 000 по модулю');
+  const t=db.prepare('SELECT id,username,fl FROM users WHERE username=?').get(String(b.to||'').trim().replace(/^@/,''));if(!t)return bad('Пользователь не найден',404);
+  if(amt<0&&(t.fl||0)+amt<0)return bad('У пользователя только '+(t.fl||0)+' FL');
+  flAdd(t.id,amt,amt>0?'Выдано админом':'Списано админом');notify(t.id,(amt>0?'+':'')+amt+' FL (админ)');C.logAudit(me.id,'fl_give',t.username,String(amt));
+  return ok({ok:true,username:t.username,fl:(t.fl||0)+amt});
+ }
+ if(url==='/api/admin/fl/config'){
+  const n=(v,d,mx)=>{v=Math.trunc(+v);return isNaN(v)||v<0||v>mx?d:v};const c=flCfg();
+  set('fl_login_bonus',n(b.bonus,c.bonus,100000));set('fl_day_price',n(b.day_price,c.day_price,1e6));set('fl_ip_limit',b.ip_limit?1:0);
+  C.logAudit(me.id,'fl_config','',JSON.stringify(flCfg()));return ok({ok:true,cfg:flCfg()});
+ }
  // ---- роли ----
  if(url==='/api/admin/role'){const r=['','moderator','support'].includes(b.role)?b.role:'';db.prepare('UPDATE users SET role=? WHERE id=? AND is_admin=0').run(r,+b.id);C.logAudit(me.id,'role',b.id,r);return ok({ok:true})}
  if(url==='/api/admin/roles')return ok({list:db.prepare("SELECT id,username,role,is_admin FROM users WHERE role!='' OR is_admin=1 ORDER BY is_admin DESC,id").all()});
@@ -119,7 +202,7 @@ api.post=(url,b,req,res,C)=>{
  if(url==='/api/admin/dash'){
   const now=Date.now(),c=(q,...p)=>db.prepare(q).get(...p).c,d1=now-DAY,d2=now-2*DAY;
   const series=[];for(let h=23;h>=0;h--){const a=now-(h+1)*36e5,e=now-h*36e5;series.push([c('SELECT COUNT(*) c FROM users WHERE created>=? AND created<?',a,e),c("SELECT COUNT(*) c FROM sub_history WHERE source!='trial' AND ts>=? AND ts<?",a,e)])}
-  const total=c('SELECT COUNT(*) c FROM users'),trial=c("SELECT COUNT(DISTINCT user_id) c FROM sub_history WHERE source='trial'"),paid=c("SELECT COUNT(DISTINCT user_id) c FROM sub_history WHERE source NOT IN ('trial','admin','admin_grant')");
+  const total=c('SELECT COUNT(*) c FROM users'),trial=c("SELECT COUNT(DISTINCT user_id) c FROM sub_history WHERE source='trial'"),paid=c("SELECT COUNT(DISTINCT user_id) c FROM sub_history WHERE source NOT IN ('trial','admin','admin_grant','fl')");
   const refd=c('SELECT COUNT(*) c FROM users WHERE referred_by IS NOT NULL AND referred_by>0'),refp=c('SELECT COUNT(*) c FROM users WHERE ref_paid=1');
   return ok({online:Math.max(seen.size,c('SELECT COUNT(DISTINCT user_id) c FROM logins WHERE ok=1 AND ts>?',now-9e5)),regs:c('SELECT COUNT(*) c FROM users WHERE created>?',d1),regs_prev:c('SELECT COUNT(*) c FROM users WHERE created>? AND created<=?',d2,d1),acts:c("SELECT COUNT(*) c FROM sub_history WHERE source!='trial' AND ts>?",d1),
    funnel:{total,trial,paid},ref:{invited:refd,paid:refp,conv:refd?Math.round(refp/refd*1000)/10:0},series,
