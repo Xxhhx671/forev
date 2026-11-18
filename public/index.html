@@ -1004,6 +1004,132 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 }
 /* burger must stay clickable above the open menu */
 header{z-index:45!important}
+
+/* ===================== REDESIGN v2 ===================== */
+:root{--ac:#4da3ff;--ln:rgba(255,255,255,.08);--sf:#0d1118;--sf2:#121722}
+body{background:#07090d!important}
+.hero-bg-grid,.hero-orb,.hero-orb-1,.hero-orb-2,.hero-orb-3{display:none!important}
+header{background:rgba(7,9,13,.82)!important;border-bottom:1px solid var(--ln);backdrop-filter:blur(14px)!important}
+
+/* --- landing --- */
+#land .hero{min-height:100svh;display:flex;align-items:center;justify-content:center;text-align:left;padding:110px 5vw 60px}
+.lp{width:100%;max-width:1120px;display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
+.lp-tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#9fb4cf;border:1px solid var(--ln);background:var(--sf);padding:7px 12px;border-radius:99px}
+.lp-tag i{width:6px;height:6px;border-radius:50%;background:#35d98a}
+.lp-h{font-family:var(--fb)!important;font-weight:800;font-size:clamp(34px,5.4vw,64px);line-height:1.04;letter-spacing:-.035em;margin:22px 0 0;color:#f2f5fa;text-transform:none}
+.lp-h em{font-style:normal;color:var(--ac)}
+.lp-p{margin:20px 0 0;max-width:480px;font-size:17px;line-height:1.6;color:#8d97a8}
+.lp-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px;align-items:center}
+.lp-b{height:50px;padding:0 24px;border-radius:12px;border:1px solid var(--ln);background:var(--sf2);color:#eaf0fa;font:600 15px var(--fb);cursor:pointer;transition:background .2s,border-color .2s,transform .15s}
+.lp-b:hover{border-color:rgba(255,255,255,.22);background:#171d2a}
+.lp-b:active{transform:scale(.98)}
+.lp-b.main{background:var(--ac);border-color:var(--ac);color:#04101f}
+.lp-b.main:hover{background:#6ab4ff;border-color:#6ab4ff}
+.lp-b.txt{background:none;border-color:transparent;color:#9fb4cf;padding:0 8px}
+.lp-b.txt:hover{background:none;color:#fff}
+.lp-pts{list-style:none;display:flex;gap:0;margin:44px 0 0;padding:0;border-top:1px solid var(--ln)}
+.lp-pts li{flex:1;padding:18px 18px 0 0}
+.lp-pts li+li{padding-left:18px;border-left:1px solid var(--ln)}
+.lp-pts b{display:block;font-size:15px;color:#f2f5fa}
+.lp-pts span{display:block;font-size:13px;color:#7c8696;margin-top:3px}
+.lp-card{background:var(--sf);border:1px solid var(--ln);border-radius:22px;padding:26px;box-shadow:0 30px 70px rgba(0,0,0,.45)}
+.lpc-top{display:flex;align-items:center;gap:9px;font-size:13px;color:#aeb8c8}
+.lpc-top em{margin-left:auto;font-style:normal;font-weight:800;letter-spacing:.12em;color:var(--ac);font-size:12px}
+.lpc-dot{width:8px;height:8px;border-radius:50%;background:#35d98a;box-shadow:0 0 0 4px rgba(53,217,138,.15)}
+.lpc-big{font-size:68px;font-weight:800;letter-spacing:-.04em;color:#fff;margin:22px 0 14px;line-height:1}
+.lpc-big small{font-size:14px;font-weight:500;letter-spacing:0;color:#7c8696;margin-left:10px}
+.lpc-bar{height:6px;border-radius:9px;background:#1a2030;overflow:hidden;margin-bottom:20px}
+.lpc-bar i{display:block;height:100%;width:72%;background:var(--ac);border-radius:9px}
+.lpc-row{display:flex;justify-content:space-between;padding:13px 0;border-top:1px solid var(--ln);font-size:14px;color:#8d97a8}
+.lpc-row b{color:#eef2fa;font-weight:600}
+.features-band{border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);background:var(--sf)!important}
+@media(max-width:860px){
+  #land .hero{padding:96px 20px 40px;align-items:flex-start}
+  .lp{grid-template-columns:1fr;gap:34px}
+  .lp-card{order:2}
+  .lp-b{flex:1 1 auto}.lp-b.txt{flex:0 0 auto}
+  .lp-pts li{padding-right:10px}.lp-pts li+li{padding-left:12px}
+  .lpc-big{font-size:54px}
+}
+
+/* --- cabinet --- */
+#cab{padding:96px 5vw 90px!important;max-width:1180px;margin:0 auto}
+#cab .prof{background:var(--sf);border:1px solid var(--ln);border-radius:20px;padding:20px 22px;margin-bottom:18px;gap:18px;flex-wrap:nowrap;align-items:center}
+#cab .prof .av{width:72px;height:72px;border-radius:20px;flex:none;font-size:30px;background:#16202f;border:1px solid var(--ln);overflow:hidden;display:grid;place-items:center}
+#cab .prof .av img{width:100%;height:100%;object-fit:cover}
+#cab .prof h2{font-family:var(--fb)!important;font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0;text-transform:none;word-break:break-word}
+#cab .prof p{margin:3px 0 0;font-size:14px;color:#7c8696;word-break:break-all}
+#cab .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;align-items:start}
+#cab .grid>.card{grid-column:span 4;min-width:0}
+#cab .grid>.card.w,#cab .grid>#adm{grid-column:1/-1}
+#cab .grid>.card:first-child{grid-column:span 4}
+#cab .card{background:var(--sf)!important;border:1px solid var(--ln)!important;border-radius:18px;padding:22px!important;box-shadow:none;transform:none!important;transition:border-color .2s}
+#cab .card:hover{border-color:rgba(255,255,255,.16)!important;box-shadow:none;transform:none!important}
+#cab .card::before,#cab .card::after{display:none!important}
+#cab .card .ic{width:38px;height:38px;border-radius:11px;background:#141b27;border:1px solid var(--ln);display:grid;place-items:center}
+#cab .card .ic svg{width:20px;height:20px;stroke:var(--ac)}
+#cab .card h3{font-family:var(--fb)!important;font-size:16px;font-weight:700;letter-spacing:0;text-transform:none;margin:14px 0 6px;color:#f0f4fa}
+#cab .card p{font-size:13.5px;line-height:1.55;color:#7c8696}
+#cab .kv{padding:11px 0;border-bottom:1px solid var(--ln);font-size:14px}
+#cab .kv:last-of-type{border-bottom:0}
+#cab .kv span{color:#7c8696}
+#cab .st{font-size:18px;text-transform:none;margin:12px 0 2px}
+#cab .btn{height:44px;padding:0 18px;border-radius:11px;font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;background:var(--ac);color:#04101f;box-shadow:none}
+#cab .btn::before{display:none}
+#cab .btn:hover{background:#6ab4ff;color:#04101f;box-shadow:none}
+#cab .btn.ghost{background:var(--sf2);color:#dfe7f3;box-shadow:inset 0 0 0 1px var(--ln)}
+#cab .btn.ghost:hover{background:#181f2c;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+#cab .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#cab .cab-in{display:flex;gap:8px;align-items:flex-start;margin-top:12px}
+#cab .cab-in .fld{flex:1;min-width:0;margin-bottom:0}
+#cab .cab-in .fld.n{flex:0 0 96px}
+#cab .fld input,#cab .fld textarea,#cab input,#cab select{background:#0a0e15!important;border:1px solid var(--ln)!important;border-radius:11px!important;color:#eef2fa!important;font-size:15px}
+#cab .fld input:focus,#cab .fld textarea:focus{border-color:var(--ac)!important;box-shadow:0 0 0 3px rgba(77,163,255,.18)!important}
+#cab .fld label{background:transparent}
+#cab .fld input:focus+label,#cab .fld input:not(:placeholder-shown)+label,#cab .fld.ta textarea:focus+label,#cab .fld.ta textarea:not(:placeholder-shown)+label{background:#0a0e15;color:var(--ac)}
+#cab #avatarUrl{width:100%;padding:11px 12px!important;margin-bottom:8px}
+#cab #themeSel{width:100%;padding:11px 12px!important;margin-top:8px}
+#cab .agal-t{font-size:12px;color:#7c8696;margin:4px 0 6px}
+#cab .agal{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+#cab .agal-i{aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--ln);padding:0;background:#0a0e15;cursor:pointer}
+#cab .agal-i.on{border-color:var(--ac);box-shadow:0 0 0 2px rgba(77,163,255,.3)}
+#cab .agal-i img{width:100%;height:100%;object-fit:cover;display:block}
+#cab .lst .it{border-bottom:1px solid var(--ln)}
+#cab .cal{gap:4px}
+#cab .cal .d{border-radius:6px;background:#0f1520}
+#cab .ring{width:64px;height:64px}
+#cab .err{font-size:13px}
+@media(max-width:1020px){#cab .grid>.card,#cab .grid>.card:first-child{grid-column:span 6}}
+@media(max-width:680px){
+  #cab{padding:84px 14px 100px!important}
+  #cab .prof{padding:16px;gap:14px;border-radius:18px}
+  #cab .prof .av{width:58px;height:58px;border-radius:16px;font-size:24px}
+  #cab .prof h2{font-size:20px}
+  #cab .grid{grid-template-columns:1fr;gap:12px}
+  #cab .grid>.card,#cab .grid>.card:first-child,#cab .grid>.card.w{grid-column:1/-1}
+  #cab .card{padding:18px!important;border-radius:16px}
+  #cab .cab-in{flex-wrap:wrap}
+  #cab .cab-in .fld{flex:1 1 100%}
+  #cab .cab-in .fld.n{flex:1 1 40%}
+  #cab .cab-in .btn{flex:1 1 auto}
+  #cab .row .btn{flex:1 1 auto}
+  #cab input,#cab select,#cab textarea{font-size:16px!important}
+  #cab .agal{grid-template-columns:repeat(5,1fr)}
+}
+
+html.light body{background:#f3f5f8!important}
+html.light{--sf:#fff;--sf2:#eef1f6;--ln:rgba(0,0,0,.09)}
+html.light header{background:rgba(255,255,255,.85)!important}
+html.light .lp-h,html.light .lpc-big,html.light #cab .card h3,html.light #cab .prof h2,html.light .lpc-row b,html.light .lp-pts b{color:#10151f}
+html.light .lp-b{color:#10151f}html.light .lp-b.main{color:#fff}
+html.light #cab .fld input,html.light #cab input,html.light #cab select,html.light #cab .fld textarea{background:#fff!important;color:#10151f!important}
+html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
+/* --- chat on phones: full-width sheet --- */
+@media(max-width:560px){
+  .ch-panel{left:0;right:0;bottom:0;width:100%;max-width:100%;height:78svh;max-height:78svh;border-radius:20px 20px 0 0;transform-origin:bottom}
+  .ch-fab{left:14px;bottom:14px}
+  .ch-in input{font-size:16px}
+}
 </style>
 
 </head><body>
@@ -1031,35 +1157,32 @@ header{z-index:45!important}
 
 <div id="land" style="overflow:hidden;position:relative">
 <section class="hero" id="top">
-  <!-- BG effects -->
-  <div class="hero-orb hero-orb-1"></div>
-  <div class="hero-orb hero-orb-2"></div>
-  <div class="hero-orb hero-orb-3"></div>
-
-  <div class="hero-content">
-
-    <h1 class="hero-title-new">
-      <span class="line1"><span class="char" style="animation-delay:.3s">F</span><span class="char" style="animation-delay:.35s">R</span><span class="char" style="animation-delay:.4s">V</span></span>
-      <span class="line2">CONTROL</span>
-    </h1>
-
-    <p class="hero-desc-new">Мощный external для Counter-Strike 2. Подписки, лицензии, привязка HWID и полный контроль из личного кабинета.</p>
-
-    <div class="hero-actions">
-      <button class="btn btn-primary" onclick="openM('reg')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-        Создать аккаунт
-      </button>
-      <button class="btn btn-ghost" onclick="openM('log')">Войти</button>
-      <button class="btn btn-ghost" onclick="go('feat')">Возможности</button>
+  <div class="lp">
+    <div class="lp-txt">
+      <div class="lp-tag"><i></i>CS2 external · FRV</div>
+      <h1 class="lp-h">Читы без возни.<br><em>Всё в одном кабинете.</em></h1>
+      <p class="lp-p">Подписка по ключу, привязка HWID, лоадер и поддержка — в личном кабинете. Пробный период выдаётся при регистрации.</p>
+      <div class="lp-cta">
+        <button class="lp-b main" onclick="openM('reg')">Создать аккаунт</button>
+        <button class="lp-b" onclick="openM('log')">Войти</button>
+        <button class="lp-b txt" onclick="go('feat')">Возможности →</button>
+      </div>
+      <ul class="lp-pts">
+        <li><b>Триал</b><span>при регистрации</span></li>
+        <li><b>Ключ</b><span>активация в кабинете</span></li>
+        <li><b>HWID</b><span>защита аккаунта</span></li>
+      </ul>
     </div>
-
-    <div class="hero-features">
-      <div class="hf"><span>01</span> Триал при регистрации</div>
-      <div class="hf"><span>02</span> Подписка ключом</div>
-      <div class="hf"><span>03</span> HWID защита</div>
+    <div class="lp-card" aria-hidden="true">
+      <div class="lpc-top"><span class="lpc-dot"></span>Подписка активна<em>FRV</em></div>
+      <div class="lpc-big">30<small>дней осталось</small></div>
+      <div class="lpc-bar"><i></i></div>
+      <div class="lpc-row"><span>Устройства</span><b>1 / 1</b></div>
+      <div class="lpc-row"><span>Лоадер</span><b>готов</b></div>
+      <div class="lpc-row"><span>HWID</span><b>привязан</b></div>
     </div>
-  </div></section>
+  </div>
+</section>
 
 <div class="features-band">
   <div class="band-item"><span class="dot"></span>Админка и генерация ключей</div>
