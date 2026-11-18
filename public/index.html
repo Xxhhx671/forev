@@ -1448,14 +1448,20 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
 <div id="profPreview" style="position:relative;height:100px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#1a2a44,#0d1522);margin-bottom:36px;background-size:cover;background-position:center">
   <div id="profAvWrap" style="position:absolute;left:50%;bottom:-28px;transform:translateX(-50%);width:56px;height:56px;border-radius:50%;border:3px solid var(--sf,#0b0f16);overflow:hidden;background:#16202f;display:grid;place-items:center;font-weight:900;font-size:20px"></div>
 </div>
-<input id="bannerUrl" placeholder="URL баннера (https://...)" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)">
-<input id="avatarUrl" placeholder="URL аватара / фото (https://...)" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)">
+<label class="btn sm ghost" style="display:inline-flex;margin:0 6px 8px 0;cursor:pointer">📷 Баннер из галереи
+  <input type="file" accept="image/*" id="bannerFile" style="display:none" onchange="pickImage(this,'banner')">
+</label>
+<label class="btn sm ghost" style="display:inline-flex;margin:0 0 8px;cursor:pointer">📷 Аватар из галереи
+  <input type="file" accept="image/*" id="avatarFile" style="display:none" onchange="pickImage(this,'avatar')">
+</label>
+<input type="hidden" id="bannerUrl" value="">
+<input type="hidden" id="avatarUrl" value="">
 <textarea id="bioText" placeholder="Описание профиля…" rows="2" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;resize:vertical"></textarea>
 <select id="themeSel" style="padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)" onchange="saveProfile()">
 <option value="dark">Тёмная тема</option><option value="light">Светлая тема</option>
 </select>
 <button class="btn sm" style="margin-top:6px" onclick="saveProfile()">Сохранить профиль</button>
-<button class="btn sm ghost" style="margin-top:6px" onclick="openUserProfile(user&&user.username)">Мой публичный профиль</button>
+<button class="btn sm ghost" style="margin-top:6px" onclick="typeof openUserProfile==='function'&&openUserProfile(user&&user.username)">Мой публичный профиль</button>
 </div>
 </div>
 <div class="card rv" style="--d:.1s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr" pathLength="1" x="3" y="4" width="18" height="18" rx="2"/><path class="dr" pathLength="1" d="M16 2v4M8 2v4M3 10h18"/></svg></div>
@@ -2030,7 +2036,7 @@ async function submit(){const b=$('mb');b.classList.add('ld');$('me').textConten
     const vid=await getVisitorId();
     r=await api('/api/login',{login:$('f1').value,password:$('f3').value,vid,...payload});
   }
-  closeM();$('f3').value='';await init();
+  closeM();$('f3').value='';if(r&&(r.fl!=null||r.fl_balance!=null)){window.__pendingFl=r.fl_balance!=null?r.fl_balance:r.fl}await init();
   if(user){
     if(mode==='reg'&&r&&r.trial_key){toast('Аккаунт создан. Пробный ключ: '+r.trial_key);try{alert('Аккаунт создан!\nПробный ключ (сохранён в личном кабинете):\n'+r.trial_key+(r.trial_days?('\nСрок: '+r.trial_days+' дн.') :''));}catch{} if(typeof loadMyKeys==='function')loadMyKeys();}
     else if(mode==='reg'&&r&&r.trial===false){toast('Аккаунт создан (пробный период недоступен)');}
@@ -2078,7 +2084,7 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
   $('cs2').textContent=u.inf?'Без ограничения по времени.':u.frozen?'Таймер на паузе, осталось '+d+' дн.':u.active?'До '+fd(u.sub_until):'Активируйте ключ, чтобы получить доступ.';
   $('bfz').style.display=u.active&&!u.inf?'':'none';$('buf').style.display=u.frozen?'':'none';
   $('adm').style.display=u.is_admin?'':'none';$('adb').style.display=u.is_admin?'inline-flex':'none';$('dls').textContent=u.inf?'навсегда':'дн.';
-  const flEl=$('flBalance');if(flEl){flEl.style.display=u?'inline-flex':'none';const flv=(u.fl_balance!=null?u.fl_balance:(u.fl!=null?u.fl:0));$('flAmt').textContent=flv+' FL';}
+  const flEl=$('flBalance');if(flEl){flEl.style.display=u?'inline-flex':'none';let flv=(u.fl_balance!=null?u.fl_balance:(u.fl!=null?u.fl:0));if(window.__pendingFl!=null){flv=window.__pendingFl;u.fl=flv;u.fl_balance=flv;window.__pendingFl=null}$('flAmt').textContent=flv+' FL';}
   if(u){setTimeout(()=>{try{if(typeof loadFl==='function')loadFl()}catch{}},300)}
   // render role badges in profile
   const br=$('userBadgesRow');if(br){br.innerHTML='';if(u.is_super)br.innerHTML+='<span class="bdg super"><svg style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#ffd060" stroke-width="2"><polygon points="12 2 15.5 8.5 23 9.5 17.5 15 19 22.5 12 19 5 22.5 6.5 15 1 9.5 8.5 8.5" fill="rgba(255,210,0,.4)"/></svg>SUPER</span>';if(u.is_tester)br.innerHTML+='<span class="bdg tester">TESTER</span>';if(u.is_reseller)br.innerHTML+='<span class="bdg reseller">RESELLER</span>';}
@@ -2266,8 +2272,34 @@ async function showHist(id){try{const r=await api('/api/admin/history',{id});ale
 // --- Theme / Profile / Activity / Reseller / Admin search ---
 function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);const tb=$('themeBtn');if(tb)tb.innerHTML=ico(t==='light'?'moon':'sun',18)}
 function toggleTheme(){const t=document.documentElement.classList.contains('light')?'dark':'light';applyTheme(t);if(user)saveProfile()}
-async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),banner=$('bannerUrl')?$('bannerUrl').value.trim():'',bio=$('bioText')?$('bioText').value.trim():'',theme=$('themeSel').value;await api('/api/profile',{avatar,banner,bio,theme});if(user){user.avatar=avatar;user.banner=banner;user.bio=bio;user.theme=theme}applyTheme(theme);try{await post('/api/profile/save',{avatar,banner,bio})}catch{}updProfPreview();toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
-function updProfPreview(){const b=$('profPreview'),w=$('profAvWrap');if(!b||!user)return;if(user.banner){b.style.backgroundImage='url('+user.banner+')'}else{b.style.backgroundImage='';}if(w){if(user.avatar)w.innerHTML='<img src="'+user.avatar.replace(/"/g,'')+'" style="width:100%;height:100%;object-fit:cover">';else w.textContent=(user.username||'?')[0].toUpperCase()}}
+async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),banner=$('bannerUrl')?$('bannerUrl').value.trim():'',bio=$('bioText')?$('bioText').value.trim():'',theme=$('themeSel').value;await api('/api/profile',{avatar,banner,bio,theme});if(user){user.avatar=avatar;user.banner=banner;user.bio=bio;user.theme=theme}applyTheme(theme);try{await api('/api/profile/save',{avatar,banner,bio})}catch{}updProfPreview();toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
+function updProfPreview(){const b=$('profPreview'),w=$('profAvWrap');if(!b||!user)return;const ban=($('bannerUrl')&&$('bannerUrl').value)||user.banner||'';const av=($('avatarUrl')&&$('avatarUrl').value)||user.avatar||'';if(ban){b.style.backgroundImage='url('+ban+')'}else{b.style.backgroundImage='';}if(w){if(av)w.innerHTML='<img src="'+String(av).replace(/"/g,'')+'" style="width:100%;height:100%;object-fit:cover">';else w.textContent=(user.username||'?')[0].toUpperCase()}}
+function compressImage(file,maxW,qual){return new Promise((resolve,reject)=>{
+  const fr=new FileReader();
+  fr.onerror=()=>reject(new Error('Не удалось прочитать файл'));
+  fr.onload=()=>{const img=new Image();
+    img.onerror=()=>reject(new Error('Это не изображение'));
+    img.onload=()=>{let w=img.width,h=img.height;if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
+      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg',qual));
+    };img.src=fr.result};
+  fr.readAsDataURL(file);
+})}
+async function pickImage(input,kind){
+  const f=input.files&&input.files[0];if(!f)return;
+  if(!f.type.startsWith('image/'))return toast('Выберите изображение',1);
+  try{
+    toast('Сжимаем фото…');
+    const data=await compressImage(f, kind==='banner'?1200:512, kind==='banner'?0.72:0.78);
+    const r=await api('/api/upload/image',{data});
+    if(kind==='banner'){$('bannerUrl').value=r.url;if(user)user.banner=r.url}
+    else{$('avatarUrl').value=r.url;if(user)user.avatar=r.url}
+    updProfPreview();
+    toast('Фото загружено — нажмите «Сохранить профиль»');
+  }catch(e){toast(e.message||'Ошибка загрузки',1)}
+  input.value='';
+}
+window.pickImage=pickImage;
 
 function renderCal(list){
   const map={};(list||[]).forEach(x=>map[x.d]=x.c);

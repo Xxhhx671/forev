@@ -165,6 +165,7 @@ let flPrice=0;
 const flAfter=()=>{lastLoad=0;loadFl()};
 async function loadFl(){if(!user)return;try{const d=await post('/api/fl/info');const el=$('flB');if(el)drawFl(d);if(user){user.fl=d.fl;user.fl_balance=d.fl}const a=$('flAmt');if(a)a.textContent=(d.fl!=null?d.fl:0)+' FL';const flEl=$('flBalance');if(flEl)flEl.style.display='inline-flex'}catch(e){const el=$('flB');if(el)el.innerHTML='<small>Не удалось загрузить FL</small>'}}
 function drawFl(d){
+ if(user){user.fl=d.fl;user.fl_balance=d.fl}const a=$('flAmt');if(a)a.textContent=(d.fl!=null?d.fl:0)+' FL';const flEl=$('flBalance');if(flEl)flEl.style.display='inline-flex';
  const el=$('flB');if(!el)return;
  const ev={};['flTo','flAm','flDays','flGTo','flGAm'].forEach(k=>{const e=$(k);if(e)ev[k]=e.value});
  flPrice=d.day_price||0;
@@ -304,41 +305,45 @@ window.openFlTab=function(){if(!user)return;inject();if(typeof goCab==='function
 let fmCat='global',fmStaff=false;
 async function loadForum(){
  const root=$('fmRoot');if(!root)return;
+ root.innerHTML='<small style="color:var(--m)">Загрузка…</small>';
  try{
-  const r=await fetch(API_BASE+'/api/forum/cats',{cache:'no-store',credentials:'include'}).then(x=>x.json());
+  const r=await post('/api/forum/cats',{});
+  if(r.error)throw new Error(r.error);
   fmStaff=!!r.staff;
   const groups={};(r.cats||[]).forEach(c=>{(groups[c.group]=groups[c.group]||[]).push(c)});
   let nav='';Object.keys(groups).forEach(g=>{nav+=`<h5>${esc(g)}</h5>`+groups[g].map(c=>`<button type="button" data-c="${c.id}" class="${c.id===fmCat?'on':''}" onclick="fmOpenCat('${c.id}')">${esc(c.name)}${c.staff?'<span class="staff-tag">staff</span>':''} <small style="opacity:.5">${c.count||0}</small></button>`).join('')});
   root.innerHTML=`<div class="fm-wrap"><div class="fm-nav">${nav}</div><div class="fm-main" id="fmMain"></div></div>`;
   fmOpenCat(fmCat);
- }catch(e){root.innerHTML='<small>Ошибка загрузки форума</small>'}
+ }catch(e){root.innerHTML='<small style="color:#ff6b8a">Ошибка форума: '+esc(e.message||'нет связи')+'</small>'}
 }
 window.fmOpenCat=async id=>{
  fmCat=id;document.querySelectorAll('.fm-nav button').forEach(b=>b.classList.toggle('on',b.dataset.c===id));
  const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
  try{
-  const r=await fetch(API_BASE+'/api/forum/list?cat='+encodeURIComponent(id),{cache:'no-store',credentials:'include'}).then(x=>x.json());
+  const r=await post('/api/forum/list',{cat:id});
+  if(r.error)throw new Error(r.error);
   const canPost=!r.meta.staff||r.staff;
-  let html=canPost?`<div style="margin-bottom:12px"><input id="fmT" placeholder="Заголовок" style="width:100%;margin-bottom:6px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><textarea id="fmB" placeholder="Текст поста…" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;resize:vertical"></textarea><button class="btn sm" style="margin-top:6px" onclick="fmCreate()">Опубликовать</button></div>`:`<p style="font-size:13px;color:var(--m);margin-bottom:12px">Раздел staff-only — посты может писать только администратор (код EmirDI1804).</p>`;
-  html+=(r.list||[]).map(p=>`<div class="fm-post" onclick="fmView(${p.id})"><b>${esc(p.title)}</b><small>@${esc(p.username)} · ${dt(p.ts)} · ${p.replies} отв.</small><div style="margin-top:6px;font-size:13px;color:#9aa3b5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div></div>`).join('')||'<small>Пока пусто</small>';
+  let html=canPost?`<div style="margin-bottom:12px"><input id="fmT" placeholder="Заголовок" style="width:100%;margin-bottom:6px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><textarea id="fmB" placeholder="Текст поста…" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;resize:vertical"></textarea><button class="btn sm" style="margin-top:6px" onclick="fmCreate()">Опубликовать</button></div>`:`<p style="font-size:13px;color:var(--m);margin-bottom:12px">Раздел staff-only — писать может только администратор (EmirDI1804).</p>`;
+  html+=(r.list||[]).map(p=>`<div class="fm-post" onclick="fmView(${p.id})"><b>${esc(p.title)}</b><small>@${esc(p.username)} · ${dt(p.ts)} · ${p.replies} отв.</small><div style="margin-top:6px;font-size:13px;color:#9aa3b5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div></div>`).join('')||'<small>Пока пусто — будьте первым</small>';
   main.innerHTML=html;
- }catch(e){main.innerHTML='<small>Ошибка</small>'}
+ }catch(e){main.innerHTML='<small style="color:#ff6b8a">'+esc(e.message||'Ошибка')+'</small>'}
 };
 window.fmCreate=async()=>{try{await post('/api/forum/create',{cat:fmCat,title:$('fmT').value,body:$('fmB').value});toast('Опубликовано');fmOpenCat(fmCat)}catch(e){toast(e.message,1)}};
 window.fmView=async id=>{
  const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
  try{
-  const r=await fetch(API_BASE+'/api/forum/post?id='+id,{cache:'no-store',credentials:'include'}).then(x=>x.json());
+  const r=await post('/api/forum/get',{id});
+  if(r.error)throw new Error(r.error);
   const p=r.post;
   main.innerHTML=`<button class="btn sm ghost" onclick="fmOpenCat('${esc(p.cat)}')">← Назад</button>
    <h3 style="margin:12px 0 4px">${esc(p.title)}</h3>
    <small style="color:var(--m)"><span style="cursor:pointer;color:#8ec8ff" onclick="openUserProfile('${esc(p.username)}')">@${esc(p.username)}</span> · ${dt(p.ts)}</small>
    <div class="fm-body">${esc(p.body)}</div>
-   <h4 style="margin:16px 0 8px">Ответы (${r.replies.length})</h4>
-   <div id="fmRep">${r.replies.map(x=>`<div class="fm-post" style="cursor:default"><small><span style="cursor:pointer;color:#8ec8ff" onclick="openUserProfile('${esc(x.username)}')">@${esc(x.username)}</span> · ${dt(x.ts)}</small><div class="fm-body" style="margin:6px 0 0">${esc(x.body)}</div></div>`).join('')||'<small>Нет ответов</small>'}</div>
+   <h4 style="margin:16px 0 8px">Ответы (${(r.replies||[]).length})</h4>
+   <div id="fmRep">${(r.replies||[]).map(x=>`<div class="fm-post" style="cursor:default"><small><span style="cursor:pointer;color:#8ec8ff" onclick="openUserProfile('${esc(x.username)}')">@${esc(x.username)}</span> · ${dt(x.ts)}</small><div class="fm-body" style="margin:6px 0 0">${esc(x.body)}</div></div>`).join('')||'<small>Нет ответов</small>'}</div>
    <textarea id="fmR" placeholder="Ваш ответ…" rows="2" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit"></textarea>
    <button class="btn sm" style="margin-top:6px" onclick="fmReply(${id})">Ответить</button>`;
- }catch(e){main.innerHTML='<small>Ошибка</small>'}
+ }catch(e){main.innerHTML='<small style="color:#ff6b8a">'+esc(e.message||'Ошибка')+'</small>'}
 };
 window.fmReply=async id=>{try{await post('/api/forum/reply',{post_id:id,body:$('fmR').value});fmView(id)}catch(e){toast(e.message,1)}};
 
@@ -349,7 +354,7 @@ window.openUserProfile=async function(name){
  ov.onclick=e=>{if(e.target===ov)ov.remove()};
  document.body.appendChild(ov);
  try{
-  const r=await fetch(API_BASE+'/api/profile/view?u='+encodeURIComponent(name),{cache:'no-store',credentials:'include'}).then(x=>{if(!x.ok)throw new Error('Не найден');return x.json()});
+  const r=await post('/api/profile/view',{u:name});if(r.error)throw new Error(r.error);
   const u=r.user;
   const ban=u.banner?`style="background-image:url('${esc(u.banner).replace(/'/g,'')}')"`:'';
   const av=u.avatar?`<img src="${esc(u.avatar)}" alt="">`:(u.username[0]||'?').toUpperCase();
