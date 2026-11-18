@@ -36,7 +36,28 @@ window.chpw=async function(){$('pe').textContent='';try{let code;if(window.__x&&
  await post('/api/password',{old:$('op').value,new:$('np').value,code});$('op').value=$('np').value='';toast('Пароль изменён, остальные сессии закрыты')}catch(e){$('pe').textContent=e.message}};
 
 /* ===== FL: анимированные SVG-бейджи ===== */
-const flst=document.createElement('style');flst.textContent=".fl-ic{display:inline-block;vertical-align:-3px;overflow:visible;flex:none}\n.fl-ic *{transform-box:fill-box;transform-origin:50% 50%}\n.fa-spark{animation:flSpark 2.6s ease-in-out infinite}\n.fa-tw{animation:flTw 2.6s ease-in-out infinite}.fa-tw2{animation:flTw 2.6s ease-in-out 1.3s infinite}\n.fa-rock{animation:flRock 3.6s ease-in-out infinite;transform-origin:50% 60%}\n.fa-shake{animation:flShake 2.8s linear infinite}.fa-flash{animation:flFlash 2.8s linear infinite;opacity:0}\n.fa-flame{animation:flFlame 1.5s ease-in-out infinite;transform-origin:50% 100%}.fa-flame2{animation:flFlame 1.1s ease-in-out .3s infinite;transform-origin:50% 100%}\n.fa-sweep{animation:flSweep 3.4s ease-in-out infinite}\n.fa-jw{animation:flPulse 2s ease-in-out infinite}.fa-jw2{animation:flPulse 2s ease-in-out 1s infinite}\n@keyframes flSpark{0%,100%{transform:scale(.88) rotate(0)}50%{transform:scale(1.04) rotate(12deg)}}\n@keyframes flTw{0%,100%{opacity:.1;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}\n@keyframes flRock{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}\n@keyframes flShake{0%,84%,100%{transform:none}88%{transform:translate(.5px,-.3px)}92%{transform:translate(-.5px,.3px)}96%{transform:translate(.3px,0)}}\n@keyframes flFlash{0%,84%,100%{opacity:0}88%{opacity:.9}91%{opacity:.1}94%{opacity:.75}}\n@keyframes flFlame{0%,100%{transform:scale(1,1) skewX(0)}35%{transform:scale(.95,1.07) skewX(-3deg)}70%{transform:scale(1.04,.96) skewX(3deg)}}\n@keyframes flSweep{0%,45%{transform:translateX(-9px)}100%{transform:translateX(34px)}}\n@keyframes flPulse{0%,100%{opacity:.55}50%{opacity:1}}\n@media (prefers-reduced-motion:reduce){.fl-ic *{animation:none!important}}"+`.fl-bd{display:inline-flex;align-items:center;line-height:1}`;document.head.appendChild(flst);
+const flst=document.createElement('style');flst.textContent=".fl-ic{display:inline-block;vertical-align:-3px;overflow:visible;flex:none}\n.fl-ic *{transform-box:fill-box;transform-origin:50% 50%}\n.fa-spark{animation:flSpark 2.6s ease-in-out infinite}\n.fa-tw{animation:flTw 2.6s ease-in-out infinite}.fa-tw2{animation:flTw 2.6s ease-in-out 1.3s infinite}\n.fa-rock{animation:flRock 3.6s ease-in-out infinite;transform-origin:50% 60%}\n.fa-shake{animation:flShake 2.8s linear infinite}.fa-flash{animation:flFlash 2.8s linear infinite;opacity:0}\n.fa-flame{animation:flFlame 1.5s ease-in-out infinite;transform-origin:50% 100%}.fa-flame2{animation:flFlame 1.1s ease-in-out .3s infinite;transform-origin:50% 100%}\n.fa-sweep{animation:flSweep 3.4s ease-in-out infinite}\n.fa-jw{animation:flPulse 2s ease-in-out infinite}.fa-jw2{animation:flPulse 2s ease-in-out 1s infinite}\n@keyframes flSpark{0%,100%{transform:scale(.88) rotate(0)}50%{transform:scale(1.04) rotate(12deg)}}\n@keyframes flTw{0%,100%{opacity:.1;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}\n@keyframes flRock{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}\n@keyframes flShake{0%,84%,100%{transform:none}88%{transform:translate(.5px,-.3px)}92%{transform:translate(-.5px,.3px)}96%{transform:translate(.3px,0)}}\n@keyframes flFlash{0%,84%,100%{opacity:0}88%{opacity:.9}91%{opacity:.1}94%{opacity:.75}}\n@keyframes flFlame{0%,100%{transform:scale(1,1) skewX(0)}35%{transform:scale(.95,1.07) skewX(-3deg)}70%{transform:scale(1.04,.96) skewX(3deg)}}\n@keyframes flSweep{0%,45%{transform:translateX(-9px)}100%{transform:translateX(34px)}}\n@keyframes flPulse{0%,100%{opacity:.55}50%{opacity:1}}\n@media (prefers-reduced-motion:reduce){.fl-ic *{animation:none!important}}"+`.fl-bd{display:inline-flex;align-items:center;justify-content:center;line-height:1;width:22px;height:22px;border-radius:8px;background:linear-gradient(145deg,rgba(255,210,80,.14),rgba(255,160,0,.05));border:1px solid rgba(255,200,60,.35);box-shadow:0 0 10px rgba(255,180,0,.18),inset 0 1px 0 rgba(255,255,255,.12);margin-right:4px;vertical-align:-4px;transform-style:preserve-3d;transition:transform .25s,box-shadow .25s}
+.fl-bd:hover{transform:translateY(-1px) scale(1.08);box-shadow:0 0 16px rgba(255,180,0,.35)}
+.fl-bal{font-size:36px;font-weight:800;line-height:1.05;letter-spacing:-.5px;background:linear-gradient(135deg,#fff3a8,#ffc02e 45%,#e5800a);-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-flex;align-items:baseline;gap:6px}
+.fl-bal span{font-size:16px;font-weight:800;letter-spacing:1.5px;color:#ffd060;background:none;-webkit-background-clip:unset;background-clip:unset;opacity:.95}
+.fl-bal-wrap{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;background:linear-gradient(135deg,rgba(255,200,40,.1),rgba(255,140,0,.04));border:1px solid rgba(255,200,60,.28);box-shadow:0 4px 24px rgba(255,160,0,.08),inset 0 1px 0 rgba(255,255,255,.06);margin-bottom:14px}
+.fl-bal-ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,210,80,.2),rgba(255,150,0,.08));border:1px solid rgba(255,200,60,.4);box-shadow:0 0 16px rgba(255,180,0,.2);flex:none}
+.fl-bal-ico svg{width:22px;height:22px;fill:#ffd060;filter:drop-shadow(0 0 4px rgba(255,200,60,.5))}
+.fl-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.fl-it{border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:12px 10px;background:linear-gradient(180deg,#0e121a,#0a0d14);display:flex;flex-direction:column;gap:8px;font-size:13px;align-items:center;text-align:center;transition:border-color .25s,transform .25s,box-shadow .25s;position:relative;overflow:hidden}
+.fl-it:hover{border-color:rgba(255,200,60,.35);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.35),0 0 0 1px rgba(255,200,60,.12)}
+.fl-it b{font-size:13.5px;font-weight:700}
+.fl-it.on{border-color:rgba(255,80,110,.55);box-shadow:0 0 0 1px rgba(255,80,110,.2),0 6px 18px rgba(255,45,80,.12);background:linear-gradient(180deg,#1a0a10,#0e080c)}
+.fl-it.on::after{content:'✓';position:absolute;top:6px;right:8px;font-size:11px;color:#ff6b8a;font-weight:900}
+.fl-it .btn{width:100%;height:34px;font-size:12px;letter-spacing:.3px}
+.fl-it .fl-ico-wrap{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,210,80,.12),rgba(255,150,0,.04));border:1px solid rgba(255,200,60,.25);box-shadow:0 0 12px rgba(255,180,0,.12);margin-bottom:2px}
+.fl-sec{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)}
+.fl-sec h4{font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--m);margin:0 0 10px}
+.fl-bonus{font-size:12.5px;color:var(--m);margin:6px 0 0;line-height:1.45}
+.fl-preview{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:99px;background:#0e121a;border:1px solid rgba(255,255,255,.08);font-size:14px;font-weight:700;margin-top:4px}
+.fl-hist .xtl{margin-top:4px;max-height:180px;overflow-y:auto}
+#xFl h3{display:flex;align-items:center;gap:8px}
+#xFl h3::before{content:'◆';color:#ffd060;font-size:11px;animation:bdgSpin 5s linear infinite;display:inline-block}`;document.head.appendChild(flst);
 document.body.insertAdjacentHTML('beforeend','<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'+"<linearGradient id=\"flg-gold\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3a8\"/><stop offset=\".5\" stop-color=\"#ffc02e\"/><stop offset=\"1\" stop-color=\"#e5800a\"/></linearGradient>\n<linearGradient id=\"flg-gold2\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe98f\"/><stop offset=\".55\" stop-color=\"#f5a912\"/><stop offset=\"1\" stop-color=\"#b9650a\"/></linearGradient>\n<linearGradient id=\"flg-moon\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#d9ccff\"/><stop offset=\".55\" stop-color=\"#8b86ff\"/><stop offset=\"1\" stop-color=\"#4a5de0\"/></linearGradient>\n<linearGradient id=\"flg-bolt\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fffbc2\"/><stop offset=\".5\" stop-color=\"#ffd23a\"/><stop offset=\"1\" stop-color=\"#ff9a0a\"/></linearGradient>\n<linearGradient id=\"flg-fo\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ff6a3d\"/><stop offset=\".6\" stop-color=\"#f03a3a\"/><stop offset=\"1\" stop-color=\"#c41f4a\"/></linearGradient>\n<linearGradient id=\"flg-fi\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3a0\"/><stop offset=\"1\" stop-color=\"#ffa21a\"/></linearGradient>\n<linearGradient id=\"flg-shine\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#fff\" stop-opacity=\"0\"/><stop offset=\".5\" stop-color=\"#fff\" stop-opacity=\".85\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></linearGradient>\n<clipPath id=\"flg-cp-gem\"><path d=\"M7 3H17L22 9L12 21.5L2 9Z\"/></clipPath>\n<clipPath id=\"flg-cp-crown\"><path d=\"M3 8L7.5 12L12 4L16.5 12L21 8L19 19H5Z\"/></clipPath>"+'</defs></svg>');
 const FLB={"star": "<path class=\"fa-spark\" d=\"M11 2C11.9 7.6 15.4 11.1 21 12C15.4 12.9 11.9 16.4 11 22C10.1 16.4 6.6 12.9 1 12C6.6 11.1 10.1 7.6 11 2Z\" fill=\"url(#flg-gold)\"/><path class=\"fa-tw\" d=\"M19.5 2.5C19.7 4 20.1 4.4 21.5 4.6C20.1 4.8 19.7 5.2 19.5 6.7C19.3 5.2 18.9 4.8 17.5 4.6C18.9 4.4 19.3 4 19.5 2.5Z\" fill=\"#fff6c8\"/>", "moon": "<path class=\"fa-rock\" d=\"M21 12.8A9 9 0 1 1 11.2 3A7 7 0 0 0 21 12.8Z\" fill=\"url(#flg-moon)\"/><circle class=\"fa-tw\" cx=\"18.4\" cy=\"5.2\" r=\"1.3\" fill=\"#e9e4ff\"/><circle class=\"fa-tw2\" cx=\"14.6\" cy=\"2.6\" r=\".8\" fill=\"#e9e4ff\"/>", "bolt": "<g class=\"fa-shake\"><path d=\"M13.6 1.5L4.6 13.4H10.6L9.6 22.5L19.4 9.6H13Z\" fill=\"url(#flg-bolt)\" stroke=\"#ff9a0a\" stroke-width=\".6\" stroke-linejoin=\"round\"/><path class=\"fa-flash\" d=\"M13.6 1.5L4.6 13.4H10.6L9.6 22.5L19.4 9.6H13Z\" fill=\"#fff\"/></g>", "fire": "<path class=\"fa-flame\" d=\"M12 2.2C13.2 5.6 18.6 8.4 18.6 14.4C18.6 18.4 15.7 21.8 12 21.8C8.3 21.8 5.4 18.4 5.4 14.4C5.4 11.8 6.7 10 8 8.6C8.3 10.4 9.2 11.4 10.2 11.8C9.6 8.2 10.4 4.6 12 2.2Z\" fill=\"url(#flg-fo)\"/><path class=\"fa-flame2\" d=\"M12 11.6C12.9 13.6 15.4 14.8 15.4 17.4C15.4 19.4 13.9 20.8 12 20.8C10.1 20.8 8.6 19.4 8.6 17.4C8.6 15.4 10.6 14.2 12 11.6Z\" fill=\"url(#flg-fi)\"/>", "gem": "<g><polygon points=\"7,3 17,3 15,9 9,9\" fill=\"#b5efff\"/><polygon points=\"7,3 9,9 2,9\" fill=\"#7fd6ff\"/><polygon points=\"17,3 22,9 15,9\" fill=\"#5cc3fb\"/><polygon points=\"2,9 9,9 12,21.5\" fill=\"#3a9be8\"/><polygon points=\"9,9 15,9 12,21.5\" fill=\"#5fb6f7\"/><polygon points=\"15,9 22,9 12,21.5\" fill=\"#2a74cf\"/><path d=\"M7 3H17L22 9L12 21.5L2 9Z\" fill=\"none\" stroke=\"#e8f9ff\" stroke-opacity=\".55\" stroke-width=\".6\" stroke-linejoin=\"round\"/></g><g clip-path=\"url(#flg-cp-gem)\"><polygon class=\"fa-sweep\" points=\"0,0 6,0 2,24 -4,24\" fill=\"url(#flg-shine)\"/></g>", "crown": "<path d=\"M3 8L7.5 12L12 4L16.5 12L21 8L19 19H5Z\" fill=\"url(#flg-gold2)\" stroke=\"#b9650a\" stroke-width=\".5\" stroke-linejoin=\"round\"/><rect x=\"5\" y=\"19.6\" width=\"14\" height=\"2.2\" rx=\"1.1\" fill=\"#c9770d\"/><circle class=\"fa-jw\" cx=\"3\" cy=\"7\" r=\"1.5\" fill=\"#ff5c8a\"/><circle class=\"fa-jw2\" cx=\"12\" cy=\"3.4\" r=\"1.6\" fill=\"#5fd8ff\"/><circle class=\"fa-jw\" cx=\"21\" cy=\"7\" r=\"1.5\" fill=\"#ff5c8a\"/><circle cx=\"12\" cy=\"15.4\" r=\"1.5\" fill=\"#fff3d0\" fill-opacity=\".9\"/><g clip-path=\"url(#flg-cp-crown)\"><polygon class=\"fa-sweep\" points=\"0,0 6,0 2,24 -4,24\" fill=\"url(#flg-shine)\"/></g>"};
 const flBadge=(id,s)=>FLB[id]?`<svg class="fl-ic" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${FLB[id]}</svg>`:'';
@@ -84,7 +105,7 @@ function inject(){const g=$$('#cab .grid');if(!g||injected)return;injected=true;
  const card=(id,t,body)=>H(`<div class="card" id="${id}"><h3>${t}</h3>${body}</div>`);
  const dv=$('dv');if(dv&&!$('hwcd'))dv.after(H('<p id="hwcd" style="font-size:12.5px;margin-top:8px"></p>'));
  (($('adm'))?(...c)=>$('adm').before(...c):(...c)=>g.append(...c))(
-  card('xFl','FL — валюта сервиса','<div id="flB"><small>Загрузка…</small></div>'),
+  card('xFl','FL — валюта сервиса','<div id="flB"><small style="color:var(--m)">Загрузка…</small></div>'),
    card('xLvl','Уровень и достижения','<div class="kv"><span>Уровень</span><b id="xl">—</b></div><div class="xbar"><i id="xlb" style="width:0"></i></div><small id="xlt" style="color:var(--m)"></small><div id="xach" style="margin-top:8px"></div>'),
   card('xHist','История подписки','<div class="xtl" id="xhist"><small>Загрузка…</small></div>'),
   card('x2fa','Двухфакторная защита (2FA)','<p id="x2s"></p><div id="x2b"></div>'),
@@ -106,167 +127,39 @@ window.tfaOff=async()=>{const c=prompt('Код 2FA для отключения:'
 
 /* ===== FL: валюта ===== */
 const fst=document.createElement('style');fst.textContent=`
-/* ===== FL PAGE: premium redesign ===== */
-#flB{padding:4px 0}
-/* header balance */
-.fl-hero{
-  position:relative;overflow:hidden;
-  background:linear-gradient(135deg,rgba(255,190,0,.12) 0%,rgba(255,140,0,.06) 50%,rgba(255,80,0,.04) 100%);
-  border:1px solid rgba(255,190,0,.25);border-radius:20px;
-  padding:24px 28px;margin-bottom:20px;
-  display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
-}
-.fl-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(255,200,0,.12),transparent 60%);pointer-events:none}
-.fl-hero::after{content:'FL';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:120px;font-weight:900;color:rgba(255,190,0,.04);letter-spacing:-4px;pointer-events:none;line-height:1}
-.fl-amt{position:relative;z-index:1}
-.fl-amt em{display:block;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,190,0,.6);font-style:normal;margin-bottom:4px}
-.fl-amt b{font-size:52px;font-weight:900;line-height:1;color:#ffd060;font-family:var(--fd,inherit);text-shadow:0 0 40px rgba(255,190,0,.4)}
-.fl-amt b span{font-size:22px;font-weight:700;color:rgba(255,190,0,.6);margin-left:6px}
-.fl-bonus-chip{
-  position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px;
-  background:rgba(255,190,0,.1);border:1px solid rgba(255,190,0,.25);border-radius:12px;
-  padding:10px 16px;font-size:13px;color:#ffd060;line-height:1.45;max-width:280px;
-}
-.fl-bonus-chip svg{flex:none;width:20px;height:20px;stroke:#ffd060;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-/* section headers */
-.fl-sec{margin:22px 0 10px;display:flex;align-items:center;gap:10px}
-.fl-sec h4{font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.5);margin:0}
-.fl-sec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.08),transparent)}
-/* transfer / days panels */
-.fl-panel{
-  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
-  border-radius:16px;padding:16px 18px;margin-bottom:8px;
-}
-.fl-panel .xrow{margin:0}
-.fl-panel input{background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:10px!important;padding:10px 12px!important;color:#fff!important;font-size:14px!important;min-width:0}
-.fl-panel input:focus{border-color:rgba(255,190,0,.4)!important;outline:none}
-.fl-panel .btn{background:linear-gradient(135deg,rgba(255,190,0,.2),rgba(255,140,0,.15))!important;border:1px solid rgba(255,190,0,.35)!important;color:#ffd060!important;border-radius:10px!important;font-weight:700!important}
-.fl-panel .btn:hover{background:linear-gradient(135deg,rgba(255,190,0,.35),rgba(255,140,0,.25))!important;border-color:rgba(255,190,0,.55)!important}
-.fl-days-eq{font-size:14px;font-weight:700;color:#ffd060;padding:0 4px}
-/* color / badge grid */
-.fl-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
-.fl-it{
-  position:relative;overflow:hidden;
-  border:1px solid rgba(255,255,255,.08);border-radius:14px;
-  padding:12px 10px 10px;
-  background:rgba(255,255,255,.03);
-  display:flex;flex-direction:column;align-items:center;gap:7px;
-  font-size:12px;text-align:center;
-  transition:border-color .2s,background .2s,transform .2s,box-shadow .2s;
-  cursor:default;
-}
-.fl-it:hover{border-color:rgba(255,190,0,.35);background:rgba(255,190,0,.06);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
-.fl-it.on{border-color:rgba(255,190,0,.55)!important;background:rgba(255,190,0,.1)!important;box-shadow:0 0 0 1px rgba(255,190,0,.2),0 4px 20px rgba(255,160,0,.15)!important}
-.fl-it.on::before{content:'✓';position:absolute;top:6px;right:8px;font-size:10px;color:#ffd060;font-weight:900}
-.fl-it b{font-size:13px;font-weight:700;color:#e8e8f0}
-.fl-it .fl-price{font-size:11px;font-weight:800;color:#ffd060;letter-spacing:.5px}
-.fl-it .btn{width:100%;font-size:11px!important;padding:6px 0!important;border-radius:8px!important;margin-top:2px}
-.fl-it .btn.sm.ghost{border-color:rgba(255,190,0,.35)!important;color:#ffd060!important;background:rgba(255,190,0,.08)!important}
-.fl-it .btn.sm.ghost:hover{background:rgba(255,190,0,.18)!important}
-/* color swatch */
-.fl-swatch{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.15);box-shadow:0 2px 8px rgba(0,0,0,.4)}
-/* badge icon wrapper */
-.fl-badge-wrap{height:36px;display:flex;align-items:center;justify-content:center}
-/* preview */
-.fl-preview{
-  display:inline-flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-  border-radius:12px;padding:10px 16px;font-size:14px;margin-top:8px;
-}
-/* history */
-.fl-hist{display:flex;flex-direction:column;gap:4px;margin-top:4px}
-.fl-hist-row{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:9px 14px;border-radius:11px;background:rgba(255,255,255,.025);
-  border:1px solid rgba(255,255,255,.05);font-size:13px;
-}
-.fl-hist-row .fh-amt{font-weight:800;font-size:14px}
-.fl-hist-row .fh-amt.pos{color:#35d98a}
-.fl-hist-row .fh-amt.neg{color:#ff6b8a}
-.fl-hist-row .fh-reason{color:rgba(255,255,255,.6);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fl-hist-row .fh-ts{font-size:11px;color:rgba(255,255,255,.3);flex:none}
-/* admin panel */
-.fl-admin{background:rgba(255,45,80,.05);border:1px solid rgba(255,45,80,.15);border-radius:16px;padding:16px 18px;margin-top:16px}
-.fl-admin h4{font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,45,80,.7);margin:0 0 10px}
-#flB h4{margin:0}
-#flB .xrow input{min-width:0}
+.fl-bal{font-size:34px;font-weight:800;line-height:1.1}.fl-bal span{font-size:15px;font-weight:700;color:var(--m);margin-left:4px}
+#flB h4{margin:18px 0 6px}#flB .xrow input{min-width:0}
+.fl-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.fl-it{border:1px solid var(--bd);border-radius:12px;padding:10px;background:#0b0f16;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.fl-it b{font-size:14px}.fl-it.on{border-color:var(--r)}.fl-it .btn{width:100%}
 `;document.head.appendChild(fst);
 const flFmt=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
 let flPrice=0;
 const flAfter=()=>{lastLoad=0;loadFl()};
-async function loadFl(){const el=$('flB');if(!el||!user)return;try{drawFl(await post('/api/fl/info'))}catch(e){el.innerHTML='<small style="color:var(--m)">Не удалось загрузить FL</small>'}}
+async function loadFl(){const el=$('flB');if(!el||!user)return;try{drawFl(await post('/api/fl/info'))}catch(e){el.innerHTML='<small>Не удалось загрузить FL</small>'}}
 function drawFl(d){
- const el=$('flB');if(!el)return;flPrice=d.day_price;
- const mins=Math.ceil(d.next_bonus/6e4);
- const bonusAvail=d.bonus>0&&d.next_bonus<=0;
- const nbText=d.bonus<=0?'Бонус за вход отключён':bonusAvail?`<b style="color:#35d98a">+${d.bonus} FL доступен — забрать!</b>`:d.next_bonus>0?`Бонус за вход +${d.bonus} FL · через ${mins>=60?Math.floor(mins/60)+' ч ':''}<b>${mins%60} мин.</b>`:'';
- const bonusIcon=`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>`;
- const clockIcon=`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/></svg>`;
- const item=(k,it)=>{
-  const on=(k==='color'?d.color:d.badge)===it.id;
-  const icon=k==='badge'?`<div class="fl-badge-wrap">${flBadge(it.id,32)}</div>`:`<div class="fl-swatch" style="background:${it.hex};box-shadow:0 2px 10px ${it.hex}66"></div>`;
-  const price=`<div class="fl-price">${flFmt(it.price)} FL</div>`;
-  const btn=on?`<button class="btn sm ghost" onclick="flEquip('${k}','')">Снять</button>`:it.owned?`<button class="btn sm" onclick="flEquip('${k}','${it.id}')">Надеть</button>`:`<button class="btn sm" onclick="flBuy('${k}','${it.id}')">Купить</button>`;
-  return `<div class="fl-it${on?' on':''}">${icon}<b ${k==='color'?`style="color:${it.hex}"`:''}>${esc(it.name)}</b>${it.owned||on?'':price}${btn}</div>`;
- };
+ const el=$('flB');if(!el)return;
+ const ev={};['flTo','flAm','flDays','flGTo','flGAm'].forEach(k=>{const e=$(k);if(e)ev[k]=e.value});
+ flPrice=d.day_price||0;
+ const mins=Math.ceil(d.next_bonus/6e4),nb=d.bonus<=0?'Бонус за вход сейчас отключён.':d.next_bonus>0?`Бонус за вход <b>+${d.bonus} FL</b> раз в 24 ч. Следующий через ${mins>=60?Math.floor(mins/60)+' ч ':''}${mins%60} мин.`:`Бонус за вход <b>+${d.bonus} FL</b> раз в 24 ч — доступен сейчас.`;
+ const item=(k,it)=>{const on=(k==='color'?d.color:d.badge)===it.id;
+  const icon=k==='badge'?`<div class="fl-ico-wrap">${flBadge(it.id,26)}</div>`:'';
+  return `<div class="fl-it${on?' on':''}">${icon}<b ${k==='color'?`style="color:${it.hex}"`:''}>${esc(it.name)}</b>`+
+  (on?`<button class="btn sm ghost" onclick="flEquip('${k}','')">Снять</button>`:it.owned?`<button class="btn sm" onclick="flEquip('${k}','${it.id}')">Надеть</button>`:`<button class="btn sm" onclick="flBuy('${k}','${it.id}')">${flFmt(it.price)} FL</button>`)+`</div>`};
  const cur=d.colors.find(c=>c.id===d.color),bd=d.badges.find(b=>b.id===d.badge);
- const ev={};['flTo','flAm','flDays','flGTo','flGAm'].forEach(i=>{const e=$(i);if(e)ev[i]=e.value});
- el.innerHTML=`
-<div class="fl-hero">
-  <div class="fl-amt"><em>Ваш баланс</em><b>${flFmt(d.fl)}<span>FL</span></b></div>
-  ${d.bonus>0?`<div class="fl-bonus-chip">${bonusAvail?bonusIcon:clockIcon}<span>${nbText}</span></div>`:''}
-</div>
-
-<div class="fl-sec"><h4>Перевод пользователю</h4></div>
-<div class="fl-panel">
-  <div class="xrow" style="gap:8px">
-    <input id="flTo" placeholder="Ник получателя" style="flex:1">
-    <input id="flAm" type="number" min="1" placeholder="Сумма FL" style="width:110px">
-    <button class="btn sm" onclick="flTransfer()">Отправить</button>
-  </div>
-</div>
-
-<div class="fl-sec"><h4>Дни подписки</h4></div>
-<div class="fl-panel">
-${d.day_price>0?`<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:10px">1 день = <b style="color:#ffd060">${flFmt(d.day_price)} FL</b></div>
-<div class="xrow" style="gap:8px;align-items:center">
-  <input id="flDays" type="number" min="1" max="90" value="1" style="width:80px" oninput="flSum()">
-  <span style="font-size:13px;color:rgba(255,255,255,.4)">дней</span>
-  <span class="fl-days-eq" id="flSum"></span>
-  <button class="btn sm" onclick="flBuyDays()">Купить</button>
-</div>`:'<span style="color:rgba(255,255,255,.35);font-size:13px">Покупка дней сейчас недоступна.</span>'}
-</div>
-
-<div class="fl-sec"><h4>Цвет ника в чате</h4></div>
-<div class="fl-g">${d.colors.map(c=>item('color',c)).join('')}</div>
-
-<div class="fl-sec"><h4>Бейдж в чате</h4></div>
-<div class="fl-g">${d.badges.map(b=>item('badge',b)).join('')}</div>
-
-<div class="fl-sec"><h4>Как вы выглядите в чате</h4></div>
-<div class="fl-preview">${bd?`<span class="fl-bd">${flBadge(bd.id,18)}</span>`:''}<b${cur?` style="color:${cur.hex}"`:''}>${esc(user.username)}</b></div>
-
-<div class="fl-sec" style="margin-top:24px"><h4>История FL</h4></div>
-<div class="fl-hist">${d.log.length?d.log.map(l=>`<div class="fl-hist-row"><span class="fh-amt ${l.delta>0?'pos':'neg'}">${l.delta>0?'+':''}${flFmt(l.delta)} FL</span><span class="fh-reason">${esc(l.reason)}</span><span class="fh-ts">${dt(l.ts)}</span></div>`).join(''):'<span style="color:rgba(255,255,255,.25);font-size:13px;padding:8px 0">История пуста</span>'}
-</div>
-
-${d.cfg?`<div class="fl-admin">
-  <h4>Админ: выдать / списать FL</h4>
-  <div class="xrow" style="gap:8px;margin-bottom:12px"><input id="flGTo" placeholder="Ник" style="flex:1"><input id="flGAm" type="number" placeholder="± сумма" style="width:110px"><button class="btn sm" onclick="flGive()">Применить</button></div>
-  <h4 style="margin-top:10px!important">Настройки FL</h4>
-  <div class="xrow" style="gap:10px;flex-wrap:wrap;margin-top:8px">
-    <label style="font-size:13px;color:rgba(255,255,255,.5)">Бонус за вход</label><input id="flCb" type="number" min="0" value="${d.cfg.bonus}" style="width:80px">
-    <label style="font-size:13px;color:rgba(255,255,255,.5)">Цена дня</label><input id="flCp" type="number" min="0" value="${d.cfg.day_price}" style="width:80px">
-    <label style="font-size:13px;display:flex;align-items:center;gap:6px"><input id="flCi" type="checkbox"${d.cfg.ip_limit?' checked':''}> 1 бонус / IP</label>
-    <button class="btn sm" onclick="flCfgSave()">Сохранить</button>
-  </div>
-</div>`:''}`;
+ const coin=`<svg viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 23 9.5 17.5 15 19 22.5 12 19 5 22.5 6.5 15 1 9.5 8.5 8.5"/></svg>`;
+ el.innerHTML=`<div class="fl-bal-wrap"><div class="fl-bal-ico">${coin}</div><div><div class="fl-bal">${flFmt(d.fl)}<span>FL</span></div><div class="fl-bonus">${nb}</div></div></div>
+ <div class="fl-sec"><h4>Перевод пользователю</h4><div class="xrow"><input id="flTo" placeholder="Ник" style="flex:1"><input id="flAm" type="number" min="1" placeholder="Сумма" style="width:100px"><button class="btn sm" onclick="flTransfer()">Отправить</button></div></div>
+ <div class="fl-sec"><h4>Дни подписки</h4>${d.day_price>0?`<small style="display:block;margin-bottom:6px;color:var(--m)">1 день = <b style="color:#ffd060">${flFmt(d.day_price)} FL</b></small><div class="xrow"><input id="flDays" type="number" min="1" max="90" value="1" style="width:90px" oninput="flSum()"><span id="flSum" style="font-size:13px;color:#ffd060;font-weight:700"></span><button class="btn sm" onclick="flBuyDays()">Купить</button></div>`:'<small>Покупка дней сейчас отключена.</small>'}</div>
+ <div class="fl-sec"><h4>Цвет ника в чате</h4><div class="fl-g">${d.colors.map(c=>item('color',c)).join('')}</div></div>
+ <div class="fl-sec"><h4>Бейдж в чате</h4><div class="fl-g">${d.badges.map(b=>item('badge',b)).join('')}</div></div>
+ <div class="fl-sec"><h4>Превью в чате</h4><div class="fl-preview">${bd?`<span class="fl-bd">${flBadge(bd.id,16)}</span>`:''}<b${cur?` style="color:${cur.hex}"`:''}>${esc(user.username)}</b></div></div>
+ <div class="fl-sec fl-hist"><h4>История FL</h4>${d.log.length?`<div class="xtl">${d.log.map(l=>`<div><b style="color:${l.delta>0?'#4cd97b':'#ff6b8a'}">${l.delta>0?'+':''}${flFmt(l.delta)} FL</b> ${esc(l.reason)}<small>${dt(l.ts)}</small></div>`).join('')}</div>`:'<small>Пока пусто</small>'}</div>
+ ${d.cfg?`<div class="fl-sec"><h4>Админ: выдать / списать FL</h4><div class="xrow"><input id="flGTo" placeholder="Ник" style="flex:1"><input id="flGAm" type="number" placeholder="± сумма" style="width:110px"><button class="btn sm" onclick="flGive()">Применить</button></div>
+ <h4 style="margin-top:14px">Админ: настройки FL</h4><div class="xrow"><span style="font-size:13px">Бонус за вход</span><input id="flCb" type="number" min="0" value="${d.cfg.bonus}" style="width:80px"><span style="font-size:13px">Цена дня</span><input id="flCp" type="number" min="0" value="${d.cfg.day_price}" style="width:80px"><label style="font-size:13px"><input id="flCi" type="checkbox"${d.cfg.ip_limit?' checked':''}> 1 бонус на IP / сутки</label><button class="btn sm" onclick="flCfgSave()">Сохранить</button></div></div>`:''}`;
  for(const k in ev){const e=$(k);if(e&&ev[k])e.value=ev[k]}window.flSum();
- // sync header balance
- const ha=$('flAmt');if(ha)ha.textContent=flFmt(d.fl)+' FL';
- const hb=$('flBalance');if(hb)hb.style.display=user?'inline-flex':'none';
 }
-window.flSum=()=>{const e=$('flSum'),i=$('flDays');if(e&&i){const total=(+i.value||0)*flPrice;e.innerHTML=total>0?`<span style="color:#ffd060;font-weight:800">= ${flFmt(total)} FL</span>`:'';}};
+window.flSum=()=>{const e=$('flSum'),i=$('flDays');if(e&&i)e.textContent='= '+flFmt((+i.value||0)*flPrice)+' FL'};
 window.flTransfer=async()=>{try{const r=await post('/api/fl/transfer',{to:$('flTo').value,amount:+$('flAm').value});toast('Переведено. Баланс: '+flFmt(r.fl)+' FL');$('flAm').value='';flAfter()}catch(e){toast(e.message,1)}};
 window.flBuyDays=async()=>{const d=+$('flDays').value;if(!confirm('Купить '+d+' дн. подписки?'))return;try{const r=await post('/api/fl/buy_days',{days:d});toast('Добавлено дней: '+r.days);flAfter();try{init()}catch{}}catch(e){toast(e.message,1)}};
 window.flBuy=async(k,id)=>{try{await post('/api/fl/buy_item',{kind:k,id});toast('Куплено и надето');flAfter()}catch(e){toast(e.message,1)}};
