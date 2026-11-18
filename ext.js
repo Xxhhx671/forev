@@ -136,7 +136,7 @@ api.get=(req,res,C)=>{
 // ---- POST ----
 api.post=(url,b,req,res,C)=>{
  const {send}=C,bad=(m,c=400)=>(send(res,c,{error:m}),true),ok=o=>(send(res,200,o),true);
- const u0=C.authUser(req);if(!u0)return false;const me=row(u0.id),admin=!!me.is_admin,mod=admin||me.role==='moderator';
+ const u0=C.authUser(req);if(!u0)return false;const me=row(u0.id)||u0;if(!me)return false;const admin=!!me.is_admin,mod=admin||me.role==='moderator';
  // chat
  if(url==='/api/chat/send'){
   if(me.chat_banned)return bad('Вы заблокированы в чате',403);

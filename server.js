@@ -765,6 +765,16 @@ const srv=http.createServer(async(req,res)=>{
       }
       res.writeHead(404);return res.end('Not found');
     }
+    if(req.method==='OPTIONS'){
+      res.writeHead(204,{
+        'Access-Control-Allow-Origin':req.headers.origin||'*',
+        'Access-Control-Allow-Methods':'GET,POST,OPTIONS',
+        'Access-Control-Allow-Headers':'Content-Type,X-Admin-Token',
+        'Access-Control-Allow-Credentials':'true',
+        'Access-Control-Max-Age':'86400'
+      });
+      return res.end();
+    }
     if(req.url.startsWith('/api/'))thaw();
 
     if(req.url.startsWith('/api/loader/download') && req.method==='GET'){
@@ -857,10 +867,12 @@ const srv=http.createServer(async(req,res)=>{
 
     if(req.url==='/api/me'&&req.method==='GET'){
       const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'});
+      try{ext.onLogin(u.id,reqIp(req))}catch{}
+      let flNow=0;try{flNow=(db.prepare('SELECT fl FROM users WHERE id=?').get(u.id)||{}).fl||0}catch{flNow=u.fl||0}
       const cnt=q=>db.prepare(q).get(u.id).c,{ref_code,referred_by,ref_paid,...pu}=u;
       const activity=db.prepare("SELECT strftime('%Y-%m-%d',ts/1000,'unixepoch') d,COUNT(*) c FROM logins WHERE user_id=? AND ok=1 AND ts>? GROUP BY d ORDER BY d").all(u.id,Date.now()-90*DAY);
       const resellerInfo = canReseller(u) ? {keys:u.reseller_keys||0,limit:u.is_admin?999999:(u.reseller_limit||0),left:u.is_admin?999999:Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0))} : null;
-      return send(res,200,{...pu,fl:u.fl||0,fl_balance:u.fl||0,active:active(u),is_tester:!!u.is_tester,is_super:!!u.is_super,super:isSuper(u),fz:{max:FZ_MAX,cool:FZ_COOL},cool_until:u.last_unfreeze?u.last_unfreeze+FZ_COOL*DAY:0,
+      return send(res,200,{...pu,fl:flNow,fl_balance:flNow,active:active(u),is_tester:!!u.is_tester,is_super:!!u.is_super,super:isSuper(u),fz:{max:FZ_MAX,cool:FZ_COOL},cool_until:u.last_unfreeze?u.last_unfreeze+FZ_COOL*DAY:0,
         ref:{code:ref_code,invited:cnt('SELECT COUNT(*) c FROM users WHERE referred_by=?'),paid:cnt('SELECT COUNT(*) c FROM users WHERE referred_by=? AND ref_paid=1'),days:REF},
         reseller:resellerInfo,
         activity});
@@ -904,7 +916,7 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{list:rows,full,last,me:u.id,admin:!!u.is_admin,online:chatSeen.size},{'Cache-Control':'no-store'});
     }
     if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'Не найдено'});
-    const url=req.url,strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password','/api/login/2fa'].includes(url);
+    const url=req.url.split('?')[0],strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password','/api/login/2fa'].includes(url);
     if(strict?rl('a'+ip,12,3e5):rl('g'+ip,100,3e5))return send(res,429,{error:'Слишком много попыток, подождите'});
     const b=await body(req);
     const bad=(m,c=400)=>send(res,c,{error:m});
@@ -1639,7 +1651,9 @@ const srv=http.createServer(async(req,res)=>{
         claimTrial(hwid, uid, ip, signalIps, idSignals);
       }
       logLogin(uid,ip,'reg',1,ipInfo);
-      return send(res,200,{ok:true,trial:trialGranted,trial_key:trialKey||null,trial_days:trialGranted?TRIAL:0,trust},login(res,uid,req));
+      try{ext.onLogin(uid,ip)}catch{}
+      let flBal=0;try{flBal=(db.prepare('SELECT fl FROM users WHERE id=?').get(uid)||{}).fl||0}catch{}
+      return send(res,200,{ok:true,trial:trialGranted,trial_key:trialKey||null,trial_days:trialGranted?TRIAL:0,trust,fl:flBal,fl_balance:flBal},login(res,uid,req));
     }
     if(url==='/api/login'){
       if(isIpBanned(ip))return bad('IP заблокирован',403);
