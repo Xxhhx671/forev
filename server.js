@@ -263,7 +263,7 @@ async function scanExpiryNotices(){
   }catch(e){console.error('scanExpiry',e.message)}
 }
 
-const MIME={'.html':'text/html; charset=utf-8','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon','.svg':'image/svg+xml','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json'};
+const MIME={'.html':'text/html; charset=utf-8','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.ico':'image/x-icon','.svg':'image/svg+xml','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json'};
 const SEC=process.env.NODE_ENV==='production'?'; Secure':'';
 const makeKey=()=>'FOREV-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');
 const hashPw=(pw,salt)=>crypto.scryptSync(pw,salt,64).toString('hex');
@@ -1655,7 +1655,8 @@ const srv=http.createServer(async(req,res)=>{
       clearFails(ip);
       if(ext.totpOn(f.id))return send(res,200,{need_2fa:true,pt:ext.pend(f.id)});
       ext.onLogin(f.id,ip);logLogin(f.id,ip,'web',1);
-      return send(res,200,{ok:true},login(res,f.id,req));
+      let flBal=0;try{flBal=(db.prepare('SELECT fl FROM users WHERE id=?').get(f.id)||{}).fl||0}catch{}
+      return send(res,200,{ok:true,fl:flBal,fl_balance:flBal},login(res,f.id,req));
     }
     if(url==='/api/logout'){
       db.prepare('DELETE FROM sessions WHERE token=?').run(cookie(req).sid||'');

@@ -234,6 +234,23 @@ if(!url.startsWith('/api/admin/'))return false;
  }
 
  // ---- Forum / Profile (любой авторизованный) ----
+ if(url==='/api/forum/cats'){
+  const counts=Object.fromEntries(db.prepare('SELECT cat,COUNT(*) c FROM forum_posts GROUP BY cat').all().map(r=>[r.cat,r.c]));
+  return ok({cats:Object.entries(FORUM_CATS).map(([id,c])=>({id,name:c.name,staff:!!c.staff,group:c.group,count:counts[id]||0})),staff:isStaff(me)});
+ }
+ if(url==='/api/forum/list'){
+  const cat=String(b.cat||'').slice(0,40);if(!FORUM_CATS[cat])return bad('Категория');
+  const rows=db.prepare('SELECT p.id,p.cat,p.title,p.body,p.ts,p.pinned,p.user_id,u.username,u.avatar,u.is_admin,(SELECT COUNT(*) FROM forum_replies r WHERE r.post_id=p.id) replies FROM forum_posts p LEFT JOIN users u ON u.id=p.user_id WHERE p.cat=? ORDER BY p.pinned DESC,p.id DESC LIMIT 80').all(cat)
+   .map(r=>({id:r.id,cat:r.cat,title:r.title,body:r.body,ts:r.ts,pinned:!!r.pinned,uid:r.user_id,username:r.username||'?',avatar:r.avatar||'',is_admin:!!r.is_admin,replies:r.replies}));
+  return ok({list:rows,cat,meta:FORUM_CATS[cat],staff:isStaff(me)});
+ }
+ if(url==='/api/forum/get'){
+  const id=+b.id;const p=db.prepare('SELECT p.*,u.username,u.avatar,u.is_admin FROM forum_posts p LEFT JOIN users u ON u.id=p.user_id WHERE p.id=?').get(id);
+  if(!p)return bad('Не найдено',404);
+  const replies=db.prepare('SELECT r.id,r.body,r.ts,r.user_id,u.username,u.avatar,u.is_admin FROM forum_replies r LEFT JOIN users u ON u.id=r.user_id WHERE r.post_id=? ORDER BY r.id').all(id)
+   .map(r=>({id:r.id,body:r.body,ts:r.ts,uid:r.user_id,username:r.username||'?',avatar:r.avatar||'',is_admin:!!r.is_admin}));
+  return ok({post:{id:p.id,cat:p.cat,title:p.title,body:p.body,ts:p.ts,pinned:!!p.pinned,uid:p.user_id,username:p.username,avatar:p.avatar||'',is_admin:!!p.is_admin},replies,staff:isStaff(me)});
+ }
  if(url==='/api/forum/create'){
   const cat=String(b.cat||'');const meta=FORUM_CATS[cat];if(!meta)return bad('Категория');
   if(meta.staff&&!isStaff(me))return bad('Только staff (код '+STAFF_CODE+')',403);
@@ -257,10 +274,38 @@ if(!url.startsWith('/api/admin/'))return false;
   if(r.user_id!==me.id&&!isStaff(me))return bad('Нет доступа',403);
   db.prepare('DELETE FROM forum_replies WHERE id=?').run(id);return ok({ok:true});
  }
+ if(url==='/api/profile/view'){
+  const name=String(b.u||b.username||'').trim().replace(/^@/,'');
+  const t=name?db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,is_super,role,nick_color,badge,fl FROM users WHERE username=?').get(name):null;
+  if(!t)return bad('Пользователь не найден',404);
+  const likes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=1').get(t.id).c;
+  const dislikes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=-1').get(t.id).c;
+  const my=db.prepare('SELECT v FROM profile_votes WHERE user_id=? AND target_id=?').get(me.id,t.id);
+  const comments=db.prepare('SELECT c.id,c.text,c.ts,c.user_id,u.username,u.avatar FROM profile_comments c LEFT JOIN users u ON u.id=c.user_id WHERE c.target_id=? ORDER BY c.id DESC LIMIT 50').all(t.id)
+   .map(c=>({id:c.id,text:c.text,ts:c.ts,uid:c.user_id,username:c.username||'?',avatar:c.avatar||''}));
+  return ok({user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),fl:t.fl||0},likes,dislikes,myVote:my?my.v:0,comments,me:me.id});
+ }
  if(url==='/api/profile/save'){
-  const banner=String(b.banner||'').slice(0,500),avatar=String(b.avatar||'').slice(0,500),bio=String(b.bio||'').slice(0,500);
+  const banner=String(b.banner||'').slice(0,800),avatar=String(b.avatar||'').slice(0,800),bio=String(b.bio||'').slice(0,500);
   db.prepare('UPDATE users SET banner=?,avatar=?,bio=? WHERE id=?').run(banner,avatar,bio,me.id);
   return ok({ok:true,banner,avatar,bio});
+ }
+ if(url==='/api/upload/image'){
+  // base64 data URL from phone gallery
+  const raw=String(b.data||'');
+  const m=raw.match(/^data:image\/(jpeg|jpg|png|webp|gif);base64,([A-Za-z0-9+/=]+)$/i);
+  if(!m)return bad('Нужна картинка (JPEG/PNG/WebP)');
+  const ext=m[1].toLowerCase()==='jpg'?'jpeg':m[1].toLowerCase();
+  const buf=Buffer.from(m[2],'base64');
+  if(buf.length<100)return bad('Файл слишком маленький');
+  if(buf.length>900000)return bad('Файл слишком большой (макс ~700КБ после сжатия)');
+  const fs=require('fs'),path=require('path');
+  const dir=path.join(__dirname,'public','uploads');
+  try{fs.mkdirSync(dir,{recursive:true})}catch{}
+  const name='u'+me.id+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
+  fs.writeFileSync(path.join(dir,name),buf);
+  const url='/uploads/'+name;
+  return ok({ok:true,url});
  }
  if(url==='/api/profile/vote'){
   const tid=+b.id;if(!tid||tid===me.id)return bad('Нельзя');
