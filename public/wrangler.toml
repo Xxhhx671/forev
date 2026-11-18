@@ -1,8 +1,0 @@
-﻿name = "forev-ext1"
-compatibility_date = "2025-01-01"
-
-# Static site deployment (frontend). Deploy with: npx wrangler deploy
-# For local Node backend use: npm run start:node
-[assets]
-directory = "./public"
-not_found_handling = "single-page-application"
