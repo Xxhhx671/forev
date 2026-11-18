@@ -151,7 +151,7 @@ function getLoaderUser(token, hwid){
   const s=db.prepare('SELECT * FROM loader_sessions WHERE token=? AND expires>?').get(t, Date.now());
   if(!s) return null;
   if(s.hwid && s.hwid !== h) return null;
-  const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit,is_tester,is_super FROM users WHERE id=?').get(s.user_id);
+  const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit,is_tester,is_super,fl FROM users WHERE id=?').get(s.user_id);
   if(!u || u.banned) return null;
   db.prepare('UPDATE loader_sessions SET last_seen=? WHERE token=?').run(Date.now(), t);
   return u;
@@ -702,7 +702,7 @@ const cookie=req=>Object.fromEntries((req.headers.cookie||'').split(/;\s*/).map(
 const authUser=req=>{
   const t=cookie(req).sid;if(!t)return null;
   const s=db.prepare('SELECT * FROM sessions WHERE token=? AND expires>?').get(t,Date.now());
-  const u=s?db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ref_code,referred_by,ref_paid,frozen_at,last_unfreeze,is_reseller,reseller_keys,reseller_limit,avatar,theme,suspicious,note,is_tester,is_super FROM users WHERE id=?').get(s.user_id):null;
+  const u=s?db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ref_code,referred_by,ref_paid,frozen_at,last_unfreeze,is_reseller,reseller_keys,reseller_limit,avatar,theme,suspicious,note,is_tester,is_super,fl FROM users WHERE id=?').get(s.user_id):null;
   return u&&!u.banned?u:null;
 };
 const isSuper=u=>!!(u && (u.is_super || (u.is_admin && String(MASTER||'').toUpperCase()==='EMIRDI1804')));
@@ -860,7 +860,7 @@ const srv=http.createServer(async(req,res)=>{
       const cnt=q=>db.prepare(q).get(u.id).c,{ref_code,referred_by,ref_paid,...pu}=u;
       const activity=db.prepare("SELECT strftime('%Y-%m-%d',ts/1000,'unixepoch') d,COUNT(*) c FROM logins WHERE user_id=? AND ok=1 AND ts>? GROUP BY d ORDER BY d").all(u.id,Date.now()-90*DAY);
       const resellerInfo = canReseller(u) ? {keys:u.reseller_keys||0,limit:u.is_admin?999999:(u.reseller_limit||0),left:u.is_admin?999999:Math.max(0,(u.reseller_limit||0)-(u.reseller_keys||0))} : null;
-      return send(res,200,{...pu,active:active(u),is_tester:!!u.is_tester,is_super:!!u.is_super,super:isSuper(u),fz:{max:FZ_MAX,cool:FZ_COOL},cool_until:u.last_unfreeze?u.last_unfreeze+FZ_COOL*DAY:0,
+      return send(res,200,{...pu,fl:u.fl||0,fl_balance:u.fl||0,active:active(u),is_tester:!!u.is_tester,is_super:!!u.is_super,super:isSuper(u),fz:{max:FZ_MAX,cool:FZ_COOL},cool_until:u.last_unfreeze?u.last_unfreeze+FZ_COOL*DAY:0,
         ref:{code:ref_code,invited:cnt('SELECT COUNT(*) c FROM users WHERE referred_by=?'),paid:cnt('SELECT COUNT(*) c FROM users WHERE referred_by=? AND ref_paid=1'),days:REF},
         reseller:resellerInfo,
         activity});
@@ -1505,7 +1505,7 @@ const srv=http.createServer(async(req,res)=>{
       const dt=db.prepare('SELECT * FROM loader_download_tokens WHERE token=?').get(token);
       if(!dt) return bad('Ссылка недействительна. Войдите вручную.',401);
       if(dt.expires < Date.now()) return bad('Ссылка истекла. Войдите вручную.',401);
-      const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit,is_tester,is_super FROM users WHERE id=?').get(dt.user_id);
+      const u=db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ban_reason,is_reseller,reseller_keys,reseller_limit,is_tester,is_super,fl FROM users WHERE id=?').get(dt.user_id);
       if(!u) return bad('Пользователь не найден',404);
       if(u.banned) return send(res,200,{ok:false,reason:'banned',banned:true,ban_reason:u.ban_reason||'',username:u.username,active:false,inf:!!u.inf,until:u.inf?0:u.sub_until,frozen:!!u.frozen});
       // consume if fresh; allow re-use from same HWID shortly (retry safety) but keep one-time semantics generally
