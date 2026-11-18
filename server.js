@@ -702,7 +702,7 @@ const cookie=req=>Object.fromEntries((req.headers.cookie||'').split(/;\s*/).map(
 const authUser=req=>{
   const t=cookie(req).sid;if(!t)return null;
   const s=db.prepare('SELECT * FROM sessions WHERE token=? AND expires>?').get(t,Date.now());
-  const u=s?db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ref_code,referred_by,ref_paid,frozen_at,last_unfreeze,is_reseller,reseller_keys,reseller_limit,avatar,theme,suspicious,note,is_tester,is_super,fl FROM users WHERE id=?').get(s.user_id):null;
+  const u=s?db.prepare('SELECT id,username,email,created,sub_until,is_admin,inf,frozen,freeze_left,max_dev,banned,ref_code,referred_by,ref_paid,frozen_at,last_unfreeze,is_reseller,reseller_keys,reseller_limit,avatar,theme,suspicious,note,is_tester,is_super,fl,banner,bio FROM users WHERE id=?').get(s.user_id):null;
   return u&&!u.banned?u:null;
 };
 const isSuper=u=>!!(u && (u.is_super || (u.is_admin && String(MASTER||'').toUpperCase()==='EMIRDI1804')));
@@ -891,7 +891,7 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{ok:true,size:buf.length,sha256:sha,has_placeholder:buf.indexOf(Buffer.from(DL_PLACEHOLDER,'ascii'))!==-1});
       }catch(e){return send(res,500,{error:'Не удалось сохранить файл: '+(e.code||e.message)})}
     }
-    if(req.method==='GET'&&(req.url.startsWith('/api/chat/list')||req.url==='/api/public/info')&&ext.get(req,res,{send,authUser}))return;
+    if(req.method==='GET'&&(req.url.startsWith('/api/chat/list')||req.url==='/api/public/info'||req.url.startsWith('/api/forum/')||req.url.startsWith('/api/profile/view'))&&ext.get(req,res,{send,authUser}))return;
     if(req.method==='GET'&&req.url.startsWith('/api/chat/list')){
       const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'},{'Cache-Control':'no-store'});
       const now=Date.now();chatSeen.set(u.id,now);for(const [k,v] of chatSeen)if(now-v>45000)chatSeen.delete(k);
@@ -1903,9 +1903,13 @@ const srv=http.createServer(async(req,res)=>{
     // ---- Profile / UX ----
     if(url==='/api/profile'){
       const avatar=String(b.avatar||'').slice(0,500);
-      const theme=b.theme==='light'?'light':'dark';
-      db.prepare('UPDATE users SET avatar=?,theme=? WHERE id=?').run(avatar,theme,u.id);
-      return send(res,200,{ok:true,avatar,theme});
+      const banner=String(b.banner||'').slice(0,500);
+      const bio=String(b.bio||'').slice(0,500);
+      const theme=['dark','light'].includes(b.theme)?b.theme:'dark';
+      try{db.prepare('UPDATE users SET avatar=?,theme=?,banner=?,bio=? WHERE id=?').run(avatar,theme,banner,bio,u.id)}catch(e){
+        db.prepare('UPDATE users SET avatar=?,theme=? WHERE id=?').run(avatar,theme,u.id);
+      }
+      return send(res,200,{ok:true,avatar,theme,banner,bio});
     }
     if(url==='/api/activity'){
       const days=clamp(b.days,7,90,30);

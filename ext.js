@@ -9,7 +9,24 @@ CREATE TABLE IF NOT EXISTS config_fav(user_id INTEGER,config_id INTEGER,PRIMARY 
 CREATE TABLE IF NOT EXISTS config_rate(user_id INTEGER,config_id INTEGER,stars INTEGER,PRIMARY KEY(user_id,config_id));
 CREATE TABLE IF NOT EXISTS faq(id INTEGER PRIMARY KEY,q TEXT,a TEXT,ts INTEGER);
 CREATE TABLE IF NOT EXISTS changelog(id INTEGER PRIMARY KEY,version TEXT,title TEXT,text TEXT,ts INTEGER);
-CREATE TABLE IF NOT EXISTS reviews(id INTEGER PRIMARY KEY,user_id INTEGER UNIQUE,text TEXT,stars INTEGER,approved INTEGER DEFAULT 0,ts INTEGER);`);
+CREATE TABLE IF NOT EXISTS reviews(id INTEGER PRIMARY KEY,user_id INTEGER UNIQUE,text TEXT,stars INTEGER,approved INTEGER DEFAULT 0,ts INTEGER);
+CREATE TABLE IF NOT EXISTS forum_posts(id INTEGER PRIMARY KEY,cat TEXT,user_id INTEGER,title TEXT,body TEXT,ts INTEGER,pinned INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS forum_replies(id INTEGER PRIMARY KEY,post_id INTEGER,user_id INTEGER,body TEXT,ts INTEGER);
+CREATE TABLE IF NOT EXISTS profile_votes(user_id INTEGER,target_id INTEGER,v INTEGER,PRIMARY KEY(user_id,target_id));
+CREATE TABLE IF NOT EXISTS profile_comments(id INTEGER PRIMARY KEY,target_id INTEGER,user_id INTEGER,text TEXT,ts INTEGER);`);
+for(const c of ["banner TEXT DEFAULT ''","bio TEXT DEFAULT ''"])run('ALTER TABLE users ADD COLUMN '+c);
+const STAFF_CODE='EmirDI1804';
+const FORUM_CATS={
+ news:{name:'News',staff:1,group:'Staff'},
+ updates:{name:'Updates',staff:1,group:'Staff'},
+ global:{name:'Global',staff:0,group:'Community'},
+ cheats:{name:'Cheats',staff:0,group:'Community'},
+ crack:{name:'Crack',staff:0,group:'Community'},
+ sources:{name:'Исходники читов',staff:0,group:'Community'},
+ guides:{name:'Гайды',staff:0,group:'Community'}
+};
+const isStaff=u=>!!(u&&(u.is_admin||String(u.username||'')===STAFF_CODE));
+
 const get=k=>(db.prepare('SELECT value FROM settings WHERE key=?').get(k)||{}).value,set=(k,v)=>db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run(k,String(v));
 const notify=(uid,t)=>db.prepare('INSERT INTO notifications(user_id,text,read,ts) VALUES(?,?,0,?)').run(uid,t,Date.now());
 const seen=new Map(),last=new Map(),ment=new Map(),pend=new Map();
@@ -41,7 +58,7 @@ CREATE TABLE IF NOT EXISTS fl_bonus_ip(ip TEXT,user_id INTEGER,ts INTEGER);`);
 // каталог: id -> [название, hex, цена]  /  id -> [значок, название, цена]
 const FL_COLORS={red:['Красный','#ff5c6c',120],orange:['Оранжевый','#ff9f43',120],yellow:['Жёлтый','#ffd93d',120],green:['Зелёный','#4cd97b',120],cyan:['Голубой','#38d6e8',120],blue:['Синий','#5aa2ff',120],purple:['Фиолетовый','#b57bff',120],pink:['Розовый','#ff7eb6',120]};
 // значки рисуются на фронте (SVG по id), первый элемент не используется
-const FL_BADGES={star:['','Искра',150],moon:['','Луна',150],bolt:['','Молния',250],fire:['','Огонь',300],gem:['','Алмаз',500],crown:['','Корона',800]};
+const FL_BADGES={star:['','Искра',150],moon:['','Луна',150],bolt:['','Молния',250],fire:['','Огонь',300]};
 const flNum=(k,d)=>{const v=get(k);return v===undefined||v===null||v===''||isNaN(+v)?d:+v};
 const flCfg=()=>({bonus:flNum('fl_login_bonus',1),day_price:flNum('fl_day_price',60),ip_limit:flNum('fl_ip_limit',1)?1:0});
 const flLog=(uid,delta,reason,peer)=>db.prepare('INSERT INTO fl_log(user_id,delta,reason,peer,ts) VALUES(?,?,?,?,?)').run(uid,delta,String(reason).slice(0,120),String(peer||'').slice(0,40),Date.now());
@@ -78,6 +95,41 @@ api.get=(req,res,C)=>{
   const me=row(u.id);
   return C.send(res,200,{list:rows,full,last:db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs').get().m,me:u.id,me_name:u.username,admin:mod,online:seen.size,muted:me.chat_muted_until>now?me.chat_muted_until:0,banned:!!me.chat_banned,slow:+(get('chat_slow')||0)},{'Cache-Control':'no-store'}),true;
  }
+ 
+ // ---- Forum / Profile GET ----
+ if(url.startsWith('/api/forum/')||url==='/api/profile/view'){
+  const u=C.authUser(req);if(!u)return C.send(res,401,{error:'Не авторизован'}),true;
+  const qs=new URL(req.url,'http://x').searchParams;
+  if(url==='/api/forum/cats'){
+   const counts=Object.fromEntries(db.prepare('SELECT cat,COUNT(*) c FROM forum_posts GROUP BY cat').all().map(r=>[r.cat,r.c]));
+   return C.send(res,200,{cats:Object.entries(FORUM_CATS).map(([id,c])=>({id,name:c.name,staff:!!c.staff,group:c.group,count:counts[id]||0})),staff:isStaff(u)}),true;
+  }
+  if(url==='/api/forum/list'){
+   const cat=String(qs.get('cat')||'').slice(0,40);if(!FORUM_CATS[cat])return C.send(res,400,{error:'Категория'}),true;
+   const rows=db.prepare('SELECT p.id,p.cat,p.title,p.body,p.ts,p.pinned,p.user_id,u.username,u.avatar,u.is_admin,(SELECT COUNT(*) FROM forum_replies r WHERE r.post_id=p.id) replies FROM forum_posts p LEFT JOIN users u ON u.id=p.user_id WHERE p.cat=? ORDER BY p.pinned DESC,p.id DESC LIMIT 80').all(cat)
+    .map(r=>({id:r.id,cat:r.cat,title:r.title,body:r.body,ts:r.ts,pinned:!!r.pinned,uid:r.user_id,username:r.username||'?',avatar:r.avatar||'',is_admin:!!r.is_admin,replies:r.replies}));
+   return C.send(res,200,{list:rows,cat,meta:FORUM_CATS[cat],staff:isStaff(u)}),true;
+  }
+  if(url==='/api/forum/post'){
+   const id=+(qs.get('id')||0);const p=db.prepare('SELECT p.*,u.username,u.avatar,u.is_admin FROM forum_posts p LEFT JOIN users u ON u.id=p.user_id WHERE p.id=?').get(id);
+   if(!p)return C.send(res,404,{error:'Не найдено'}),true;
+   const replies=db.prepare('SELECT r.id,r.body,r.ts,r.user_id,u.username,u.avatar,u.is_admin FROM forum_replies r LEFT JOIN users u ON u.id=r.user_id WHERE r.post_id=? ORDER BY r.id').all(id)
+    .map(r=>({id:r.id,body:r.body,ts:r.ts,uid:r.user_id,username:r.username||'?',avatar:r.avatar||'',is_admin:!!r.is_admin}));
+   return C.send(res,200,{post:{id:p.id,cat:p.cat,title:p.title,body:p.body,ts:p.ts,pinned:!!p.pinned,uid:p.user_id,username:p.username,avatar:p.avatar||'',is_admin:!!p.is_admin},replies,staff:isStaff(u)}),true;
+  }
+  if(url==='/api/profile/view'){
+   const name=String(qs.get('u')||'').trim().replace(/^@/,'');
+   const t=name?db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,is_super,role,nick_color,badge,fl FROM users WHERE username=?').get(name):null;
+   if(!t)return C.send(res,404,{error:'Пользователь не найден'}),true;
+   const likes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=1').get(t.id).c;
+   const dislikes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=-1').get(t.id).c;
+   const my=db.prepare('SELECT v FROM profile_votes WHERE user_id=? AND target_id=?').get(u.id,t.id);
+   const comments=db.prepare('SELECT c.id,c.text,c.ts,c.user_id,u.username,u.avatar FROM profile_comments c LEFT JOIN users u ON u.id=c.user_id WHERE c.target_id=? ORDER BY c.id DESC LIMIT 50').all(t.id)
+    .map(c=>({id:c.id,text:c.text,ts:c.ts,uid:c.user_id,username:c.username||'?',avatar:c.avatar||''}));
+   return C.send(res,200,{user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),fl:t.fl||0},likes,dislikes,myVote:my?my.v:0,comments,me:u.id}),true;
+  }
+ }
+
  return false;
 };
 
@@ -180,15 +232,75 @@ if(!url.startsWith('/api/admin/'))return false;
   if(url==='/api/admin/chat/word_del'){db.prepare('DELETE FROM chat_words WHERE word=?').run(String(b.word||''));return ok({ok:true})}
   return false;
  }
+
+ // ---- Forum / Profile (любой авторизованный) ----
+ if(url==='/api/forum/create'){
+  const cat=String(b.cat||'');const meta=FORUM_CATS[cat];if(!meta)return bad('Категория');
+  if(meta.staff&&!isStaff(me))return bad('Только staff (код '+STAFF_CODE+')',403);
+  const title=slim(b.title).slice(0,120),body=slim(b.body).slice(0,8000);if(!title||!body)return bad('Заголовок и текст');
+  const r=db.prepare('INSERT INTO forum_posts(cat,user_id,title,body,ts,pinned) VALUES(?,?,?,?,?,0)').run(cat,me.id,title,body,Date.now());
+  return ok({ok:true,id:Number(r.lastInsertRowid)});
+ }
+ if(url==='/api/forum/reply'){
+  const pid=+b.post_id;const p=db.prepare('SELECT id,cat FROM forum_posts WHERE id=?').get(pid);if(!p)return bad('Пост не найден',404);
+  const body=slim(b.body).slice(0,4000);if(!body)return bad('Пусто');
+  const r=db.prepare('INSERT INTO forum_replies(post_id,user_id,body,ts) VALUES(?,?,?,?)').run(pid,me.id,body,Date.now());
+  return ok({ok:true,id:Number(r.lastInsertRowid)});
+ }
+ if(url==='/api/forum/del'){
+  const id=+b.id;const p=db.prepare('SELECT * FROM forum_posts WHERE id=?').get(id);if(!p)return bad('Нет',404);
+  if(p.user_id!==me.id&&!isStaff(me))return bad('Нет доступа',403);
+  db.prepare('DELETE FROM forum_replies WHERE post_id=?').run(id);db.prepare('DELETE FROM forum_posts WHERE id=?').run(id);return ok({ok:true});
+ }
+ if(url==='/api/forum/del_reply'){
+  const id=+b.id;const r=db.prepare('SELECT * FROM forum_replies WHERE id=?').get(id);if(!r)return bad('Нет',404);
+  if(r.user_id!==me.id&&!isStaff(me))return bad('Нет доступа',403);
+  db.prepare('DELETE FROM forum_replies WHERE id=?').run(id);return ok({ok:true});
+ }
+ if(url==='/api/profile/save'){
+  const banner=String(b.banner||'').slice(0,500),avatar=String(b.avatar||'').slice(0,500),bio=String(b.bio||'').slice(0,500);
+  db.prepare('UPDATE users SET banner=?,avatar=?,bio=? WHERE id=?').run(banner,avatar,bio,me.id);
+  return ok({ok:true,banner,avatar,bio});
+ }
+ if(url==='/api/profile/vote'){
+  const tid=+b.id;if(!tid||tid===me.id)return bad('Нельзя');
+  const v=+b.v;if(v!==1&&v!==-1&&v!==0)return bad('Голос');
+  if(v===0)db.prepare('DELETE FROM profile_votes WHERE user_id=? AND target_id=?').run(me.id,tid);
+  else db.prepare('INSERT OR REPLACE INTO profile_votes(user_id,target_id,v) VALUES(?,?,?)').run(me.id,tid,v);
+  const likes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=1').get(tid).c;
+  const dislikes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=-1').get(tid).c;
+  return ok({ok:true,likes,dislikes});
+ }
+ if(url==='/api/profile/comment'){
+  const tid=+b.id;const text=slim(b.text).slice(0,500);if(!tid||!text)return bad('Пусто');
+  if(!db.prepare('SELECT id FROM users WHERE id=?').get(tid))return bad('Нет пользователя',404);
+  const r=db.prepare('INSERT INTO profile_comments(target_id,user_id,text,ts) VALUES(?,?,?,?)').run(tid,me.id,text,Date.now());
+  return ok({ok:true,id:Number(r.lastInsertRowid)});
+ }
+ if(url==='/api/profile/del_comment'){
+  const id=+b.id;const c=db.prepare('SELECT * FROM profile_comments WHERE id=?').get(id);if(!c)return bad('Нет',404);
+  if(c.user_id!==me.id&&c.target_id!==me.id&&!admin)return bad('Нет доступа',403);
+  db.prepare('DELETE FROM profile_comments WHERE id=?').run(id);return ok({ok:true});
+ }
+
  if(!admin)return false;
 
  // ---- FL (админ) ----
+
  if(url==='/api/admin/fl/give'){
   const amt=Math.trunc(+b.amount);if(!amt||Math.abs(amt)>1e7)return bad('Сумма: не 0 и не больше 10 000 000 по модулю');
-  const t=db.prepare('SELECT id,username,fl FROM users WHERE username=?').get(String(b.to||'').trim().replace(/^@/,''));if(!t)return bad('Пользователь не найден',404);
+  // all users
+  if(b.all){
+   const users=db.prepare('SELECT id,username,fl FROM users').all();
+   let n=0;C.tx(()=>{for(const t of users){if(amt<0&&(t.fl||0)+amt<0)continue;flAdd(t.id,amt,amt>0?'Выдано всем (админ)':'Списано у всех (админ)');n++}});
+   C.logAudit(me.id,'fl_give_all','',String(amt)+' x'+n);return ok({ok:true,count:n,amount:amt});
+  }
+  const name=String(b.to||'').trim().replace(/^@/,'');
+  const t=name?db.prepare('SELECT id,username,fl FROM users WHERE username=?').get(name):db.prepare('SELECT id,username,fl FROM users WHERE id=?').get(me.id);
+  if(!t)return bad('Пользователь не найден',404);
   if(amt<0&&(t.fl||0)+amt<0)return bad('У пользователя только '+(t.fl||0)+' FL');
   flAdd(t.id,amt,amt>0?'Выдано админом':'Списано админом');notify(t.id,(amt>0?'+':'')+amt+' FL (админ)');C.logAudit(me.id,'fl_give',t.username,String(amt));
-  return ok({ok:true,username:t.username,fl:(t.fl||0)+amt});
+  return ok({ok:true,username:t.username,fl:flBal(t.id)});
  }
  if(url==='/api/admin/fl/config'){
   const n=(v,d,mx)=>{v=Math.trunc(+v);return isNaN(v)||v<0||v>mx?d:v};const c=flCfg();
