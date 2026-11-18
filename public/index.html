@@ -630,43 +630,78 @@ footer{border-top:1px solid var(--line);color:var(--mut);padding:34px 5vw;text-a
 .prof .av img,.avatar{object-fit:cover}
 
 /* ===== chat ===== */
-.ch-fab{position:fixed;left:18px;bottom:18px;z-index:98;width:52px;height:52px;border-radius:16px;border:1px solid rgba(120,190,255,.4);
-  background:linear-gradient(135deg,#4aa6ff,#1f70d6);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;
-  box-shadow:0 10px 30px rgba(59,158,255,.45);transition:transform .2s}
-.ch-fab:hover{transform:translateY(-2px) scale(1.05)}
-.ch-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:#ff3d5a;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid #05070c}
-.ch-panel{position:fixed;left:18px;bottom:82px;z-index:98;width:370px;max-width:calc(100vw - 24px);height:520px;max-height:calc(100vh - 110px);
-  display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:rgba(9,12,20,.97);border:1px solid rgba(255,255,255,.1);
-  box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 40px rgba(59,158,255,.08);backdrop-filter:blur(18px);
-  opacity:0;visibility:hidden;transform:translateY(14px) scale(.98);transform-origin:left bottom;transition:opacity .22s,transform .22s,visibility .22s}
+.ch-fab,.ch-panel{--c-bg:#0c1118;--c-bg2:#141b26;--c-ln:rgba(255,255,255,.07);--c-tx:#e8edf6;--c-mu:#8793a8;--c-me:#2f7fe0;--c-in:#121823;--nl:70%}
+html.light .ch-fab,html.light .ch-panel{--c-bg:#fff;--c-bg2:#f1f4f9;--c-ln:rgba(0,0,0,.09);--c-tx:#111827;--c-mu:#6a7587;--c-me:#2563eb;--c-in:#eef1f6;--nl:36%}
+.ch-fab{position:fixed;left:20px;bottom:20px;z-index:98;width:54px;height:54px;border-radius:50%;border:0;background:var(--c-me);color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 10px 24px -8px rgba(47,127,224,.7);transition:transform .2s}
+.ch-fab:hover{transform:scale(1.06)}
+.ch-fab:active{transform:scale(.96)}
+.ch-badge{position:absolute;top:-3px;right:-3px;min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:#ff4d6a;color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid var(--c-bg)}
+.ch-panel{position:fixed;left:20px;bottom:86px;z-index:98;width:380px;max-width:calc(100vw - 24px);height:560px;max-height:calc(100vh - 110px);
+  display:flex;flex-direction:column;border-radius:18px;overflow:hidden;background:var(--c-bg);color:var(--c-tx);border:1px solid var(--c-ln);
+  box-shadow:0 28px 60px -14px rgba(0,0,0,.6);opacity:0;visibility:hidden;transform:translateY(10px) scale(.98);transform-origin:bottom left;
+  transition:opacity .18s ease,transform .18s ease,visibility .18s}
 .ch-panel.on{opacity:1;visibility:visible;transform:none}
-.ch-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(59,158,255,.12),transparent)}
-.ch-head b{display:block;font-size:15px;color:#fff}.ch-head small{font-size:11.5px;color:#7fd6a8}
-.ch-head small::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ee68a;margin-right:6px;box-shadow:0 0 8px #2ee68a}
-.ch-actions{display:flex;gap:8px}
-.ch-actions button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
-.ch-actions button:hover{border-color:rgba(59,158,255,.5)}
-.ch-list{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;overscroll-behavior:contain}
-.ch-list::-webkit-scrollbar{width:6px}.ch-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:6px}
-.ch-empty{margin:auto;color:var(--m);font-size:14px;text-align:center}
-.ch-m{display:flex;gap:10px;align-items:flex-start;animation:chIn .25s ease both}
-@keyframes chIn{from{opacity:0;transform:translateY(8px)}}
-.ch-av{flex:none;width:34px;height:34px;border-radius:11px;overflow:hidden;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;background:linear-gradient(135deg,#3b9eff,#1a2a6c)}
+.ch-head{display:flex;align-items:center;gap:10px;padding:13px 12px 13px 16px;border-bottom:1px solid var(--c-ln)}
+.ch-ttl{flex:1;min-width:0}
+.ch-ttl b{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.ch-ttl small{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:12px;color:var(--c-mu)}
+.ch-ttl small i{width:6px;height:6px;border-radius:50%;background:#34d399;flex:none}
+.ch-ib{width:32px;height:32px;display:grid;place-items:center;border-radius:9px;border:0;background:transparent;color:var(--c-mu);cursor:pointer;transition:background .15s,color .15s}
+.ch-ib:hover{background:var(--c-bg2);color:var(--c-tx)}
+.ch-body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.ch-list{flex:1;min-height:0;overflow-y:auto;padding:12px 12px 6px;display:flex;flex-direction:column;overscroll-behavior:contain}
+.ch-list::-webkit-scrollbar{width:5px}.ch-list::-webkit-scrollbar-thumb{background:var(--c-ln);border-radius:5px}
+.ch-day{align-self:center;margin:14px 0 6px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;color:var(--c-mu);background:var(--c-bg2)}
+.ch-day:first-child{margin-top:2px}
+.ch-m{display:flex;align-items:flex-end;gap:8px;margin-top:2px;animation:chIn .2s ease both}
+.ch-m.g-first{margin-top:10px}
+.ch-m.me{flex-direction:row-reverse}
+@keyframes chIn{from{opacity:0;transform:translateY(6px)}}
+.ch-av{flex:none;width:28px;height:28px;border-radius:50%;overflow:hidden;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;background:hsl(var(--h,215) 38% 36%)}
 .ch-av img{width:100%;height:100%;object-fit:cover;display:block}
-.ch-c{min-width:0;max-width:calc(100% - 44px)}
-.ch-n{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#cfe5ff;margin-bottom:3px}
-.ch-n em{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.1em;padding:2px 6px;border-radius:6px;background:rgba(59,158,255,.2);color:#7cc4ff;border:1px solid rgba(59,158,255,.4)}
-.ch-n small{font-weight:500;color:var(--m);font-size:11px}
-.ch-x{margin-left:auto;background:none;border:0;color:#ff7a8d;cursor:pointer;font-size:12px;opacity:0;transition:.15s;padding:0 2px}
-.ch-m:hover .ch-x{opacity:1}
-.ch-t{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);padding:9px 12px;border-radius:4px 14px 14px 14px;font-size:14px;line-height:1.45;color:#eef2fa;word-break:break-word;white-space:pre-wrap}
-.ch-m.me .ch-t{background:rgba(59,158,255,.18);border-color:rgba(59,158,255,.3)}
-.ch-in{display:flex;gap:8px;padding:12px;border-top:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.25)}
-.ch-in input{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:11px 14px;color:#fff;font-size:14px;outline:0;font-family:inherit}
-.ch-in input:focus{border-color:rgba(59,158,255,.6);box-shadow:0 0 0 3px rgba(59,158,255,.15)}
-.ch-in button{flex:none;width:44px;border:0;border-radius:12px;background:linear-gradient(135deg,#4aa6ff,#1f70d6);color:#fff;cursor:pointer;display:grid;place-items:center}
-.ch-in button:hover{filter:brightness(1.1)}
-@media(max-width:560px){.ch-panel{left:8px;right:8px;width:auto;bottom:80px;height:min(70vh,560px)}.ch-fab{left:12px;bottom:14px}.ch-x{opacity:.7}}
+.ch-m:not(.g-last) .ch-av{visibility:hidden}
+.ch-m.me .ch-av{display:none}
+.ch-c{min-width:0;max-width:80%;display:flex;flex-direction:column;align-items:flex-start}
+.ch-m.me .ch-c{align-items:flex-end}
+.ch-n{display:none;align-items:center;gap:6px;margin:0 0 3px 10px;font-size:12px;font-weight:600;color:hsl(var(--h,215) 65% var(--nl))}
+.ch-m.g-first:not(.me) .ch-n{display:flex}
+.ch-n em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.06em;padding:1px 6px;border-radius:5px;background:rgba(47,127,224,.16);color:var(--c-me)}
+.ch-b{position:relative;max-width:100%;padding:7px 11px 6px;background:var(--c-bg2);border-radius:16px;font-size:14px;line-height:1.42;word-break:break-word}
+.ch-m:not(.me):not(.g-first) .ch-b{border-top-left-radius:5px}
+.ch-m:not(.me):not(.g-last) .ch-b{border-bottom-left-radius:5px}
+.ch-m:not(.me).g-last .ch-b{border-bottom-left-radius:5px}
+.ch-m.me .ch-b{background:var(--c-me);color:#fff}
+.ch-m.me:not(.g-first) .ch-b{border-top-right-radius:5px}
+.ch-m.me:not(.g-last) .ch-b{border-bottom-right-radius:5px}
+.ch-m.me.g-last .ch-b{border-bottom-right-radius:5px}
+.ch-m.pm .ch-b{box-shadow:inset 0 0 0 1px rgba(245,166,35,.5)}
+.ch-t{white-space:pre-wrap}
+.ch-ts{float:right;margin:6px 0 0 12px;font-size:10.5px;line-height:1;opacity:.55}
+.ch-q{margin:0 0 5px;padding:3px 8px;border-left:2px solid var(--c-me);border-radius:3px;font-size:12px;line-height:1.35;background:rgba(127,127,127,.12);opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-m.me .ch-q{border-left-color:rgba(255,255,255,.8);background:rgba(0,0,0,.16)}
+.ch-pm{font-size:9.5px;font-weight:700;letter-spacing:.06em;padding:1px 6px;border-radius:5px;background:rgba(245,166,35,.16);color:#f5a623}
+.ch-me-t{padding:0 3px;border-radius:5px;background:rgba(47,127,224,.22);color:inherit;font-weight:600}
+.ch-a{display:flex;gap:2px;align-self:center;opacity:0;transition:opacity .15s}
+.ch-m:hover .ch-a,.ch-m:focus-within .ch-a{opacity:1}
+@media(hover:none){.ch-m.tap .ch-a{opacity:1}}
+.ch-a button{width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--c-mu);cursor:pointer;transition:background .15s,color .15s}
+.ch-a button:hover{background:var(--c-bg2);color:var(--c-tx)}
+.ch-a button.dng:hover{color:#ff6b7f}
+.ch-empty{margin:auto;display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;text-align:center;font-size:13.5px;line-height:1.5;color:var(--c-mu)}
+.ch-empty i{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--c-bg2);color:var(--c-me)}
+.ch-down{position:absolute;right:14px;bottom:10px;width:36px;height:36px;border-radius:50%;border:1px solid var(--c-ln);background:var(--c-bg2);color:var(--c-tx);display:none;place-items:center;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+.ch-down.on{display:grid}
+.ch-down b{position:absolute;top:-7px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--c-me);color:#fff;font-size:10.5px;font-weight:700;display:none;place-items:center}
+.ch-down.has b{display:grid}
+.ch-in{display:flex;align-items:flex-end;gap:8px;padding:10px 12px 12px;border-top:1px solid var(--c-ln);background:var(--c-bg)}
+.ch-in textarea{flex:1;min-width:0;min-height:40px;max-height:120px;resize:none;overflow-y:auto;padding:10px 14px;border:1px solid transparent;border-radius:14px;background:var(--c-in);color:var(--c-tx);font:14px/1.4 inherit;outline:0;transition:border-color .15s}
+.ch-in textarea::placeholder{color:var(--c-mu)}
+.ch-in textarea:focus{border-color:var(--c-me)}
+.ch-send{flex:none;width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--c-me);color:#fff;cursor:pointer;transition:opacity .15s,filter .15s}
+.ch-send:disabled{opacity:.3;cursor:default}
+.ch-send:not(:disabled):hover{filter:brightness(1.12)}
+.ic{flex:none;vertical-align:-.15em}
+@media(max-width:560px){.ch-c{max-width:84%}}
 
 /* ===== admin: loader update ===== */
 .ld-info{display:grid;gap:6px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--bd);margin-bottom:12px;font-size:13.5px}
@@ -1155,9 +1190,9 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
 @media(prefers-reduced-motion:reduce){.lp *,.lp-wrap{animation:none!important}.lpc-bar i{width:72%}}
 /* --- chat on phones: full-width sheet --- */
 @media(max-width:560px){
-  .ch-panel{left:0;right:0;bottom:0;width:100%;max-width:100%;height:78svh;max-height:78svh;border-radius:20px 20px 0 0;transform-origin:bottom}
+  .ch-panel{left:0;right:0;bottom:0;width:100%;max-width:100%;height:82svh;max-height:82svh;border-radius:18px 18px 0 0;transform-origin:bottom}
   .ch-fab{left:14px;bottom:14px}
-  .ch-in input{font-size:16px}
+  .ch-in textarea{font-size:16px}
 }
 </style>
 
@@ -1433,7 +1468,7 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
 <div id="captchaBox" style="margin:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
 <label id="capQ" style="font-size:14px;color:var(--m);min-width:90px"></label>
 <input id="capA" type="text" inputmode="numeric" placeholder="Ответ" autocomplete="off" style="width:90px;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)">
-<button type="button" class="btn sm ghost" onclick="loadCaptcha()" title="Обновить">↻</button>
+<button type="button" class="btn sm ghost" onclick="loadCaptcha()" title="Обновить" aria-label="Обновить"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></button>
 </div>
 <div class="err" id="me"></div>
 <button class="btn big" id="mb" onclick="submit()"><span id="mbt"></span><i class="sp"></i></button>
@@ -1441,9 +1476,9 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
 
 <button id="chBtn" class="ch-fab" onclick="chatToggle()" aria-label="Чат" style="display:none"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/></svg><span id="chBadge" class="ch-badge"></span></button>
 <div id="chat" class="ch-panel" aria-hidden="true">
-  <div class="ch-head"><div><b>Общий чат</b><small id="chOnline">онлайн: 0</small></div><div class="ch-actions"><button id="chClear" onclick="chatClear()" title="Очистить чат" style="display:none">Очистить</button><button onclick="chatToggle(0)" aria-label="Закрыть">✕</button></div></div>
-  <div id="chList" class="ch-list"></div>
-  <div class="ch-in"><input id="chIn" maxlength="300" placeholder="Напишите сообщение…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();chatSend()}"><button onclick="chatSend()" aria-label="Отправить"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+  <div class="ch-head"><div class="ch-ttl"><b>Общий чат</b><small><i></i><span id="chOnline">онлайн: 0</span></small></div><button id="chClear" class="ch-ib" onclick="chatClear()" title="Очистить чат" aria-label="Очистить чат" style="display:none"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button><button class="ch-ib" onclick="chatToggle(0)" aria-label="Закрыть"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="ch-body"><div id="chList" class="ch-list"></div><button id="chDown" class="ch-down" onclick="chToEnd()" aria-label="Вниз"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg><b>0</b></button></div>
+  <div class="ch-in"><textarea id="chIn" rows="1" maxlength="300" placeholder="Напишите сообщение…" autocomplete="off" oninput="chAuto()" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();chatSend()}"></textarea><button id="chSend" class="ch-send" onclick="chatSend()" aria-label="Отправить" disabled><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
 </div>
 <script>
 const $=id=>document.getElementById(id);let mode='log',user=null;
@@ -1865,7 +1900,7 @@ async function openCfg(id){
     if(c.photo)html+=`<img src="${esc(c.photo)}" style="max-width:100%;border-radius:8px;margin:12px 0">`;
     if(c.is_file&&c.filename)html+=`<p><a class="btn sm" download="${esc(c.filename)}" href="data:application/octet-stream;base64,${btoa(c.content)}">Скачать ${esc(c.filename)}</a></p>`;
     else html+=`<pre style="background:#111;padding:12px;overflow:auto;max-height:300px;font-size:12px;white-space:pre-wrap">${esc(c.content)}</pre><button class="btn sm" onclick="cp(this.dataset.t)" data-t="${esc(c.content).replace(/"/g,'&quot;')}">Копировать</button>`;
-    $('cfgList').innerHTML=html+'<br><button class="btn sm ghost" onclick="showConfigs()">← Назад</button>';
+    $('cfgList').innerHTML=html+'<br><button class="btn sm ghost" onclick="showConfigs()">'+ico('arrL',14)+' Назад</button>';
   }catch(e){toast('Ошибка',1)}
 }
 
@@ -1934,8 +1969,8 @@ const cp=t=>navigator.clipboard.writeText(t).then(()=>toast('Скопирова�
 async function fz(on){try{await api(on?'/api/freeze':'/api/unfreeze');await init();toast(on?'Подписка заморожена':'Подписка разморожена')}catch(e){toast(e.message,1)}}
 let gT;function gs(){clearTimeout(gT);const q=$('gto').value.trim();if(q.length<2){$('sug').innerHTML='';return}
  gT=setTimeout(async()=>{try{const r=await api('/api/users/search',{q});$('sug').innerHTML=r.users.map(n=>`<span onclick="$('gto').value='${n}';$('sug').innerHTML=''">${esc(n)}</span>`).join('')||'<small>никого не найдено</small>'}catch{}},250)}
-async function gift(){$('ge').textContent='';try{const r=await api('/api/gift',{to:$('gto').value,days:+$('gd').value});$('gto').value=$('gd').value='';$('sug').innerHTML='';await init();toast('Подарено '+r.days+' дн. → '+r.to)}catch(e){$('ge').textContent=e.message}}
-async function loadGifts(){try{const r=await api('/api/gifts');$('gh').innerHTML=r.list.map(g=>`<div class="it"><div>${g.out?'→ ':'← '}${esc(g.out?g.tn:g.fn)}<small>${fd(g.ts)}</small></div><b>${g.out?'−':'+'}${g.days} дн.</b></div>`).join('')}catch{}}
+async function gift(){$('ge').textContent='';try{const r=await api('/api/gift',{to:$('gto').value,days:+$('gd').value});$('gto').value=$('gd').value='';$('sug').innerHTML='';await init();toast('Подарено '+r.days+' дн. пользователю '+r.to)}catch(e){$('ge').textContent=e.message}}
+async function loadGifts(){try{const r=await api('/api/gifts');$('gh').innerHTML=r.list.map(g=>`<div class="it"><div>${g.out?ico('arrR',13)+' ':ico('arrL',13)+' '}${esc(g.out?g.tn:g.fn)}<small>${fd(g.ts)}</small></div><b>${g.out?'−':'+'}${g.days} дн.</b></div>`).join('')}catch{}}
 async function loadDev(){try{const r=await api('/api/devices');$('dvh').textContent=r.list.length+' / '+r.max;
  $('dv').innerHTML=r.list.map(d=>`<div class="it"><div>${esc(d.name||'Устройство')}<small>последний вход: ${fd(d.last_seen)}</small></div><button class="xs" onclick="dd(${d.id})" aria-label="Удалить">×</button></div>`).join('')||'<p>Пусто. Устройство добавится при первом входе в клиент.</p>'}catch{}}
 async function dd(id){try{await api('/api/device/del',{id});loadDev();toast('Устройство удалено')}catch(e){toast(e.message,1)}}
@@ -2017,7 +2052,7 @@ async function loadSet(){try{const r=await api('/api/admin/settings',{action:'ge
 async function toggleSet(k){try{const cur=await api('/api/admin/settings',{action:'get'});await api('/api/admin/settings',{[k]:cur[k]!=='1'});loadSet();toast('Обновлено')}catch(e){toast(e.message,1)}}
 async function setStatus(){try{await api('/api/admin/settings',{status:'custom',status_text:$('sttxt').value});loadSet();toast('Статус обновлён')}catch(e){toast(e.message,1)}}
 async function doBackup(){try{const r=await fetch(API_BASE+'/api/admin/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='forev-backup.db';a.click();toast('Бэкап скачан')}catch(e){toast('Ошибка бэкапа',1)}}
-async function loadAud(){try{const r=await api('/api/admin/audit');$('audl').innerHTML=r.list.map(x=>`<div class="it"><div><b>${esc(x.action)}</b> → ${esc(x.target||'')} <small>${esc(x.username||'system')} · ${new Date(x.ts).toLocaleString('ru')} · ${esc(x.details||'')} ${x.ip?'· IP '+esc(x.ip):''}</small></div></div>`).join('')||'<p>Пусто</p>'}catch(e){toast(e.message,1)}}
+async function loadAud(){try{const r=await api('/api/admin/audit');$('audl').innerHTML=r.list.map(x=>`<div class="it"><div><b>${esc(x.action)}</b> ${ico('arrR',12)} ${esc(x.target||'')} <small>${esc(x.username||'system')} · ${new Date(x.ts).toLocaleString('ru')} · ${esc(x.details||'')} ${x.ip?'· IP '+esc(x.ip):''}</small></div></div>`).join('')||'<p>Пусто</p>'}catch(e){toast(e.message,1)}}
 let chartInst;
 async function loadChart(){try{const r=await api('/api/admin/chart',{days:30});
   const labels=[...new Set([...(r.regs||[]).map(x=>x.d),...(r.acts||[]).map(x=>x.d),...(r.logins||[]).map(x=>x.d),...(r.bans||[]).map(x=>x.d)])].sort();
@@ -2060,7 +2095,7 @@ async function resetDev(id){if(!confirm('Сбросить все устройс�
 async function showHist(id){try{const r=await api('/api/admin/history',{id});alert(r.list.map(h=>`${new Date(h.ts).toLocaleString('ru')}: ${h.days}д (${h.source})`).join('\n')||'Пусто')}catch(e){toast(e.message,1)}}
 
 // --- Theme / Profile / Activity / Reseller / Admin search ---
-function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);const tb=$('themeBtn');if(tb)tb.textContent=t==='light'?'🌙':'☀️'}
+function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);const tb=$('themeBtn');if(tb)tb.innerHTML=ico(t==='light'?'moon':'sun',18)}
 function toggleTheme(){const t=document.documentElement.classList.contains('light')?'dark':'light';applyTheme(t);if(user)saveProfile()}
 async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),theme=$('themeSel').value;await api('/api/profile',{avatar,theme});if(user){user.avatar=avatar;user.theme=theme}applyTheme(theme);if(avatar){$('avimg').src=avatar;$('avimg').style.display='block'}toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
 function renderCal(list){
@@ -2073,9 +2108,9 @@ async function rslGen(){try{const r=await api('/api/reseller/genkey',{days:+$('r
 async function loadRslKeys(){try{const r=await api('/api/reseller/keys');$('rslList').innerHTML=(r.list||[]).map(k=>`<div class="hwid-row"><code>${esc(k.code)}</code><span>${k.days}д · ${k.devices}у · ${k.used?esc(k.used):'свободен'}</span></div>`).join('')||'<p style="color:var(--m)">Пока нет ключей</p>'}catch{}}
 async function advSearch(){try{const q=$('advQ').value.trim();if(q.length<3)return toast('Минимум 3 символа',1);const r=await api('/api/admin/search',{q});
   let h='';
-  if(r.users?.length){h+='<h4>Пользователи</h4>'+r.users.map(u=>`<div class="hwid-row"><b>${esc(u.username)}</b> ${esc(u.email)} ${u.banned?'🚫':''}${u.suspicious?'<span class="badge-s">suspicious</span>':''}</div>`).join('')}
+  if(r.users?.length){h+='<h4>Пользователи</h4>'+r.users.map(u=>`<div class="hwid-row"><b>${esc(u.username)}</b> ${esc(u.email)} ${u.banned?ico('ban',14):''}${u.suspicious?'<span class="badge-s">suspicious</span>':''}</div>`).join('')}
   if(r.devices?.length){h+='<h4>HWID</h4>'+r.devices.map(d=>`<div class="hwid-row"><code>${esc(d.hwid)}</code><span>${esc(d.username)} · ${esc(d.name||'')}</span></div>`).join('')}
-  if(r.logins?.length){h+='<h4>IP / логины</h4>'+r.logins.map(l=>`<div class="hwid-row"><code>${esc(l.ip)}</code><span>${esc(l.username)} · ${l.ok?'✓':'✗'} · ${l.proxy?'VPN ':''}${esc(l.country||'')} · ${new Date(l.ts).toLocaleString('ru')}</span></div>`).join('')}
+  if(r.logins?.length){h+='<h4>IP / логины</h4>'+r.logins.map(l=>`<div class="hwid-row"><code>${esc(l.ip)}</code><span>${esc(l.username)} · ${l.ok?ico('check',13):ico('x',13)} · ${l.proxy?'VPN ':''}${esc(l.country||'')} · ${new Date(l.ts).toLocaleString('ru')}</span></div>`).join('')}
   $('advRes').innerHTML=h||'<p>Ничего не найдено</p>'}catch(e){toast(e.message,1)}}
 async function loadHwidLog(){try{const r=await api('/api/admin/hwidlog',{});$('hwidLogList').innerHTML=(r.list||[]).map(x=>`<div class="hwid-row"><span><b>${esc(x.username||x.user_id)}</b> · ${esc(x.action)} · <code>${esc(x.hwid)}</code></span><span>${esc(x.ip||'')} · ${new Date(x.ts).toLocaleString('ru')}</span></div>`).join('')||'<p>Пусто</p>'}catch(e){toast(e.message,1)}}
 // init theme from localStorage
@@ -2110,7 +2145,10 @@ function markGallery(){document.querySelectorAll('.agal-i').forEach(b=>b.classLi
 async function pickAvatar(src){$('avatarUrl').value=src;await saveProfile();avFill($('av'),src,user&&user.username);markGallery()}
 
 /* ===== Онлайн-чат ===== */
-let chTm=null,chLast=0,chOpen=false,chUnread=0,chBusy=false,chMe=0,chAdm=false,chN=0;
+const IC={reply:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v3"/>',eyeoff:'<path d="M3 3l18 18"/><path d="M10.6 6.1A9.8 9.8 0 0 1 12 6c5 0 8.5 4 9.5 6a14 14 0 0 1-2.7 3.5M6.5 7.5A14.5 14.5 0 0 0 2.5 12c1 2 4.5 6 9.5 6 1.3 0 2.5-.3 3.6-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',mute:'<path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path d="M3 3l18 18"/>',ban:'<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',x:'<path d="M6 6l12 12M18 6 6 18"/>',check:'<path d="m5 12 5 5 9-10"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',star:'<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',warn:'<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.5v.5"/>',refresh:'<path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/>',arrR:'<path d="M5 12h14m-6-6 6 6-6 6"/>',arrL:'<path d="M19 12H5m6-6-6 6 6 6"/>',chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>'};
+function ico(n,z,fill){z=z||16;return '<svg class="ic" viewBox="0 0 24 24" width="'+z+'" height="'+z+'" fill="'+(fill?'currentColor':'none')+'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[n]+'</svg>'}
+function uHue(n){let h=0;n=String(n||'');for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%360;return h}
+let chTm=null,chLast=0,chOpen=false,chUnread=0,chBusy=false,chMe=0,chAdm=false,chN=0,chNew=0;
 function chatStart(){buildGallery();const b=$('chBtn');if(!b)return;b.style.display='flex';if(chTm)return;chLast=0;chN=0;$('chList').innerHTML='';chLoop(0)}
 function chatStop(){clearTimeout(chTm);chTm=null;chOpen=false;chLast=0;const b=$('chBtn');if(b)b.style.display='none';const p=$('chat');if(p)p.classList.remove('on')}
 function chLoop(d){clearTimeout(chTm);chTm=setTimeout(async()=>{await chPoll();if(user)chLoop()},d!==undefined?d:(document.hidden?30000:(chOpen?2500:15000)))}
@@ -2124,26 +2162,42 @@ async function chPoll(){if(chBusy||!user)return;chBusy=true;try{
   else if(j.list.length){chAppend(j.list,true);chLast=Math.max(chLast,...j.list.map(m=>m.id))}
 }catch(e){}finally{chBusy=false}}
 function chNode(m){
-  const d=document.createElement('div');d.className='ch-m'+(m.uid===chMe?' me':'');d.dataset.id=m.id;
+  const d=document.createElement('div');d.className='ch-m'+(m.uid===chMe?' me':'');d.dataset.id=m.id;d.dataset.uid=m.uid;d.dataset.ts=m.ts;d.dataset.pm=m.to?1:0;
   const a=document.createElement('div');a.className='ch-av';avFill(a,m.avatar,m.username);
   const c=document.createElement('div');c.className='ch-c';
   const h=document.createElement('div');h.className='ch-n';
   const nm=document.createElement('span');nm.textContent=m.username;h.appendChild(nm);
   if(m.is_admin){const t=document.createElement('em');t.textContent='ADMIN';h.appendChild(t)}
   const tm=document.createElement('small');tm.textContent=new Date(m.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});h.appendChild(tm);
-  if(chAdm){const x=document.createElement('button');x.className='ch-x';x.textContent='✕';x.title='Удалить';x.onclick=()=>chatDel(m.id);h.appendChild(x)}
+  if(chAdm){const x=document.createElement('button');x.className='ch-ib';x.innerHTML=ico('x',14);x.title='Удалить';x.onclick=()=>chatDel(m.id);h.appendChild(x)}
   const t=document.createElement('div');t.className='ch-t';t.textContent=m.text;
   c.appendChild(h);c.appendChild(t);d.appendChild(a);d.appendChild(c);return d}
 function chNear(){const l=$('chList');return l.scrollHeight-l.scrollTop-l.clientHeight<90}
-function chRender(list,first){const l=$('chList'),near=first||chNear();l.innerHTML='';list.forEach(m=>l.appendChild(chNode(m)));if(!list.length)l.innerHTML='<div class="ch-empty">Сообщений пока нет. Напишите первым 👋</div>';if(near)l.scrollTop=l.scrollHeight}
+function chToEnd(){const l=$('chList');l.scrollTo({top:l.scrollHeight,behavior:'smooth'});chNew=0;chDownUI()}
+function chDownUI(){const b=$('chDown');if(!b)return;const far=!chNear();b.classList.toggle('on',far);b.classList.toggle('has',far&&chNew>0);b.querySelector('b').textContent=chNew>99?'99+':chNew;if(!far)chNew=0}
+function chAuto(){const i=$('chIn');i.style.height='auto';i.style.height=Math.min(i.scrollHeight,120)+'px';$('chSend').disabled=!i.value.trim()}
+function chDayLabel(ts){const d=new Date(ts),n=new Date(),y=new Date(n);y.setDate(n.getDate()-1);const k=x=>x.toDateString();if(k(d)===k(n))return'Сегодня';if(k(d)===k(y))return'Вчера';return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}
+function chGroup(){const l=$('chList');l.querySelectorAll('.ch-day').forEach(e=>e.remove());
+  const rows=[...l.querySelectorAll('.ch-m')].filter(e=>e.style.display!=='none');let prev=null,pd='';
+  const same=(a,b)=>a&&b&&a.dataset.uid===b.dataset.uid&&a.dataset.pm===b.dataset.pm&&Math.abs(+b.dataset.ts-+a.dataset.ts)<300000&&new Date(+a.dataset.ts).toDateString()===new Date(+b.dataset.ts).toDateString();
+  rows.forEach((e,i)=>{const ts=+e.dataset.ts,day=new Date(ts).toDateString();
+    if(day!==pd){const sp=document.createElement('div');sp.className='ch-day';sp.textContent=chDayLabel(ts);l.insertBefore(sp,e);pd=day;prev=null}
+    e.classList.toggle('g-first',!same(prev,e));e.classList.toggle('g-last',!same(e,rows[i+1]));prev=e})}
+function chEmpty(){return '<div class="ch-empty"><i>'+ico('chat',22)+'</i><div>Здесь пока тихо.<br>Напишите первое сообщение.</div></div>'}
+function chRender(list,first){const l=$('chList'),near=first||chNear();l.innerHTML='';list.forEach(m=>l.appendChild(chNode(m)));
+  if(!list.length)l.innerHTML=chEmpty();else chGroup();
+  if(near){l.scrollTop=l.scrollHeight;chNew=0}chDownUI()}
 function chAppend(list,notify){const l=$('chList'),near=chNear();const em=l.querySelector('.ch-empty');if(em)em.remove();
-  list.forEach(m=>{if(l.querySelector('[data-id="'+m.id+'"]'))return;l.appendChild(chNode(m));if(notify&&!chOpen&&m.uid!==chMe)chUnread++});
-  while(l.children.length>150)l.removeChild(l.firstChild);
-  if(near||list.some(m=>m.uid===chMe))l.scrollTop=l.scrollHeight;chBadge()}
+  list.forEach(m=>{if(l.querySelector('[data-id="'+m.id+'"]'))return;l.appendChild(chNode(m));if(notify&&!chOpen&&m.uid!==chMe)chUnread++;if(!near&&m.uid!==chMe)chNew++});
+  let rs=l.querySelectorAll('.ch-m');while(rs.length>150){rs[0].remove();rs=l.querySelectorAll('.ch-m')}
+  chGroup();
+  if(near||list.some(m=>m.uid===chMe)){l.scrollTop=l.scrollHeight;chNew=0}
+  chDownUI();chBadge()}
+(function(){const l=$('chList');if(l)l.addEventListener('scroll',chDownUI,{passive:true})})();
 function chBadge(){const b=$('chBadge');b.textContent=chUnread>99?'99+':chUnread;b.style.display=chUnread?'flex':'none'}
 function chatToggle(v){chOpen=v===undefined?!chOpen:!!v;$('chat').classList.toggle('on',chOpen);$('chat').setAttribute('aria-hidden',!chOpen);
   if(chOpen){chUnread=0;chBadge();chPoll();chLoop();setTimeout(()=>{const l=$('chList');l.scrollTop=l.scrollHeight;if(innerWidth>700)$('chIn').focus()},60)}else chLoop()}
-async function chatSend(){const i=$('chIn'),t=i.value.trim();if(!t)return;i.value='';try{await api('/api/chat/send',{text:t});setTimeout(chPoll,120)}catch(e){toast(e.message,1);i.value=t}}
+async function chatSend(){const i=$('chIn'),t=i.value.trim();if(!t)return;i.value='';chAuto();try{await api('/api/chat/send',{text:t});setTimeout(chPoll,120)}catch(e){toast(e.message,1);i.value=t;chAuto()}}
 async function chatDel(id){try{await api('/api/admin/chat/del',{id});const n=document.querySelector('#chList [data-id="'+id+'"]');if(n)n.remove()}catch(e){toast(e.message,1)}}
 async function chatClear(){if(!confirm('Очистить весь чат для всех?'))return;try{await api('/api/admin/chat/clear',{});chLast=0;chRender([],true);toast('Чат очищен')}catch(e){toast(e.message,1)}}
 
@@ -2163,9 +2217,9 @@ function ldUpload(){if(!ldFile)return;if(!confirm('Заменить лоадер
   $('ldBar').style.display='';$('ldGo').disabled=true;
   x.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);$('ldBarI').style.width=p+'%';$('ldPct').textContent='Загрузка… '+p+'%'}};
   x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch{}$('ldBar').style.display='none';
-    if(x.status===200){toast('Лоадер обновлён');$('ldPct').textContent=j.has_placeholder===false?'⚠ В файле нет маркера DLBOOT — токен скачивания в него подставляться не будет.':'Готово, SHA-256: '+(j.sha256||'').slice(0,16)+'…';ldFile=null;$('ldSel').textContent='';$('ldVer').value='';$('ldNote').value='';ldInfo()}
+    if(x.status===200){toast('Лоадер обновлён');$('ldPct').textContent=j.has_placeholder===false?'Внимание: в файле нет маркера DLBOOT — токен скачивания в него подставляться не будет.':'Готово, SHA-256: '+(j.sha256||'').slice(0,16)+'…';ldFile=null;$('ldSel').textContent='';$('ldVer').value='';$('ldNote').value='';ldInfo()}
     else{toast(j.error||'Ошибка загрузки ('+x.status+')',1);$('ldPct').textContent='';$('ldGo').disabled=false}};
   x.onerror=()=>{$('ldBar').style.display='none';$('ldPct').textContent='';toast('Нет связи с сервером',1);$('ldGo').disabled=false};
   x.send(ldFile)}
 async function ldRollback(){if(!confirm('Вернуть предыдущую версию лоадера?'))return;try{await api('/api/admin/loader/rollback',{});toast('Возвращена предыдущая версия');ldInfo()}catch(e){toast(e.message,1)}}
-</script><script src="/ext.js"></script></body></html>
+</script><script src="/ext.js?v=fl2"></script></body></html>

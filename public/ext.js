@@ -12,12 +12,9 @@ const st=document.createElement('style');st.textContent=`
 .xfaq input{width:100%;padding:13px 15px;border-radius:12px;border:1px solid var(--bd);background:#0b0f16;color:#fff;font:inherit;margin-bottom:10px}
 .xfaq details{border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:8px;background:#0b0f16}.xfaq summary{cursor:pointer;font-weight:600}.xfaq p{color:var(--m);margin:10px 0 0;font-size:14px;line-height:1.55}
 .xrv{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}.xrv>div{border:1px solid var(--bd);border-radius:14px;padding:16px;background:#0b0f16;font-size:14px;color:#c5cddb}.xrv small{display:block;margin-top:8px;color:var(--m)}
-.ch-rp{display:none;align-items:center;gap:8px;padding:6px 12px;font-size:12px;color:#9fb4cf;border-top:1px solid rgba(255,255,255,.08)}.ch-rp b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}.ch-rp button{background:none;border:0;color:#ff7a8d;cursor:pointer}
-.ch-q{font-size:11.5px;color:#7f8ca2;border-left:2px solid var(--r);padding-left:7px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ch-pm{font-size:9.5px;font-weight:800;letter-spacing:.08em;padding:2px 6px;border-radius:6px;background:rgba(255,170,60,.18);color:#ffb64d;border:1px solid rgba(255,170,60,.4)}
-.ch-me-t{background:rgba(59,158,255,.18);border-radius:6px;padding:0 3px;color:#9fd0ff}.ch-m.pm .ch-t{color:#ffd9a0}
-.ch-a{margin-left:auto;display:flex;gap:6px;opacity:0;transition:.15s}.ch-m:hover .ch-a,.ch-m:focus-within .ch-a{opacity:1}@media(hover:none){.ch-a{opacity:.8}}
-.ch-a button{background:none;border:0;color:#7f8ca2;cursor:pointer;font-size:11.5px;padding:0}.ch-a button:hover{color:#fff}
+.ch-rp{display:none;align-items:center;gap:10px;padding:8px 8px 8px 14px;border-top:1px solid var(--c-ln);background:var(--c-bg);font-size:12.5px;color:var(--c-mu)}.ch-rp::before{content:"";align-self:stretch;width:2px;border-radius:2px;background:var(--c-me)}.ch-rp b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.ch-rp button{width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--c-mu);cursor:pointer}.ch-rp button:hover{background:var(--c-bg2);color:var(--c-tx)}
+.xrv .ic,.xrow .ic,.xtab .ic{color:#f5b942}.xach .xb .ic{color:inherit}
 .xgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
 .xrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}.xrow input,.xrow select{padding:9px 11px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;min-width:0}
 .xtab{width:100%;border-collapse:collapse;font-size:13px}.xtab td,.xtab th{padding:7px 6px;border-bottom:1px solid var(--bd);text-align:left}
@@ -38,6 +35,12 @@ window.fetch=async function(u,o){
 window.chpw=async function(){$('pe').textContent='';try{let code;if(window.__x&&window.__x.totp_on){code=prompt('Код 2FA:');if(!code)return}
  await post('/api/password',{old:$('op').value,new:$('np').value,code});$('op').value=$('np').value='';toast('Пароль изменён, остальные сессии закрыты')}catch(e){$('pe').textContent=e.message}};
 
+/* ===== FL: анимированные SVG-бейджи ===== */
+const flst=document.createElement('style');flst.textContent=".fl-ic{display:inline-block;vertical-align:-3px;overflow:visible;flex:none}\n.fl-ic *{transform-box:fill-box;transform-origin:50% 50%}\n.fa-spark{animation:flSpark 2.6s ease-in-out infinite}\n.fa-tw{animation:flTw 2.6s ease-in-out infinite}.fa-tw2{animation:flTw 2.6s ease-in-out 1.3s infinite}\n.fa-rock{animation:flRock 3.6s ease-in-out infinite;transform-origin:50% 60%}\n.fa-shake{animation:flShake 2.8s linear infinite}.fa-flash{animation:flFlash 2.8s linear infinite;opacity:0}\n.fa-flame{animation:flFlame 1.5s ease-in-out infinite;transform-origin:50% 100%}.fa-flame2{animation:flFlame 1.1s ease-in-out .3s infinite;transform-origin:50% 100%}\n.fa-sweep{animation:flSweep 3.4s ease-in-out infinite}\n.fa-jw{animation:flPulse 2s ease-in-out infinite}.fa-jw2{animation:flPulse 2s ease-in-out 1s infinite}\n@keyframes flSpark{0%,100%{transform:scale(.88) rotate(0)}50%{transform:scale(1.04) rotate(12deg)}}\n@keyframes flTw{0%,100%{opacity:.1;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}\n@keyframes flRock{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}\n@keyframes flShake{0%,84%,100%{transform:none}88%{transform:translate(.5px,-.3px)}92%{transform:translate(-.5px,.3px)}96%{transform:translate(.3px,0)}}\n@keyframes flFlash{0%,84%,100%{opacity:0}88%{opacity:.9}91%{opacity:.1}94%{opacity:.75}}\n@keyframes flFlame{0%,100%{transform:scale(1,1) skewX(0)}35%{transform:scale(.95,1.07) skewX(-3deg)}70%{transform:scale(1.04,.96) skewX(3deg)}}\n@keyframes flSweep{0%,45%{transform:translateX(-9px)}100%{transform:translateX(34px)}}\n@keyframes flPulse{0%,100%{opacity:.55}50%{opacity:1}}\n@media (prefers-reduced-motion:reduce){.fl-ic *{animation:none!important}}"+`.fl-bd{display:inline-flex;align-items:center;line-height:1}`;document.head.appendChild(flst);
+document.body.insertAdjacentHTML('beforeend','<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'+"<linearGradient id=\"flg-gold\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3a8\"/><stop offset=\".5\" stop-color=\"#ffc02e\"/><stop offset=\"1\" stop-color=\"#e5800a\"/></linearGradient>\n<linearGradient id=\"flg-gold2\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe98f\"/><stop offset=\".55\" stop-color=\"#f5a912\"/><stop offset=\"1\" stop-color=\"#b9650a\"/></linearGradient>\n<linearGradient id=\"flg-moon\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#d9ccff\"/><stop offset=\".55\" stop-color=\"#8b86ff\"/><stop offset=\"1\" stop-color=\"#4a5de0\"/></linearGradient>\n<linearGradient id=\"flg-bolt\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fffbc2\"/><stop offset=\".5\" stop-color=\"#ffd23a\"/><stop offset=\"1\" stop-color=\"#ff9a0a\"/></linearGradient>\n<linearGradient id=\"flg-fo\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ff6a3d\"/><stop offset=\".6\" stop-color=\"#f03a3a\"/><stop offset=\"1\" stop-color=\"#c41f4a\"/></linearGradient>\n<linearGradient id=\"flg-fi\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3a0\"/><stop offset=\"1\" stop-color=\"#ffa21a\"/></linearGradient>\n<linearGradient id=\"flg-shine\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#fff\" stop-opacity=\"0\"/><stop offset=\".5\" stop-color=\"#fff\" stop-opacity=\".85\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></linearGradient>\n<clipPath id=\"flg-cp-gem\"><path d=\"M7 3H17L22 9L12 21.5L2 9Z\"/></clipPath>\n<clipPath id=\"flg-cp-crown\"><path d=\"M3 8L7.5 12L12 4L16.5 12L21 8L19 19H5Z\"/></clipPath>"+'</defs></svg>');
+const FLB={"star": "<path class=\"fa-spark\" d=\"M11 2C11.9 7.6 15.4 11.1 21 12C15.4 12.9 11.9 16.4 11 22C10.1 16.4 6.6 12.9 1 12C6.6 11.1 10.1 7.6 11 2Z\" fill=\"url(#flg-gold)\"/><path class=\"fa-tw\" d=\"M19.5 2.5C19.7 4 20.1 4.4 21.5 4.6C20.1 4.8 19.7 5.2 19.5 6.7C19.3 5.2 18.9 4.8 17.5 4.6C18.9 4.4 19.3 4 19.5 2.5Z\" fill=\"#fff6c8\"/>", "moon": "<path class=\"fa-rock\" d=\"M21 12.8A9 9 0 1 1 11.2 3A7 7 0 0 0 21 12.8Z\" fill=\"url(#flg-moon)\"/><circle class=\"fa-tw\" cx=\"18.4\" cy=\"5.2\" r=\"1.3\" fill=\"#e9e4ff\"/><circle class=\"fa-tw2\" cx=\"14.6\" cy=\"2.6\" r=\".8\" fill=\"#e9e4ff\"/>", "bolt": "<g class=\"fa-shake\"><path d=\"M13.6 1.5L4.6 13.4H10.6L9.6 22.5L19.4 9.6H13Z\" fill=\"url(#flg-bolt)\" stroke=\"#ff9a0a\" stroke-width=\".6\" stroke-linejoin=\"round\"/><path class=\"fa-flash\" d=\"M13.6 1.5L4.6 13.4H10.6L9.6 22.5L19.4 9.6H13Z\" fill=\"#fff\"/></g>", "fire": "<path class=\"fa-flame\" d=\"M12 2.2C13.2 5.6 18.6 8.4 18.6 14.4C18.6 18.4 15.7 21.8 12 21.8C8.3 21.8 5.4 18.4 5.4 14.4C5.4 11.8 6.7 10 8 8.6C8.3 10.4 9.2 11.4 10.2 11.8C9.6 8.2 10.4 4.6 12 2.2Z\" fill=\"url(#flg-fo)\"/><path class=\"fa-flame2\" d=\"M12 11.6C12.9 13.6 15.4 14.8 15.4 17.4C15.4 19.4 13.9 20.8 12 20.8C10.1 20.8 8.6 19.4 8.6 17.4C8.6 15.4 10.6 14.2 12 11.6Z\" fill=\"url(#flg-fi)\"/>", "gem": "<g><polygon points=\"7,3 17,3 15,9 9,9\" fill=\"#b5efff\"/><polygon points=\"7,3 9,9 2,9\" fill=\"#7fd6ff\"/><polygon points=\"17,3 22,9 15,9\" fill=\"#5cc3fb\"/><polygon points=\"2,9 9,9 12,21.5\" fill=\"#3a9be8\"/><polygon points=\"9,9 15,9 12,21.5\" fill=\"#5fb6f7\"/><polygon points=\"15,9 22,9 12,21.5\" fill=\"#2a74cf\"/><path d=\"M7 3H17L22 9L12 21.5L2 9Z\" fill=\"none\" stroke=\"#e8f9ff\" stroke-opacity=\".55\" stroke-width=\".6\" stroke-linejoin=\"round\"/></g><g clip-path=\"url(#flg-cp-gem)\"><polygon class=\"fa-sweep\" points=\"0,0 6,0 2,24 -4,24\" fill=\"url(#flg-shine)\"/></g>", "crown": "<path d=\"M3 8L7.5 12L12 4L16.5 12L21 8L19 19H5Z\" fill=\"url(#flg-gold2)\" stroke=\"#b9650a\" stroke-width=\".5\" stroke-linejoin=\"round\"/><rect x=\"5\" y=\"19.6\" width=\"14\" height=\"2.2\" rx=\"1.1\" fill=\"#c9770d\"/><circle class=\"fa-jw\" cx=\"3\" cy=\"7\" r=\"1.5\" fill=\"#ff5c8a\"/><circle class=\"fa-jw2\" cx=\"12\" cy=\"3.4\" r=\"1.6\" fill=\"#5fd8ff\"/><circle class=\"fa-jw\" cx=\"21\" cy=\"7\" r=\"1.5\" fill=\"#ff5c8a\"/><circle cx=\"12\" cy=\"15.4\" r=\"1.5\" fill=\"#fff3d0\" fill-opacity=\".9\"/><g clip-path=\"url(#flg-cp-crown)\"><polygon class=\"fa-sweep\" points=\"0,0 6,0 2,24 -4,24\" fill=\"url(#flg-shine)\"/></g>"};
+const flBadge=(id,s)=>FLB[id]?`<svg class="fl-ic" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${FLB[id]}</svg>`:'';
+
 /* ===== Чат ===== */
 let rpl=0;const muted=()=>{try{return JSON.parse(localStorage.ch_mute||'[]')}catch{return[]}};
 window.chatHide=n=>{const m=muted();if(!m.includes(n)){m.push(n);localStorage.ch_mute=JSON.stringify(m)}document.querySelectorAll('#chList .ch-m').forEach(e=>{if(e.dataset.u===n)e.remove()});toast('Скрыто: '+n+' (у вас)')};
@@ -46,29 +49,33 @@ window.chatReply=(id,name,txt)=>{rpl=id;const b=$('chRp');b.style.display='flex'
 window.chatModAct=async(a,id,uid,name)=>{try{if(a==='mute'){const m=prompt('Мут '+name+' на сколько минут?','10');if(!m)return;await post('/api/admin/chat/mute',{id:uid,minutes:+m})}
  else if(a==='ban'){if(!confirm('Забанить '+name+' в чате?'))return;await post('/api/admin/chat/ban',{id:uid})}toast('Готово')}catch(e){toast(e.message,1)}};
 window.chNode=function(m){
- const d=document.createElement('div');d.className='ch-m'+(m.uid===chMe?' me':'')+(m.to?' pm':'');d.dataset.id=m.id;d.dataset.u=m.username;
+ const d=document.createElement('div');d.className='ch-m'+(m.uid===chMe?' me':'')+(m.to?' pm':'');
+ d.dataset.id=m.id;d.dataset.u=m.username;d.dataset.uid=m.uid;d.dataset.ts=m.ts;d.dataset.pm=m.to?1:0;d.style.setProperty('--h',uHue(m.username));
  if(muted().includes(m.username)&&m.uid!==chMe)d.style.display='none';
  const a=document.createElement('div');a.className='ch-av';avFill(a,m.avatar,m.username);
  const c=document.createElement('div');c.className='ch-c';
- const h=document.createElement('div');h.className='ch-n';const nm=document.createElement('span');nm.textContent=m.username;h.appendChild(nm);
+ const h=document.createElement('div');h.className='ch-n';const nm=document.createElement('span');nm.textContent=m.username;if(m.color)nm.style.color=m.color;if(m.badge&&FLB[m.badge]){const bd=document.createElement('span');bd.className='fl-bd';bd.innerHTML=flBadge(m.badge,16);h.appendChild(bd)}h.appendChild(nm);
  if(m.is_admin||m.role){const t=document.createElement('em');t.textContent=m.is_admin?'ADMIN':m.role==='moderator'?'MOD':'SUPPORT';h.appendChild(t)}
- if(m.to){const t=document.createElement('span');t.className='ch-pm';t.textContent=m.uid===chMe?'ЛС → '+m.to:'ЛС';h.appendChild(t)}
- const tm=document.createElement('small');tm.textContent=new Date(m.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});h.appendChild(tm);
- const ac=document.createElement('span');ac.className='ch-a';
- const bt=(t,f,ti)=>{const x=document.createElement('button');x.textContent=t;x.title=ti;x.onclick=f;ac.appendChild(x)};
- bt('↩',()=>chatReply(m.id,m.username,m.text.slice(0,40)),'Ответить');
- if(m.uid!==chMe)bt('скрыть',()=>chatHide(m.username),'Скрыть этого пользователя у себя');
- if(chAdm&&m.uid!==chMe&&!m.is_admin){bt('мут',()=>chatModAct('mute',m.id,m.uid,m.username),'Мут');bt('бан',()=>chatModAct('ban',m.id,m.uid,m.username),'Бан в чате')}
- if(chAdm)bt('✕',()=>chatDel(m.id),'Удалить');
- h.appendChild(ac);c.appendChild(h);
- if(m.reply){const q=document.createElement('div');q.className='ch-q';q.textContent='↩ '+m.reply.username+': '+m.reply.text;c.appendChild(q)}
+ c.appendChild(h);
+ const b=document.createElement('div');b.className='ch-b';
+ if(m.to){const t=document.createElement('div');t.style.marginBottom='4px';const s2=document.createElement('span');s2.className='ch-pm';s2.textContent=m.uid===chMe?'Личное для '+m.to:'Личное сообщение';t.appendChild(s2);b.appendChild(t)}
+ if(m.reply){const q=document.createElement('div');q.className='ch-q';q.textContent=m.reply.username+': '+m.reply.text;b.appendChild(q)}
  const t=document.createElement('div');t.className='ch-t';
  const me=(user&&user.username||'').toLowerCase();
- m.text.split(/(@[A-Za-z0-9_]{3,20})/g).forEach(p=>{if(/^@/.test(p)){const s=document.createElement('span');s.textContent=p;if(p.slice(1).toLowerCase()===me)s.className='ch-me-t';t.appendChild(s)}else t.appendChild(document.createTextNode(p))});
- c.appendChild(t);d.appendChild(a);d.appendChild(c);return d};
-window.chatSend=async function(){const i=$('chIn'),t=i.value.trim();if(!t)return;i.value='';const r=rpl;rpl=0;$('chRp').style.display='none';
- try{await api('/api/chat/send',{text:t,reply:r});setTimeout(chPoll,120)}catch(e){toast(e.message,1);i.value=t}};
-function chatInit(){if($('chRp'))return;const inp=$$('.ch-in');if(!inp)return;const b=H('<div class="ch-rp" id="chRp"><b></b><button onclick="rpl=0;this.parentNode.style.display=\'none\'">✕</button></div>');b.querySelector('button').onclick=()=>{rpl=0;b.style.display='none'};inp.parentNode.insertBefore(b,inp);
+ m.text.split(/(@[A-Za-z0-9_]{3,20})/g).forEach(p=>{if(/^@/.test(p)){const s2=document.createElement('span');s2.textContent=p;if(p.slice(1).toLowerCase()===me)s2.className='ch-me-t';t.appendChild(s2)}else t.appendChild(document.createTextNode(p))});
+ const ts=document.createElement('span');ts.className='ch-ts';ts.textContent=new Date(m.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});t.appendChild(ts);
+ b.appendChild(t);
+ const ac=document.createElement('div');ac.className='ch-a';
+ const bt=(ic,f,ti,cls)=>{const x=document.createElement('button');x.type='button';x.innerHTML=ico(ic,15);x.title=ti;x.setAttribute('aria-label',ti);if(cls)x.className=cls;x.onclick=e=>{e.stopPropagation();f()};ac.appendChild(x)};
+ bt('reply',()=>chatReply(m.id,m.username,m.text.slice(0,40)),'Ответить');
+ if(m.uid!==chMe)bt('eyeoff',()=>chatHide(m.username),'Скрыть этого пользователя у себя');
+ if(chAdm&&m.uid!==chMe&&!m.is_admin){bt('mute',()=>chatModAct('mute',m.id,m.uid,m.username),'Мут');bt('ban',()=>chatModAct('ban',m.id,m.uid,m.username),'Бан в чате','dng')}
+ if(chAdm)bt('trash',()=>chatDel(m.id),'Удалить','dng');
+ b.onclick=()=>{if(matchMedia('(hover:none)').matches){document.querySelectorAll('#chList .ch-m.tap').forEach(e=>{if(e!==d)e.classList.remove('tap')});d.classList.toggle('tap')}};
+ c.appendChild(b);d.appendChild(a);d.appendChild(c);d.appendChild(ac);return d};
+window.chatSend=async function(){const i=$('chIn'),t=i.value.trim();if(!t)return;i.value='';chAuto();const r=rpl;rpl=0;$('chRp').style.display='none';
+ try{await api('/api/chat/send',{text:t,reply:r});setTimeout(chPoll,120)}catch(e){toast(e.message,1);i.value=t;chAuto()}};
+function chatInit(){if($('chRp'))return;const inp=$$('.ch-in');if(!inp)return;const b=H('<div class="ch-rp" id="chRp"><b></b><button onclick="rpl=0;this.parentNode.style.display=\'none\'">'+ico('x',14)+'</button></div>');b.querySelector('button').onclick=()=>{rpl=0;b.style.display='none'};inp.parentNode.insertBefore(b,inp);
  $('chIn').placeholder='Сообщение… (@ник, /w ник текст — личное)'}
 
 /* ===== Кабинет: карточки ===== */
@@ -77,18 +84,19 @@ function inject(){const g=$$('#cab .grid');if(!g||injected)return;injected=true;
  const card=(id,t,body)=>H(`<div class="card" id="${id}"><h3>${t}</h3>${body}</div>`);
  const dv=$('dv');if(dv&&!$('hwcd'))dv.after(H('<p id="hwcd" style="font-size:12.5px;margin-top:8px"></p>'));
  (($('adm'))?(...c)=>$('adm').before(...c):(...c)=>g.append(...c))(
-  card('xLvl','Уровень и достижения','<div class="kv"><span>Уровень</span><b id="xl">—</b></div><div class="xbar"><i id="xlb" style="width:0"></i></div><small id="xlt" style="color:var(--m)"></small><div id="xach" style="margin-top:8px"></div>'),
+  card('xFl','FL — валюта сервиса','<div id="flB"><small>Загрузка…</small></div>'),
+   card('xLvl','Уровень и достижения','<div class="kv"><span>Уровень</span><b id="xl">—</b></div><div class="xbar"><i id="xlb" style="width:0"></i></div><small id="xlt" style="color:var(--m)"></small><div id="xach" style="margin-top:8px"></div>'),
   card('xHist','История подписки','<div class="xtl" id="xhist"><small>Загрузка…</small></div>'),
   card('x2fa','Двухфакторная защита (2FA)','<p id="x2s"></p><div id="x2b"></div>'),
   card('xRv','Отзыв о сервисе','<div class="fld ta"><textarea id="xrvt" placeholder=" "></textarea><label>Ваш отзыв (от 10 символов)</label></div><div class="row"><select id="xrvs" style="padding:10px;border-radius:10px;background:var(--card2);color:var(--fg);border:1px solid var(--bd)"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select><button class="btn sm" onclick="sendReview()">Отправить</button></div><p style="font-size:12px">Отзыв появится на сайте после модерации.</p>'))}
 window.sendReview=async()=>{try{const r=await post('/api/review',{text:$('xrvt').value,stars:+$('xrvs').value});toast(r.msg);$('xrvt').value=''}catch(e){toast(e.message,1)}};
-async function loadExt(){if(!user)return;chatInit();inject();if(Date.now()-lastLoad<15000)return;lastLoad=Date.now();
+async function loadExt(){if(!user)return;chatInit();inject();if(Date.now()-lastLoad<15000)return;lastLoad=Date.now();loadFl();
  try{const x=window.__x=await post('/api/ext/me');
   $('xl').textContent=x.level+' · '+x.xp+' XP';$('xlb').style.width=Math.min(100,(x.xp-x.lvl_from)/(x.lvl_to-x.lvl_from)*100)+'%';$('xlt').textContent='До уровня '+(x.level+1)+': '+Math.max(0,x.lvl_to-x.xp)+' XP';
-  $('xach').innerHTML=x.ach.map(a=>`<div class="xach ${a.done?'ok':'off'}"><div class="xb">${a.done?'✓':Math.round(a.cur/a.goal*100)+'%'}</div><div><b>${esc(a.title)}</b><small>${esc(a.desc)} · ${a.cur}/${a.goal}</small></div></div>`).join('');
+  $('xach').innerHTML=x.ach.map(a=>`<div class="xach ${a.done?'ok':'off'}"><div class="xb">${a.done?ico('check',16):Math.round(a.cur/a.goal*100)+'%'}</div><div><b>${esc(a.title)}</b><small>${esc(a.desc)} · ${a.cur}/${a.goal}</small></div></div>`).join('');
   const hc=$('hwcd');if(hc)hc.textContent=x.hwid_cd>0?'Сброс устройства: доступен через '+(x.hwid_cd>=864e5?Math.ceil(x.hwid_cd/864e5)+' дн.':Math.ceil(x.hwid_cd/36e5)+' ч.'):'Сброс устройства доступен сейчас (удалите устройство в списке).';
   draw2fa(x)}catch{}
- try{const h=await post('/api/history'),L={trial:'Пробный период',key:'Активация ключа',redeem:'Активация ключа',promo:'Промокод',gift:'Подарок',admin:'Выдано админом',admin_grant:'Выдано админом',ref:'Бонус за реферала'};
+ try{const h=await post('/api/history'),L={trial:'Пробный период',key:'Активация ключа',redeem:'Активация ключа',promo:'Промокод',gift:'Подарок',admin:'Выдано админом',admin_grant:'Выдано админом',ref:'Бонус за реферала',fl:'Покупка за FL'};
   $('xhist').innerHTML=h.list.length?h.list.map(i=>`<div><b>${esc(L[i.source]||i.source||'Событие')}</b> ${i.days>0?'+'+i.days+' дн.':i.days<0?i.days+' дн.':'∞'}<small>${dt(i.ts)}${i.details?' · '+esc(String(i.details).replace(/\[.*?\]/,'').trim().slice(0,60)):''}</small></div>`).join(''):'<small>Пока пусто</small>'}catch{}}
 function draw2fa(x){$('x2s').textContent=x.totp_on?'2FA включена: код нужен при входе и смене пароля.':'Защитите аккаунт кодом из Google Authenticator / Authy.';
  $('x2b').innerHTML=x.totp_on?'<div class="row"><button class="btn sm ghost" onclick="tfaOff()">Отключить 2FA</button></div>':'<div class="row"><button class="btn sm" onclick="tfaSetup()">Включить 2FA</button></div><div id="x2q"></div>'}
@@ -96,12 +104,50 @@ window.tfaSetup=async()=>{try{const r=await post('/api/2fa/setup');$('x2q').inne
 window.tfaOn=async()=>{try{await post('/api/2fa/enable',{code:$('x2c').value});toast('2FA включена');lastLoad=0;loadExt()}catch(e){toast(e.message,1)}};
 window.tfaOff=async()=>{const c=prompt('Код 2FA для отключения:');if(!c)return;try{await post('/api/2fa/disable',{code:c});toast('2FA отключена');lastLoad=0;loadExt()}catch(e){toast(e.message,1)}};
 
+/* ===== FL: валюта ===== */
+const fst=document.createElement('style');fst.textContent=`
+.fl-bal{font-size:34px;font-weight:800;line-height:1.1}.fl-bal span{font-size:15px;font-weight:700;color:var(--m);margin-left:4px}
+#flB h4{margin:18px 0 6px}#flB .xrow input{min-width:0}
+.fl-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.fl-it{border:1px solid var(--bd);border-radius:12px;padding:10px;background:#0b0f16;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.fl-it b{font-size:14px}.fl-it.on{border-color:var(--r)}.fl-it .btn{width:100%}
+`;document.head.appendChild(fst);
+const flFmt=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+let flPrice=0;
+const flAfter=()=>{lastLoad=0;loadFl()};
+async function loadFl(){const el=$('flB');if(!el||!user)return;try{drawFl(await post('/api/fl/info'))}catch(e){el.innerHTML='<small>Не удалось загрузить FL</small>'}}
+function drawFl(d){
+ const el=$('flB');if(!el)return;flPrice=d.day_price;
+ const mins=Math.ceil(d.next_bonus/6e4),nb=d.bonus<=0?'Бонус за вход сейчас отключён.':d.next_bonus>0?`Бонус за вход +${d.bonus} FL раз в 24 ч. Следующий через ${mins>=60?Math.floor(mins/60)+' ч ':''}${mins%60} мин.`:`Бонус за вход +${d.bonus} FL раз в 24 ч — доступен.`;
+ const item=(k,it)=>{const on=(k==='color'?d.color:d.badge)===it.id;return `<div class="fl-it${on?' on':''}">${k==='badge'?`<div style="height:30px;display:flex;align-items:center">${flBadge(it.id,28)}</div>`:''}<b ${k==='color'?`style="color:${it.hex}"`:''}>${esc(it.name)}</b>`+
+  (on?`<button class="btn sm ghost" onclick="flEquip('${k}','')">Снять</button>`:it.owned?`<button class="btn sm" onclick="flEquip('${k}','${it.id}')">Надеть</button>`:`<button class="btn sm" onclick="flBuy('${k}','${it.id}')">${flFmt(it.price)} FL</button>`)+`</div>`};
+ const cur=d.colors.find(c=>c.id===d.color),bd=d.badges.find(b=>b.id===d.badge);
+ const ev={};['flTo','flAm','flDays','flGTo','flGAm'].forEach(i=>{const e=$(i);if(e)ev[i]=e.value});
+ el.innerHTML=`<div class="fl-bal">${flFmt(d.fl)}<span>FL</span></div><small>${nb}</small>
+ <h4>Перевод пользователю</h4><div class="xrow"><input id="flTo" placeholder="Ник" style="flex:1"><input id="flAm" type="number" min="1" placeholder="Сумма" style="width:100px"><button class="btn sm" onclick="flTransfer()">Отправить</button></div>
+ <h4>Дни подписки</h4>${d.day_price>0?`<small>1 день = ${flFmt(d.day_price)} FL</small><div class="xrow"><input id="flDays" type="number" min="1" max="90" value="1" style="width:90px" oninput="flSum()"><span id="flSum" style="font-size:13px"></span><button class="btn sm" onclick="flBuyDays()">Купить</button></div>`:'<small>Покупка дней сейчас отключена.</small>'}
+ <h4>Цвет ника в чате</h4><div class="fl-g">${d.colors.map(c=>item('color',c)).join('')}</div>
+ <h4>Бейдж в чате</h4><div class="fl-g">${d.badges.map(b=>item('badge',b)).join('')}</div>
+ <p style="font-size:13px;margin-top:12px">В чате вы выглядите так: ${bd?`<span class="fl-bd">${flBadge(bd.id,16)}</span> `:''}<b${cur?` style="color:${cur.hex}"`:''}>${esc(user.username)}</b></p>
+ <h4>История FL</h4>${d.log.length?`<div class="xtl">${d.log.map(l=>`<div><b>${l.delta>0?'+':''}${flFmt(l.delta)} FL</b> ${esc(l.reason)}<small>${dt(l.ts)}</small></div>`).join('')}</div>`:'<small>Пока пусто</small>'}
+ ${d.cfg?`<h4>Админ: выдать / списать FL</h4><div class="xrow"><input id="flGTo" placeholder="Ник" style="flex:1"><input id="flGAm" type="number" placeholder="± сумма" style="width:110px"><button class="btn sm" onclick="flGive()">Применить</button></div>
+ <h4>Админ: настройки FL</h4><div class="xrow"><span style="font-size:13px">Бонус за вход</span><input id="flCb" type="number" min="0" value="${d.cfg.bonus}" style="width:80px"><span style="font-size:13px">Цена дня</span><input id="flCp" type="number" min="0" value="${d.cfg.day_price}" style="width:80px"><label style="font-size:13px"><input id="flCi" type="checkbox"${d.cfg.ip_limit?' checked':''}> 1 бонус на IP / сутки</label><button class="btn sm" onclick="flCfgSave()">Сохранить</button></div>`:''}`;
+ for(const k in ev){const e=$(k);if(e&&ev[k])e.value=ev[k]}window.flSum();
+}
+window.flSum=()=>{const e=$('flSum'),i=$('flDays');if(e&&i)e.textContent='= '+flFmt((+i.value||0)*flPrice)+' FL'};
+window.flTransfer=async()=>{try{const r=await post('/api/fl/transfer',{to:$('flTo').value,amount:+$('flAm').value});toast('Переведено. Баланс: '+flFmt(r.fl)+' FL');$('flAm').value='';flAfter()}catch(e){toast(e.message,1)}};
+window.flBuyDays=async()=>{const d=+$('flDays').value;if(!confirm('Купить '+d+' дн. подписки?'))return;try{const r=await post('/api/fl/buy_days',{days:d});toast('Добавлено дней: '+r.days);flAfter();try{init()}catch{}}catch(e){toast(e.message,1)}};
+window.flBuy=async(k,id)=>{try{await post('/api/fl/buy_item',{kind:k,id});toast('Куплено и надето');flAfter()}catch(e){toast(e.message,1)}};
+window.flEquip=async(k,id)=>{try{await post('/api/fl/equip',{kind:k,id});flAfter()}catch(e){toast(e.message,1)}};
+window.flGive=async()=>{try{const r=await post('/api/admin/fl/give',{to:$('flGTo').value,amount:+$('flGAm').value});toast(r.username+': '+flFmt(r.fl)+' FL');$('flGAm').value='';flAfter()}catch(e){toast(e.message,1)}};
+window.flCfgSave=async()=>{try{await post('/api/admin/fl/config',{bonus:+$('flCb').value,day_price:+$('flCp').value,ip_limit:$('flCi').checked});toast('Сохранено');flAfter()}catch(e){toast(e.message,1)}};
+
 /* ===== Конфиги: избранное и оценки ===== */
 const _sc=window.showConfigs;
 window.showConfigs=async function(){await _sc();if(!user)return;try{const m=await post('/api/config/mine'),L=$('cfgList');if(!L)return;
  L.querySelectorAll('.it[onclick^="openCfg"]').forEach(it=>{const id=+it.getAttribute('onclick').match(/\d+/)[0],s=m.stats[id],f=m.fav.includes(id),r=m.rate[id]||0;
-  const x=H(`<div style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--m)" onclick="event.stopPropagation()"><button class="btn sm ghost" style="height:30px;padding:0 10px" onclick="cfgFav(${id})">${f?'★ В избранном':'☆ В избранное'}</button><span>${s?'★ '+s.avg+' ('+s.n+')':'нет оценок'}</span><select style="padding:5px;border-radius:8px;background:var(--card2);color:var(--fg);border:1px solid var(--bd)" onchange="cfgRate(${id},this.value)"><option value="">Оценить</option>${[5,4,3,2,1].map(n=>`<option value="${n}"${r===n?' selected':''}>${n} ★</option>`).join('')}</select></div>`);it.appendChild(x)});
- const items=[...L.querySelectorAll('.it')];items.sort((a,b)=>(b.textContent.includes('★ В избранном')?1:0)-(a.textContent.includes('★ В избранном')?1:0)).forEach(e=>L.appendChild(e))}catch{}};
+  const x=H(`<div style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--m)" onclick="event.stopPropagation()"><button class="btn sm ghost" style="height:30px;padding:0 10px" onclick="cfgFav(${id})">${ico('star',14,f)} ${f?'В избранном':'В избранное'}</button><span>${s?ico('star',13,1)+' '+s.avg+' ('+s.n+')':'нет оценок'}</span><select style="padding:5px;border-radius:8px;background:var(--card2);color:var(--fg);border:1px solid var(--bd)" onchange="cfgRate(${id},this.value)"><option value="">Оценить</option>${[5,4,3,2,1].map(n=>`<option value="${n}"${r===n?' selected':''}>${n} из 5</option>`).join('')}</select></div>`);it.appendChild(x)});
+ const items=[...L.querySelectorAll('.it')];items.sort((a,b)=>(b.textContent.includes('В избранном')?1:0)-(a.textContent.includes('В избранном')?1:0)).forEach(e=>L.appendChild(e))}catch{}};
 window.cfgFav=async id=>{await post('/api/config/fav',{id});showConfigs()};window.cfgRate=async(id,v)=>{if(!v)return;await post('/api/config/rate',{id,stars:+v});toast('Оценка сохранена');showConfigs()};
 
 /* ===== Админ-вкладки ===== */
@@ -125,7 +171,7 @@ window.loadDash=async()=>{try{const d=await post('/api/admin/dash'),f=d.funnel,m
  <h4>Рефералы</h4><p style="font-size:13px">Приглашено: <b>${d.ref.invited}</b> · оплатили: <b>${d.ref.paid}</b> · конверсия: <b>${d.ref.conv}%</b></p>
  <h4>Последние 24 часа (синий — регистрации, зелёный — активации)</h4><svg viewBox="0 0 240 60" style="width:100%;height:90px">${d.series.map((s,i)=>`<rect x="${i*10+1}" y="${58-s[0]/mx*56}" width="4" height="${s[0]/mx*56}" fill="#4da3ff"/><rect x="${i*10+5}" y="${58-s[1]/mx*56}" width="4" height="${s[1]/mx*56}" fill="#35d98a"/>`).join('')}</svg>
  <h4>Промокоды</h4>${d.promos.length?d.promos.map(p=>`<div class="hwid-row"><span>${esc(p.code)}</span><span>${p.uses}/${p.max_uses||'∞'}</span></div>`).join(''):'<small>Нет</small>'}`}catch(e){$('dashB').textContent=e.message}};
-window.loadChatMod=async()=>{try{const s=await post('/api/admin/chat/state');$('cmSlow').value=s.slow;$('cmWords').innerHTML=s.words.map(w=>`<span class="badge-s" style="cursor:pointer;background:#2a3142;color:#fff" onclick="cmWordDel('${esc(w).replace(/'/g,'')}')">${esc(w)} ✕</span>`).join('')||'<small>Список пуст</small>';
+window.loadChatMod=async()=>{try{const s=await post('/api/admin/chat/state');$('cmSlow').value=s.slow;$('cmWords').innerHTML=s.words.map(w=>`<span class="badge-s" style="cursor:pointer;background:#2a3142;color:#fff" onclick="cmWordDel('${esc(w).replace(/'/g,'')}')">${esc(w)} ${ico('x',11)}</span>`).join('')||'<small>Список пуст</small>';
  $('cmMuted').innerHTML=s.muted.map(u=>`<div class="hwid-row"><span>${esc(u.username)} — ${u.chat_banned?'бан':'мут до '+dt(u.chat_muted_until)}</span><button class="btn sm ghost" style="height:30px" onclick="cmUn(${u.id})">Снять</button></div>`).join('')||'<small>Никого</small>';
  $('cmLog').innerHTML=s.log.map(l=>`<div class="hwid-row"><span>${dt(l.ts)} · ${esc(l.adm||'')} · <b>${esc(l.action)}</b> ${esc(l.target)}</span><span style="color:var(--m)">${esc(l.details)}</span></div>`).join('')}catch(e){toast(e.message,1)}};
 window.cmSlow=async()=>{await post('/api/admin/chat/slow',{sec:+$('cmSlow').value});toast('Готово')};window.cmWord=async()=>{await post('/api/admin/chat/word_add',{word:$('cmW').value});$('cmW').value='';loadChatMod()};
@@ -141,14 +187,14 @@ window.frUser=async()=>{try{const r=await post('/api/admin/fraud/user',{id:+$('f
 window.frBan=async()=>{if(!confirm('Заблокировать все связанные аккаунты?'))return;try{const r=await post('/api/admin/fraud/banlinked',{id:+$('frId').value});toast('Заблокировано: '+r.count);frUser()}catch(e){toast(e.message,1)}};
 window.loadContent=async()=>{const r=await post('/api/admin/content');const row=(t,d,c)=>`<div class="hwid-row"><span>${t}</span><button class="btn sm ghost" style="height:30px" onclick="${d}">${c||'Удалить'}</button></div>`;
  $('ctFaq').innerHTML=r.faq.map(f=>row(esc(f.q),`ctDel('faq',${f.id})`)).join('');$('ctCl').innerHTML=r.changelog.map(c=>row(esc(c.version+' '+c.title),`ctDel('cl',${c.id})`)).join('');
- $('ctRv').innerHTML=r.reviews.map(v=>`<div class="hwid-row"><span>${esc(v.username)} ${v.stars}★: ${esc(v.text)}</span><span>${v.approved?'':`<button class="btn sm" style="height:30px" onclick="ctRv(${v.id},1)">Одобрить</button> `}<button class="btn sm ghost" style="height:30px" onclick="ctRv(${v.id},0,1)">Удалить</button></span></div>`).join('')||'<small>Нет</small>'};
+ $('ctRv').innerHTML=r.reviews.map(v=>`<div class="hwid-row"><span>${esc(v.username)} ${v.stars}/5: ${esc(v.text)}</span><span>${v.approved?'':`<button class="btn sm" style="height:30px" onclick="ctRv(${v.id},1)">Одобрить</button> `}<button class="btn sm ghost" style="height:30px" onclick="ctRv(${v.id},0,1)">Удалить</button></span></div>`).join('')||'<small>Нет</small>'};
 window.ctAdd=async k=>{if(k==='faq')await post('/api/admin/faq/add',{q:$('fq').value,a:$('fa').value});else await post('/api/admin/changelog/add',{version:$('cv').value,title:$('ct').value,text:$('cx').value});loadContent()};
 window.ctDel=async(k,id)=>{await post(k==='faq'?'/api/admin/faq/del':'/api/admin/changelog/del',{id});loadContent()};window.ctRv=async(id,a,d)=>{await post('/api/admin/review',{id,approve:a,del:d});loadContent()};
 
 /* ===== Лендинг: счётчики, FAQ, changelog, отзывы ===== */
 async function landing(){const how=$('how');if(!how||$('xpub'))return;try{const r=await _fetch(API_BASE+'/api/public/info').then(x=>x.json());
  const f=r.faq.length,sec=H(`<div id="xpub"><section class="xsec"><div class="xcnt"><div><b>${r.counters.users}</b><span>пользователей</span></div><div><b>${r.counters.activations}</b><span>активаций</span></div></div>
- ${r.reviews.length?'<h2>Отзывы</h2><div class="xrv">'+r.reviews.map(v=>`<div>${'★'.repeat(v.stars)}<br>${esc(v.text)}<small>— ${esc(v.username)}</small></div>`).join('')+'</div>':''}</section>
+ ${r.reviews.length?'<h2>Отзывы</h2><div class="xrv">'+r.reviews.map(v=>`<div>${ico('star',15,1).repeat(v.stars)}<br>${esc(v.text)}<small>— ${esc(v.username)}</small></div>`).join('')+'</div>':''}</section>
  ${f?`<section class="xsec xfaq" id="faq"><h2>FAQ</h2><input id="xfq" placeholder="Поиск по вопросам…" oninput="faqF(this.value)"><div id="xfl">${r.faq.map(q=>`<details><summary>${esc(q.q)}</summary><p>${esc(q.a)}</p></details>`).join('')}</div></section>`:''}
  ${r.changelog.length?`<section class="xsec" id="chlog"><h2>Что нового</h2><div class="xtl">${r.changelog.map(c=>`<div><b>${esc(c.version||'')} ${esc(c.title||'')}</b><small>${new Date(c.ts).toLocaleDateString('ru-RU')}</small>${esc(c.text||'')}</div>`).join('')}</div></section>`:''}</div>`);
  $('how').after(sec)}catch{}}
