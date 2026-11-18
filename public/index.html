@@ -2168,4 +2168,4 @@ function ldUpload(){if(!ldFile)return;if(!confirm('Заменить лоадер
   x.onerror=()=>{$('ldBar').style.display='none';$('ldPct').textContent='';toast('Нет связи с сервером',1);$('ldGo').disabled=false};
   x.send(ldFile)}
 async function ldRollback(){if(!confirm('Вернуть предыдущую версию лоадера?'))return;try{await api('/api/admin/loader/rollback',{});toast('Возвращена предыдущая версия');ldInfo()}catch(e){toast(e.message,1)}}
-</script></body></html>
+</script><script src="/ext.js"></script></body></html>
