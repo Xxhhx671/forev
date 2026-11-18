@@ -359,6 +359,7 @@ async function loadForum(){
  }catch(e){/* категории уже на экране */}
 }
 
+window.loadForum=loadForum; // loadForum внутри IIFE — без этого openForum() в index.html её не видит
 window.fmOpenCat=async id=>{
  fmCat=id;document.querySelectorAll('.fm-nav button').forEach(b=>b.classList.toggle('on',b.dataset.c===id));
  const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
