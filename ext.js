@@ -43,7 +43,7 @@ const FL_COLORS={red:['Красный','#ff5c6c',120],orange:['Оранжевы�
 // значки рисуются на фронте (SVG по id), первый элемент не используется
 const FL_BADGES={star:['','Искра',150],moon:['','Луна',150],bolt:['','Молния',250],fire:['','Огонь',300],gem:['','Алмаз',500],crown:['','Корона',800]};
 const flNum=(k,d)=>{const v=get(k);return v===undefined||v===null||v===''||isNaN(+v)?d:+v};
-const flCfg=()=>({bonus:flNum('fl_login_bonus',12),day_price:flNum('fl_day_price',60),ip_limit:flNum('fl_ip_limit',1)?1:0});
+const flCfg=()=>({bonus:flNum('fl_login_bonus',1),day_price:flNum('fl_day_price',60),ip_limit:flNum('fl_ip_limit',1)?1:0});
 const flLog=(uid,delta,reason,peer)=>db.prepare('INSERT INTO fl_log(user_id,delta,reason,peer,ts) VALUES(?,?,?,?,?)').run(uid,delta,String(reason).slice(0,120),String(peer||'').slice(0,40),Date.now());
 const flAdd=(uid,n,reason,peer)=>{db.prepare('UPDATE users SET fl=fl+? WHERE id=?').run(n,uid);flLog(uid,n,reason,peer)};
 const flSpend=(uid,n,reason,peer)=>{const r=db.prepare('UPDATE users SET fl=fl-? WHERE id=? AND fl>=?').run(n,uid,n);if(!r.changes)return false;flLog(uid,-n,reason,peer);return true};
