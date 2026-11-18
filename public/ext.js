@@ -59,7 +59,7 @@ const flst=document.createElement('style');flst.textContent=".fl-ic{display:inli
 #xFl h3{display:flex;align-items:center;gap:8px}
 #xFl h3::before{content:'◆';color:#ffd060;font-size:11px;animation:bdgSpin 5s linear infinite;display:inline-block}`;document.head.appendChild(flst);
 document.body.insertAdjacentHTML('beforeend','<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'+"<linearGradient id=\"flg-gold\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3a8\"/><stop offset=\".5\" stop-color=\"#ffc02e\"/><stop offset=\"1\" stop-color=\"#e5800a\"/></linearGradient>\n<linearGradient id=\"flg-gold2\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe98f\"/><stop offset=\".55\" stop-color=\"#f5a912\"/><stop offset=\"1\" stop-color=\"#b9650a\"/></linearGradient>\n<linearGradient id=\"flg-moon\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#d9ccff\"/><stop offset=\".55\" stop-color=\"#8b86ff\"/><stop offset=\"1\" stop-color=\"#4a5de0\"/></linearGradient>\n<linearGradient id=\"flg-bolt\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fffbc2\"/><stop offset=\".5\" stop-color=\"#ffd23a\"/><stop offset=\"1\" stop-color=\"#ff9a0a\"/></linearGradient>\n<linearGradient id=\"flg-fo\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ff6a3d\"/><stop offset=\".6\" stop-color=\"#f03a3a\"/><stop offset=\"1\" stop-color=\"#c41f4a\"/></linearGradient>\n<linearGradient id=\"flg-fi\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3a0\"/><stop offset=\"1\" stop-color=\"#ffa21a\"/></linearGradient>\n<linearGradient id=\"flg-shine\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#fff\" stop-opacity=\"0\"/><stop offset=\".5\" stop-color=\"#fff\" stop-opacity=\".85\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></linearGradient>\n<clipPath id=\"flg-cp-gem\"><path d=\"M12 2.5L18.5 8L21.5 11.5L12 21.2L2.5 11.5L5.5 8Z\"/></clipPath>\n<clipPath id=\"flg-cp-crown\"><path d=\"M3.2 8.2L7.6 12.2L12 3.8L16.4 12.2L20.8 8.2L19 19.4H5Z\"/></clipPath>"+'</defs></svg>');
-const FLB={"star":"<g class=\"fa-spark\"><path d=\"M12 2.2l2.1 5.6 6 .3-4.6 3.8 1.5 5.8L12 14.9 7 17.7l1.5-5.8L4 8.1l6-.3z\" fill=\"url(#flg-gold)\" stroke=\"#ffe08a\" stroke-width=\".4\" stroke-linejoin=\"round\"/><circle class=\"fa-tw\" cx=\"18.5\" cy=\"4\" r=\"1.2\" fill=\"#fff6c8\"/><circle class=\"fa-tw2\" cx=\"5.2\" cy=\"6\" r=\".9\" fill=\"#fff6c8\"/></g>","moon":"<g class=\"fa-rock\"><path d=\"M20.5 13.2A8.5 8.5 0 1 1 10.8 3.4 6.6 6.6 0 0 0 20.5 13.2Z\" fill=\"url(#flg-moon)\" stroke=\"#c8b8ff\" stroke-width=\".4\"/><circle class=\"fa-tw\" cx=\"17.8\" cy=\"5.4\" r=\"1.2\" fill=\"#efe8ff\"/><circle class=\"fa-tw2\" cx=\"14.2\" cy=\"3.2\" r=\".75\" fill=\"#efe8ff\"/><circle cx=\"16.5\" cy=\"8.5\" r=\".5\" fill=\"#fff\" opacity=\".5\"/></g>","bolt":"<g class=\"fa-shake\"><path d=\"M13.4 1.8 5.2 13.2h5.4L9.4 22.2 18.6 9.6h-5.2z\" fill=\"url(#flg-bolt)\" stroke=\"#ffb020\" stroke-width=\".55\" stroke-linejoin=\"round\"/><path class=\"fa-flash\" d=\"M13.4 1.8 5.2 13.2h5.4L9.4 22.2 18.6 9.6h-5.2z\" fill=\"#fff\"/></g>","fire":"<g><path class=\"fa-flame\" d=\"M12 2.4C13.2 5.8 18.6 8.5 18.6 14.2c0 3.9-2.9 7.2-6.6 7.2S5.4 18.1 5.4 14.2c0-2.6 1.3-4.4 2.6-5.8.3 1.8 1.2 2.8 2.2 3.2C9.6 8.4 10.5 4.8 12 2.4Z\" fill=\"url(#flg-fo)\"/><path class=\"fa-flame2\" d=\"M12 11.8c.9 2 3.3 3.1 3.3 5.5 0 1.95-1.45 3.3-3.3 3.3s-3.3-1.35-3.3-3.3c0-2 2-3.15 3.3-5.5Z\" fill=\"url(#flg-fi)\"/></g>","gem":"<g><polygon points=\"12,2.5 18.5,8 15.5,8 12,4.8 8.5,8 5.5,8\" fill=\"#d8f6ff\"/><polygon points=\"5.5,8 2.5,11.5 8.5,11.5\" fill=\"#7fd6ff\"/><polygon points=\"18.5,8 21.5,11.5 15.5,11.5\" fill=\"#5cc3fb\"/><polygon points=\"8.5,8 15.5,8 15.5,11.5 8.5,11.5\" fill=\"#b0eaff\"/><polygon points=\"2.5,11.5 8.5,11.5 12,21.2\" fill=\"#3a9be8\"/><polygon points=\"8.5,11.5 15.5,11.5 12,21.2\" fill=\"#5fb6f7\"/><polygon points=\"15.5,11.5 21.5,11.5 12,21.2\" fill=\"#2a74cf\"/><path d=\"M12 2.5 18.5 8 21.5 11.5 12 21.2 2.5 11.5 5.5 8Z\" fill=\"none\" stroke=\"#e8f9ff\" stroke-opacity=\".6\" stroke-width=\".55\" stroke-linejoin=\"round\"/><g clip-path=\"url(#flg-cp-gem)\"><polygon class=\"fa-sweep\" points=\"0,0 7,0 2,24 -5,24\" fill=\"url(#flg-shine)\"/></g></g>","crown":"<g><path d=\"M3.2 8.2 7.6 12.2 12 3.8l4.4 8.4 4.4-4L19 19.4H5Z\" fill=\"url(#flg-gold2)\" stroke=\"#c97810\" stroke-width=\".5\" stroke-linejoin=\"round\"/><rect x=\"5\" y=\"19.4\" width=\"14\" height=\"2.4\" rx=\"1.1\" fill=\"#d4891a\"/><rect x=\"5.5\" y=\"19.7\" width=\"13\" height=\".6\" rx=\".3\" fill=\"#ffe08a\" opacity=\".45\"/><circle class=\"fa-jw\" cx=\"3.2\" cy=\"7.2\" r=\"1.55\" fill=\"#ff5c8a\"/><circle class=\"fa-jw2\" cx=\"12\" cy=\"3.5\" r=\"1.7\" fill=\"#5fd8ff\"/><circle class=\"fa-jw\" cx=\"20.8\" cy=\"7.2\" r=\"1.55\" fill=\"#ff5c8a\"/><circle cx=\"12\" cy=\"15.2\" r=\"1.6\" fill=\"#fff3d0\"/><circle cx=\"12\" cy=\"15.2\" r=\".7\" fill=\"#ffc02e\"/><g clip-path=\"url(#flg-cp-crown)\"><polygon class=\"fa-sweep\" points=\"0,0 6,0 1,24 -5,24\" fill=\"url(#flg-shine)\"/></g></g>"};
+const FLB={"star":"<g class=\"fa-spark\"><path d=\"M12 2.2l2.1 5.6 6 .3-4.6 3.8 1.5 5.8L12 14.9 7 17.7l1.5-5.8L4 8.1l6-.3z\" fill=\"url(#flg-gold)\" stroke=\"#ffe08a\" stroke-width=\".4\" stroke-linejoin=\"round\"/><circle class=\"fa-tw\" cx=\"18.5\" cy=\"4\" r=\"1.2\" fill=\"#fff6c8\"/><circle class=\"fa-tw2\" cx=\"5.2\" cy=\"6\" r=\".9\" fill=\"#fff6c8\"/></g>","moon":"<g class=\"fa-rock\"><path d=\"M20.5 13.2A8.5 8.5 0 1 1 10.8 3.4 6.6 6.6 0 0 0 20.5 13.2Z\" fill=\"url(#flg-moon)\" stroke=\"#c8b8ff\" stroke-width=\".4\"/><circle class=\"fa-tw\" cx=\"17.8\" cy=\"5.4\" r=\"1.2\" fill=\"#efe8ff\"/><circle class=\"fa-tw2\" cx=\"14.2\" cy=\"3.2\" r=\".75\" fill=\"#efe8ff\"/></g>","bolt":"<g class=\"fa-shake\"><path d=\"M13.4 1.8 5.2 13.2h5.4L9.4 22.2 18.6 9.6h-5.2z\" fill=\"url(#flg-bolt)\" stroke=\"#ffb020\" stroke-width=\".55\" stroke-linejoin=\"round\"/><path class=\"fa-flash\" d=\"M13.4 1.8 5.2 13.2h5.4L9.4 22.2 18.6 9.6h-5.2z\" fill=\"#fff\"/></g>","fire":"<g><path class=\"fa-flame\" d=\"M12 2.4C13.2 5.8 18.6 8.5 18.6 14.2c0 3.9-2.9 7.2-6.6 7.2S5.4 18.1 5.4 14.2c0-2.6 1.3-4.4 2.6-5.8.3 1.8 1.2 2.8 2.2 3.2C9.6 8.4 10.5 4.8 12 2.4Z\" fill=\"url(#flg-fo)\"/><path class=\"fa-flame2\" d=\"M12 11.8c.9 2 3.3 3.1 3.3 5.5 0 1.95-1.45 3.3-3.3 3.3s-3.3-1.35-3.3-3.3c0-2 2-3.15 3.3-5.5Z\" fill=\"url(#flg-fi)\"/></g>"};
 const flBadge=(id,s)=>FLB[id]?`<svg class="fl-ic" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${FLB[id]}</svg>`:'';
 
 /* ===== Чат ===== */
@@ -75,7 +75,7 @@ window.chNode=function(m){
  if(muted().includes(m.username)&&m.uid!==chMe)d.style.display='none';
  const a=document.createElement('div');a.className='ch-av';avFill(a,m.avatar,m.username);
  const c=document.createElement('div');c.className='ch-c';
- const h=document.createElement('div');h.className='ch-n';const nm=document.createElement('span');nm.textContent=m.username;if(m.color)nm.style.color=m.color;if(m.badge&&FLB[m.badge]){const bd=document.createElement('span');bd.className='fl-bd';bd.innerHTML=flBadge(m.badge,16);h.appendChild(bd)}h.appendChild(nm);
+ const h=document.createElement('div');h.className='ch-n';const nm=document.createElement('span');nm.textContent=m.username;nm.style.cursor='pointer';nm.title='Открыть профиль';nm.onclick=e=>{e.stopPropagation();openUserProfile(m.username)};if(m.color)nm.style.color=m.color;if(m.badge&&FLB[m.badge]){const bd=document.createElement('span');bd.className='fl-bd';bd.innerHTML=flBadge(m.badge,16);h.appendChild(bd)}h.appendChild(nm);
  if(m.is_admin||m.role){const t=document.createElement('em');t.textContent=m.is_admin?'ADMIN':m.role==='moderator'?'MOD':'SUPPORT';h.appendChild(t)}
  c.appendChild(h);
  const b=document.createElement('div');b.className='ch-b';
@@ -138,7 +138,7 @@ window.switchCabTab=function(tab){
 };
 window.openFlTab=function(){if(!user)return;inject();switchCabTab('fl')};
 window.sendReview=async()=>{try{const r=await post('/api/review',{text:$('xrvt').value,stars:+$('xrvs').value});toast(r.msg);$('xrvt').value=''}catch(e){toast(e.message,1)}};
-async function loadExt(){if(!user)return;chatInit();inject();if(Date.now()-lastLoad<15000)return;lastLoad=Date.now();loadFl();
+async function loadExt(){if(!user)return;chatInit();inject();injectForum();if(Date.now()-lastLoad<15000)return;lastLoad=Date.now();loadFl();
  try{const x=window.__x=await post('/api/ext/me');
   $('xl').textContent=x.level+' · '+x.xp+' XP';$('xlb').style.width=Math.min(100,(x.xp-x.lvl_from)/(x.lvl_to-x.lvl_from)*100)+'%';$('xlt').textContent='До уровня '+(x.level+1)+': '+Math.max(0,x.lvl_to-x.xp)+' XP';
   $('xach').innerHTML=x.ach.map(a=>`<div class="xach ${a.done?'ok':'off'}"><div class="xb">${a.done?ico('check',16):Math.round(a.cur/a.goal*100)+'%'}</div><div><b>${esc(a.title)}</b><small>${esc(a.desc)} · ${a.cur}/${a.goal}</small></div></div>`).join('');
@@ -182,7 +182,7 @@ function drawFl(d){
  <div class="fl-sec"><h4>Бейдж в чате</h4><div class="fl-g">${d.badges.map(b=>item('badge',b)).join('')}</div></div>
  <div class="fl-sec"><h4>Превью в чате</h4><div class="fl-preview">${bd?`<span class="fl-bd">${flBadge(bd.id,16)}</span>`:''}<b${cur?` style="color:${cur.hex}"`:''}>${esc(user.username)}</b></div></div>
  <div class="fl-sec fl-hist"><h4>История FL</h4>${d.log.length?`<div class="xtl">${d.log.map(l=>`<div><b style="color:${l.delta>0?'#4cd97b':'#ff6b8a'}">${l.delta>0?'+':''}${flFmt(l.delta)} FL</b> ${esc(l.reason)}<small>${dt(l.ts)}</small></div>`).join('')}</div>`:'<small>Пока пусто</small>'}</div>
- ${d.cfg?`<div class="fl-sec"><h4>Админ: выдать / списать FL</h4><div class="xrow"><input id="flGTo" placeholder="Ник" style="flex:1"><input id="flGAm" type="number" placeholder="± сумма" style="width:110px"><button class="btn sm" onclick="flGive()">Применить</button></div>
+ ${d.cfg?`<div class="fl-sec"><h4>Админ: выдать / списать FL</h4><div class="xrow"><input id="flGTo" placeholder="Ник (пусто = себе)" style="flex:1"><input id="flGAm" type="number" placeholder="± сумма" style="width:110px"><button class="btn sm" onclick="flGive()">Применить</button><button class="btn sm ghost" onclick="flGiveSelf()">Себе</button><button class="btn sm ghost" onclick="flGiveAll()">Всем</button></div>
  <h4 style="margin-top:14px">Админ: настройки FL</h4><div class="xrow"><span style="font-size:13px">Бонус за вход</span><input id="flCb" type="number" min="0" value="${d.cfg.bonus}" style="width:80px"><span style="font-size:13px">Цена дня</span><input id="flCp" type="number" min="0" value="${d.cfg.day_price}" style="width:80px"><label style="font-size:13px"><input id="flCi" type="checkbox"${d.cfg.ip_limit?' checked':''}> 1 бонус на IP / сутки</label><button class="btn sm" onclick="flCfgSave()">Сохранить</button></div></div>`:''}`;
  for(const k in ev){const e=$(k);if(e&&ev[k])e.value=ev[k]}window.flSum();
 }
@@ -191,7 +191,9 @@ window.flTransfer=async()=>{try{const r=await post('/api/fl/transfer',{to:$('flT
 window.flBuyDays=async()=>{const d=+$('flDays').value;if(!confirm('Купить '+d+' дн. подписки?'))return;try{const r=await post('/api/fl/buy_days',{days:d});toast('Добавлено дней: '+r.days);flAfter();try{init()}catch{}}catch(e){toast(e.message,1)}};
 window.flBuy=async(k,id)=>{try{await post('/api/fl/buy_item',{kind:k,id});toast('Куплено и надето');flAfter()}catch(e){toast(e.message,1)}};
 window.flEquip=async(k,id)=>{try{await post('/api/fl/equip',{kind:k,id});flAfter()}catch(e){toast(e.message,1)}};
-window.flGive=async()=>{try{const r=await post('/api/admin/fl/give',{to:$('flGTo').value,amount:+$('flGAm').value});toast(r.username+': '+flFmt(r.fl)+' FL');$('flGAm').value='';flAfter()}catch(e){toast(e.message,1)}};
+window.flGive=async()=>{try{const r=await post('/api/admin/fl/give',{to:$('flGTo').value.trim(),amount:+$('flGAm').value});toast(r.username+': '+flFmt(r.fl)+' FL');$('flGAm').value='';flAfter()}catch(e){toast(e.message,1)}};
+window.flGiveSelf=async()=>{try{const amt=+$('flGAm').value;if(!amt)return toast('Укажите сумму',1);const r=await post('/api/admin/fl/give',{to:user.username,amount:amt});toast('Себе: '+flFmt(r.fl)+' FL');flAfter()}catch(e){toast(e.message,1)}};
+window.flGiveAll=async()=>{const amt=+$('flGAm').value;if(!amt)return toast('Укажите сумму',1);if(!confirm('Начислить '+amt+' FL ВСЕМ пользователям?'))return;try{const r=await post('/api/admin/fl/give',{all:1,amount:amt});toast('Готово: '+r.count+' чел. × '+amt+' FL');flAfter()}catch(e){toast(e.message,1)}};
 window.flCfgSave=async()=>{try{await post('/api/admin/fl/config',{bonus:+$('flCb').value,day_price:+$('flCp').value,ip_limit:$('flCi').checked});toast('Сохранено');flAfter()}catch(e){toast(e.message,1)}};
 
 /* ===== Конфиги: избранное и оценки ===== */
@@ -253,6 +255,136 @@ async function landing(){const how=$('how');if(!how||$('xpub'))return;try{const 
 window.faqF=v=>{v=v.toLowerCase();document.querySelectorAll('#xfl details').forEach(d=>d.style.display=d.textContent.toLowerCase().includes(v)?'':'none')};
 
 /* ===== хуки ===== */
+
+/* ===== FORUM + PUBLIC PROFILE ===== */
+const fst2=document.createElement('style');fst2.textContent=`
+.fm-wrap{display:grid;grid-template-columns:220px 1fr;gap:14px;min-height:420px}
+@media(max-width:720px){.fm-wrap{grid-template-columns:1fr}}
+.fm-nav{display:flex;flex-direction:column;gap:4px}
+.fm-nav h5{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--m);margin:10px 0 4px;padding:0 8px}
+.fm-nav button{text-align:left;border:0;background:transparent;color:var(--fg);padding:10px 12px;border-radius:10px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600}
+.fm-nav button:hover{background:rgba(255,255,255,.04)}
+.fm-nav button.on{background:rgba(59,158,255,.12);color:#8ec8ff}
+.fm-nav .staff-tag{font-size:10px;color:#f59e0b;margin-left:6px;font-weight:800}
+.fm-main{min-width:0}
+.fm-post{border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px;background:#0b0f16;cursor:pointer;transition:border-color .2s}
+.fm-post:hover{border-color:rgba(59,158,255,.35)}
+.fm-post b{display:block;font-size:15px;margin-bottom:4px}
+.fm-post small{color:var(--m)}
+.fm-body{white-space:pre-wrap;line-height:1.55;font-size:14px;margin:10px 0}
+.pf-ov{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.72);display:flex;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto;backdrop-filter:blur(6px)}
+.pf-box{width:min(560px,100%);background:#0b0f16;border:1px solid var(--bd);border-radius:18px;overflow:hidden;position:relative;margin-bottom:40px}
+.pf-ban{height:140px;background:linear-gradient(135deg,#1a2a44,#0d1522);background-size:cover;background-position:center;position:relative}
+.pf-av{width:88px;height:88px;border-radius:50%;border:4px solid #0b0f16;object-fit:cover;background:#16202f;position:absolute;left:50%;bottom:-44px;transform:translateX(-50%);display:grid;place-items:center;font-size:32px;font-weight:900;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.pf-av img{width:100%;height:100%;object-fit:cover}
+.pf-body{padding:56px 20px 20px;text-align:center}
+.pf-body h2{margin:0 0 4px;font-size:22px}
+.pf-bio{color:var(--m);font-size:14px;margin:10px 0 14px;white-space:pre-wrap;text-align:left;background:rgba(255,255,255,.03);border-radius:12px;padding:12px}
+.pf-votes{display:flex;gap:10px;justify-content:center;margin:12px 0}
+.pf-votes button{border:1px solid var(--bd);background:#121824;color:var(--fg);border-radius:10px;padding:8px 16px;cursor:pointer;font-weight:700}
+.pf-votes button.on-like{border-color:#4cd97b;color:#4cd97b}
+.pf-votes button.on-dis{border-color:#ff6b8a;color:#ff6b8a}
+.pf-com{text-align:left;margin-top:16px;border-top:1px solid var(--bd);padding-top:14px}
+.pf-com .c{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13.5px}
+.pf-com .c b{cursor:pointer}
+.pf-x{position:absolute;top:10px;right:10px;width:34px;height:34px;border:0;border-radius:10px;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;z-index:2}
+`;document.head.appendChild(fst2);
+
+function injectForum(){
+ if($('xForum')||!user)return;
+ const g=$$('#cab .grid');if(!g)return;
+ // add tab
+ const tabs=$('cabTabs');
+ if(tabs&&!tabs.querySelector('[data-tab="forum"]')){
+  const b=document.createElement('button');b.type='button';b.dataset.tab='forum';b.textContent='Форум';b.onclick=()=>switchCabTab('forum');tabs.appendChild(b);
+ }
+ if(!$('xForumPanel')){
+  const panel=H(`<div id="xForumPanel" class="card w" style="display:none;grid-column:1/-1"><h3>Форум</h3><div id="fmRoot"><small>Загрузка…</small></div></div>`);
+  const flp=$('xFlPanel');(flp||g).before(panel);
+ }
+}
+const _switch=window.switchCabTab;
+window.switchCabTab=function(tab){
+ injectForum();
+ const g=$$('#cab .grid'), fl=$('xFlPanel'), fm=$('xForumPanel'), tabs=$('cabTabs');
+ if(tab==='fl'){if(g)g.style.display='none';if(fl)fl.style.display='block';if(fm)fm.style.display='none';loadFl()}
+ else if(tab==='forum'){if(g)g.style.display='none';if(fl)fl.style.display='none';if(fm)fm.style.display='block';loadForum()}
+ else{if(g)g.style.display='grid';if(fl)fl.style.display='none';if(fm)fm.style.display='none'}
+ if(tabs)[...tabs.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+};
+let fmCat='global',fmStaff=false;
+async function loadForum(){
+ const root=$('fmRoot');if(!root)return;
+ try{
+  const r=await fetch(API_BASE+'/api/forum/cats',{cache:'no-store'}).then(x=>x.json());
+  fmStaff=!!r.staff;
+  const groups={};(r.cats||[]).forEach(c=>{(groups[c.group]=groups[c.group]||[]).push(c)});
+  let nav='';Object.keys(groups).forEach(g=>{nav+=`<h5>${esc(g)}</h5>`+groups[g].map(c=>`<button type="button" data-c="${c.id}" class="${c.id===fmCat?'on':''}" onclick="fmOpenCat('${c.id}')">${esc(c.name)}${c.staff?'<span class="staff-tag">staff</span>':''} <small style="opacity:.5">${c.count||0}</small></button>`).join('')});
+  root.innerHTML=`<div class="fm-wrap"><div class="fm-nav">${nav}</div><div class="fm-main" id="fmMain"></div></div>`;
+  fmOpenCat(fmCat);
+ }catch(e){root.innerHTML='<small>Ошибка загрузки форума</small>'}
+}
+window.fmOpenCat=async id=>{
+ fmCat=id;document.querySelectorAll('.fm-nav button').forEach(b=>b.classList.toggle('on',b.dataset.c===id));
+ const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
+ try{
+  const r=await fetch(API_BASE+'/api/forum/list?cat='+encodeURIComponent(id),{cache:'no-store'}).then(x=>x.json());
+  const canPost=!r.meta.staff||r.staff;
+  let html=canPost?`<div style="margin-bottom:12px"><input id="fmT" placeholder="Заголовок" style="width:100%;margin-bottom:6px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><textarea id="fmB" placeholder="Текст поста…" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;resize:vertical"></textarea><button class="btn sm" style="margin-top:6px" onclick="fmCreate()">Опубликовать</button></div>`:`<p style="font-size:13px;color:var(--m);margin-bottom:12px">Раздел staff-only — посты может писать только администратор (код EmirDI1804).</p>`;
+  html+=(r.list||[]).map(p=>`<div class="fm-post" onclick="fmView(${p.id})"><b>${esc(p.title)}</b><small>@${esc(p.username)} · ${dt(p.ts)} · ${p.replies} отв.</small><div style="margin-top:6px;font-size:13px;color:#9aa3b5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div></div>`).join('')||'<small>Пока пусто</small>';
+  main.innerHTML=html;
+ }catch(e){main.innerHTML='<small>Ошибка</small>'}
+};
+window.fmCreate=async()=>{try{await post('/api/forum/create',{cat:fmCat,title:$('fmT').value,body:$('fmB').value});toast('Опубликовано');fmOpenCat(fmCat)}catch(e){toast(e.message,1)}};
+window.fmView=async id=>{
+ const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
+ try{
+  const r=await fetch(API_BASE+'/api/forum/post?id='+id,{cache:'no-store'}).then(x=>x.json());
+  const p=r.post;
+  main.innerHTML=`<button class="btn sm ghost" onclick="fmOpenCat('${esc(p.cat)}')">← Назад</button>
+   <h3 style="margin:12px 0 4px">${esc(p.title)}</h3>
+   <small style="color:var(--m)"><span style="cursor:pointer;color:#8ec8ff" onclick="openUserProfile('${esc(p.username)}')">@${esc(p.username)}</span> · ${dt(p.ts)}</small>
+   <div class="fm-body">${esc(p.body)}</div>
+   <h4 style="margin:16px 0 8px">Ответы (${r.replies.length})</h4>
+   <div id="fmRep">${r.replies.map(x=>`<div class="fm-post" style="cursor:default"><small><span style="cursor:pointer;color:#8ec8ff" onclick="openUserProfile('${esc(x.username)}')">@${esc(x.username)}</span> · ${dt(x.ts)}</small><div class="fm-body" style="margin:6px 0 0">${esc(x.body)}</div></div>`).join('')||'<small>Нет ответов</small>'}</div>
+   <textarea id="fmR" placeholder="Ваш ответ…" rows="2" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit"></textarea>
+   <button class="btn sm" style="margin-top:6px" onclick="fmReply(${id})">Ответить</button>`;
+ }catch(e){main.innerHTML='<small>Ошибка</small>'}
+};
+window.fmReply=async id=>{try{await post('/api/forum/reply',{post_id:id,body:$('fmR').value});fmView(id)}catch(e){toast(e.message,1)}};
+
+window.openUserProfile=async function(name){
+ if(!name||!user)return;
+ let ov=$('pfOv');if(ov)ov.remove();
+ ov=H(`<div class="pf-ov" id="pfOv"><div class="pf-box"><button class="pf-x" onclick="$('pfOv').remove()">✕</button><div id="pfIn"><div style="padding:40px;text-align:center;color:var(--m)">Загрузка…</div></div></div></div>`);
+ ov.onclick=e=>{if(e.target===ov)ov.remove()};
+ document.body.appendChild(ov);
+ try{
+  const r=await fetch(API_BASE+'/api/profile/view?u='+encodeURIComponent(name),{cache:'no-store'}).then(x=>{if(!x.ok)throw new Error('Не найден');return x.json()});
+  const u=r.user;
+  const ban=u.banner?`style="background-image:url('${esc(u.banner).replace(/'/g,'')}')"`:'';
+  const av=u.avatar?`<img src="${esc(u.avatar)}" alt="">`:(u.username[0]||'?').toUpperCase();
+  const likeOn=r.myVote===1?' on-like':'',disOn=r.myVote===-1?' on-dis':'';
+  $('pfIn').innerHTML=`<div class="pf-ban" ${ban}><div class="pf-av">${av}</div></div>
+   <div class="pf-body">
+    <h2 ${u.color?`style="color:${u.color}"`:''}>${u.badge&&FLB[u.badge]?`<span class="fl-bd">${flBadge(u.badge,18)}</span> `:''}${esc(u.username)}</h2>
+    <small style="color:var(--m)">${u.is_admin?'ADMIN · ':''}${u.is_super?'SUPER · ':''}с ${u.created?new Date(u.created).toLocaleDateString('ru-RU'):'—'}</small>
+    ${u.bio?`<div class="pf-bio">${esc(u.bio)}</div>`:'<div class="pf-bio" style="opacity:.5">Нет описания</div>'}
+    <div class="pf-votes">
+     <button class="${likeOn}" onclick="pfVote(${u.id},1)">👍 ${r.likes}</button>
+     <button class="${disOn}" onclick="pfVote(${u.id},-1)">👎 ${r.dislikes}</button>
+    </div>
+    <div class="pf-com">
+     <h4 style="margin:0 0 10px">Комментарии</h4>
+     <div id="pfComs">${r.comments.map(c=>`<div class="c"><b onclick="openUserProfile('${esc(c.username)}')">@${esc(c.username)}</b> <small style="color:var(--m)">${dt(c.ts)}</small><div>${esc(c.text)}</div></div>`).join('')||'<small style="color:var(--m)">Пока нет комментариев</small>'}</div>
+     <div class="xrow" style="margin-top:10px"><input id="pfCmt" placeholder="Комментарий…" style="flex:1"><button class="btn sm" onclick="pfComment(${u.id},'${esc(u.username)}')">Отправить</button></div>
+    </div>
+   </div>`;
+ }catch(e){$('pfIn').innerHTML=`<div style="padding:40px;text-align:center">${esc(e.message||'Ошибка')}</div>`}
+};
+window.pfVote=async(id,v)=>{try{const r=await post('/api/profile/vote',{id,v});const box=document.querySelector('.pf-votes');if(box){box.children[0].textContent='👍 '+r.likes;box.children[1].textContent='👎 '+r.dislikes}}catch(e){toast(e.message,1)}};
+window.pfComment=async(id,name)=>{try{await post('/api/profile/comment',{id,text:$('pfCmt').value});openUserProfile(name)}catch(e){toast(e.message,1)}};
+
 const _r=window.render;window.render=function(){_r.apply(this,arguments);try{if(user){loadExt();injectAdmin()}else landing()}catch{}};
 setTimeout(()=>{try{user?loadExt():landing()}catch{}},1500);
 })();

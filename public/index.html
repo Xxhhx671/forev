@@ -1437,15 +1437,19 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
 <p id="fzh" style="font-size:13px;margin-top:8px"></p><div class="row"><button class="btn sm" id="bfz" onclick="fz(1)" style="display:none">Заморозить</button><button class="btn sm" id="buf" onclick="fz(0)" style="display:none">Разморозить</button></div></div>
 <div class="card rv" style="--d:.08s"><div class="ic"><svg viewBox="0 0 24 24"><circle class="dr a" pathLength="1" cx="12" cy="8" r="4"/><path class="dr" pathLength="1" d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><h3>Аккаунт</h3>
 <div class="kv"><span>Ник</span><b id="ku"></b></div><div class="kv"><span>E-mail</span><b id="ke2"></b></div><div class="kv"><span>Регистрация</span><b id="cc"></b></div>
-<div style="display:flex;align-items:center;gap:12px;margin-top:12px">
-<img class="avatar" id="avimg" src="" alt="" style="display:none">
-<div style="flex:1">
-<input id="avatarUrl" placeholder="URL аватара (https://...)" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><div class="agal-t">Выбрать из галереи</div><div class="agal" id="agal"></div>
+<div style="margin-top:12px">
+<div id="profPreview" style="position:relative;height:100px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#1a2a44,#0d1522);margin-bottom:36px;background-size:cover;background-position:center">
+  <div id="profAvWrap" style="position:absolute;left:50%;bottom:-28px;transform:translateX(-50%);width:56px;height:56px;border-radius:50%;border:3px solid var(--sf,#0b0f16);overflow:hidden;background:#16202f;display:grid;place-items:center;font-weight:900;font-size:20px"></div>
+</div>
+<input id="bannerUrl" placeholder="URL баннера (https://...)" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)">
+<input id="avatarUrl" placeholder="URL аватара / фото (https://...)" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)">
+<textarea id="bioText" placeholder="Описание профиля…" rows="2" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;resize:vertical"></textarea>
 <select id="themeSel" style="padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)" onchange="saveProfile()">
 <option value="dark">Тёмная тема</option><option value="light">Светлая тема</option>
 </select>
 <button class="btn sm" style="margin-top:6px" onclick="saveProfile()">Сохранить профиль</button>
-</div></div>
+<button class="btn sm ghost" style="margin-top:6px" onclick="openUserProfile(user&&user.username)">Мой публичный профиль</button>
+</div>
 </div>
 <div class="card rv" style="--d:.1s"><div class="ic"><svg viewBox="0 0 24 24"><rect class="dr" pathLength="1" x="3" y="4" width="18" height="18" rx="2"/><path class="dr" pathLength="1" d="M16 2v4M8 2v4M3 10h18"/></svg></div>
 <h3>Активность</h3>
@@ -2064,7 +2068,7 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
   setTimeout(()=>{u.inf?$('dl').textContent='∞':countTo($('dl'),d);$('rg').style.strokeDashoffset=u.inf?0:213.6*(1-Math.min(d/30,1))},300);
   loadDev();loadGifts();loadLg();loadNews();tlist(0);refUI(u);fzUI(u);loadUserTop();loadNotifs();loadSessions();
   // profile / theme / activity / reseller
-  if(u.avatar){$('avimg').src=u.avatar;$('avimg').style.display='block';$('avatarUrl').value=u.avatar}else{$('avimg').style.display='none'}
+  if($('avatarUrl'))$('avatarUrl').value=u.avatar||'';if($('bannerUrl'))$('bannerUrl').value=u.banner||'';if($('bioText'))$('bioText').value=u.bio||'';try{updProfPreview()}catch{}
   $('themeSel').value=u.theme||'dark';applyTheme(u.theme||'dark');
   renderCal(u.activity||[]);avFill($('av'),u.avatar,u.username);markGallery();chatStart();
   if(u.reseller){$('resellerCard').style.display='';$('rslLim').textContent=u.reseller.limit;$('rslUsed').textContent=u.reseller.keys;$('rslLeft').textContent=u.reseller.left;loadRslKeys()}else{$('resellerCard').style.display='none'}
@@ -2245,7 +2249,9 @@ async function showHist(id){try{const r=await api('/api/admin/history',{id});ale
 // --- Theme / Profile / Activity / Reseller / Admin search ---
 function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);const tb=$('themeBtn');if(tb)tb.innerHTML=ico(t==='light'?'moon':'sun',18)}
 function toggleTheme(){const t=document.documentElement.classList.contains('light')?'dark':'light';applyTheme(t);if(user)saveProfile()}
-async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),theme=$('themeSel').value;await api('/api/profile',{avatar,theme});if(user){user.avatar=avatar;user.theme=theme}applyTheme(theme);if(avatar){$('avimg').src=avatar;$('avimg').style.display='block'}toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
+async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),banner=$('bannerUrl')?$('bannerUrl').value.trim():'',bio=$('bioText')?$('bioText').value.trim():'',theme=$('themeSel').value;await api('/api/profile',{avatar,banner,bio,theme});if(user){user.avatar=avatar;user.banner=banner;user.bio=bio;user.theme=theme}applyTheme(theme);try{await post('/api/profile/save',{avatar,banner,bio})}catch{}updProfPreview();toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
+function updProfPreview(){const b=$('profPreview'),w=$('profAvWrap');if(!b||!user)return;if(user.banner){b.style.backgroundImage='url('+user.banner+')'}else{b.style.backgroundImage='';}if(w){if(user.avatar)w.innerHTML='<img src="'+user.avatar.replace(/"/g,'')+'" style="width:100%;height:100%;object-fit:cover">';else w.textContent=(user.username||'?')[0].toUpperCase()}}
+
 function renderCal(list){
   const map={};(list||[]).forEach(x=>map[x.d]=x.c);
   const days=[];const now=new Date();
@@ -2288,7 +2294,7 @@ async function showWl(uid){
 /* ===== Аватарки: галерея ===== */
 const AVS=Array.from({length:15},(_,i)=>'/avatars/a'+(i+1)+'.svg');
 function avFill(el,src,name){el.innerHTML='';if(src){const im=new Image();im.alt='';im.src=src;im.onerror=()=>{el.textContent=(name||'?')[0].toUpperCase()};el.appendChild(im)}else el.textContent=(name||'?')[0].toUpperCase()}
-function buildGallery(){const g=$('agal');if(!g||g.dataset.ok)return;g.dataset.ok=1;AVS.forEach(src=>{const b=document.createElement('button');b.type='button';b.className='agal-i';b.dataset.src=src;const im=new Image();im.src=src;im.alt='';b.appendChild(im);b.onclick=()=>pickAvatar(src);g.appendChild(b)})}
+function buildGallery(){/* gallery removed */}
 function markGallery(){document.querySelectorAll('.agal-i').forEach(b=>b.classList.toggle('on',!!user&&user.avatar===b.dataset.src))}
 async function pickAvatar(src){$('avatarUrl').value=src;await saveProfile();avFill($('av'),src,user&&user.username);markGallery()}
 
