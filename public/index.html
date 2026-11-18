@@ -289,20 +289,20 @@ footer{text-align:center;color:var(--m);padding:36px;font-size:13px;border-top:1
 }
 @keyframes crownBob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
 
-/* FL balance chip in header */
+/* FL balance chip in header — blue currency */
 #flBalance{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:7px 12px;border-radius:10px;
-  background:linear-gradient(135deg,rgba(255,210,0,.12),rgba(255,180,0,.06));
-  border:1px solid rgba(255,210,0,.35);
-  color:#ffd060;font-size:12px;font-weight:800;letter-spacing:.5px;
-  cursor:default;transition:.25s;
-  box-shadow:0 2px 10px rgba(255,180,0,.15);
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px 6px 8px;border-radius:12px;
+  background:linear-gradient(135deg,rgba(59,158,255,.16),rgba(40,100,220,.08));
+  border:1px solid rgba(90,170,255,.4);
+  color:#7ec8ff;font-size:12px;font-weight:800;letter-spacing:.4px;
+  cursor:pointer;transition:.25s;
+  box-shadow:0 2px 12px rgba(40,120,255,.18), inset 0 1px 0 rgba(255,255,255,.08);
   animation:flGlow 3s ease-in-out infinite;
 }
-#flBalance:hover{background:rgba(255,210,0,.18);border-color:rgba(255,210,0,.55);transform:translateY(-1px)}
-#flBalance svg{width:14px;height:14px;fill:none;stroke:#ffd060;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-@keyframes flGlow{0%,100%{box-shadow:0 2px 10px rgba(255,180,0,.15)}50%{box-shadow:0 2px 18px rgba(255,180,0,.35)}}
+#flBalance:hover{background:rgba(59,158,255,.22);border-color:rgba(120,190,255,.6);transform:translateY(-1px);box-shadow:0 4px 16px rgba(40,120,255,.3)}
+#flBalance svg{width:18px;height:18px;flex:none;filter:drop-shadow(0 0 3px rgba(80,160,255,.5))}
+@keyframes flGlow{0%,100%{box-shadow:0 2px 12px rgba(40,120,255,.18)}50%{box-shadow:0 2px 20px rgba(60,150,255,.4)}}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;min-height:4px}.chips span{padding:7px 14px;border-radius:99px;background:#121212;border:1px solid var(--b);cursor:pointer;font-size:13px;transition:.25s}.chips span:hover{border-color:var(--r);color:var(--r)}.chips small{color:var(--m)}
 .lst{display:flex;flex-direction:column;gap:8px;margin-top:14px}
 .it{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 14px;background:#0f0f0f;border:1px solid var(--b);border-radius:12px;font-size:14px}.it small{display:block;color:var(--m)}
@@ -1303,8 +1303,23 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
   <span class="logo-text">FRV</span>
 </div>
 <div style="display:flex;align-items:center;gap:10px">
-<div id="flBalance" style="display:none" title="FL — внутренняя валюта сервиса">
-  <svg viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 23 9.5 17.5 15 19 22.5 12 19 5 22.5 6.5 15 1 9.5 8.5 8.5"/></svg>
+<div id="flBalance" style="display:none" title="FL — валюта сервиса · открыть" onclick="typeof openFlTab==='function'&&openFlTab()" role="button">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <defs>
+      <linearGradient id="flCoinG" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#b8e4ff"/>
+        <stop offset="45%" stop-color="#4aa8ff"/>
+        <stop offset="100%" stop-color="#1a6ad4"/>
+      </linearGradient>
+      <linearGradient id="flCoinRim" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e8f6ff"/>
+        <stop offset="100%" stop-color="#3b8eef"/>
+      </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="10" fill="url(#flCoinG)" stroke="url(#flCoinRim)" stroke-width="1.4"/>
+    <circle cx="12" cy="12" r="7.2" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".8"/>
+    <text x="12" y="15.2" text-anchor="middle" font-size="9" font-weight="800" font-family="system-ui,sans-serif" fill="#fff" letter-spacing="-0.5">FL</text>
+  </svg>
   <span id="flAmt">0 FL</span>
 </div>
 <button id="langBtn" onclick="toggleLang()" style="background:#0a0a0a;border:1px solid var(--b);color:#fff;padding:8px 12px;font-weight:800;font-size:12px;letter-spacing:1px;cursor:pointer">EN</button>
@@ -2043,7 +2058,7 @@ function render(){const u=user;menu();$('land').style.display=u?'none':'block';$
   $('cs2').textContent=u.inf?'Без ограничения по времени.':u.frozen?'Таймер на паузе, осталось '+d+' дн.':u.active?'До '+fd(u.sub_until):'Активируйте ключ, чтобы получить доступ.';
   $('bfz').style.display=u.active&&!u.inf?'':'none';$('buf').style.display=u.frozen?'':'none';
   $('adm').style.display=u.is_admin?'':'none';$('adb').style.display=u.is_admin?'inline-flex':'none';$('dls').textContent=u.inf?'навсегда':'дн.';
-  const flEl=$('flBalance');if(flEl){flEl.style.display=u?'inline-flex':'none';$('flAmt').textContent=(u.fl_balance||0)+' FL';}
+  const flEl=$('flBalance');if(flEl){flEl.style.display=u?'inline-flex':'none';$('flAmt').textContent=((u.fl_balance!=null?u.fl_balance:u.fl)||0)+' FL';}
   // render role badges in profile
   const br=$('userBadgesRow');if(br){br.innerHTML='';if(u.is_super)br.innerHTML+='<span class="bdg super"><svg style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#ffd060" stroke-width="2"><polygon points="12 2 15.5 8.5 23 9.5 17.5 15 19 22.5 12 19 5 22.5 6.5 15 1 9.5 8.5 8.5" fill="rgba(255,210,0,.4)"/></svg>SUPER</span>';if(u.is_tester)br.innerHTML+='<span class="bdg tester">TESTER</span>';if(u.is_reseller)br.innerHTML+='<span class="bdg reseller">RESELLER</span>';}
   setTimeout(()=>{u.inf?$('dl').textContent='∞':countTo($('dl'),d);$('rg').style.strokeDashoffset=u.inf?0:213.6*(1-Math.min(d/30,1))},300);
