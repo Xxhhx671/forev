@@ -262,7 +262,7 @@ async function scanExpiryNotices(){
   }catch(e){console.error('scanExpiry',e.message)}
 }
 
-const MIME={'.html':'text/html; charset=utf-8','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon'};
+const MIME={'.html':'text/html; charset=utf-8','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon','.svg':'image/svg+xml','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json'};
 const SEC=process.env.NODE_ENV==='production'?'; Secure':'';
 const makeKey=()=>'FOREV-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');
 const hashPw=(pw,salt)=>crypto.scryptSync(pw,salt,64).toString('hex');
