@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS tariffs(
 );`);
 db.exec('CREATE TABLE IF NOT EXISTS chat_msgs(id INTEGER PRIMARY KEY,user_id INTEGER,text TEXT,ts INTEGER)');
 const chatSeen=new Map(),chatLast=new Map();
+const ext=require('./ext')(db,crypto);
 db.exec("UPDATE users SET ref_code=lower(hex(randomblob(4))) WHERE ref_code IS NULL OR ref_code=''");
 db.prepare('UPDATE users SET frozen_at=? WHERE frozen=1 AND frozen_at=0').run(Date.now());
 
@@ -864,6 +865,33 @@ const srv=http.createServer(async(req,res)=>{
         reseller:resellerInfo,
         activity});
     }
+    if(req.method==='POST'&&req.url.split('?')[0]==='/api/admin/loader/raw'){
+      const a=authUser(req);
+      if(!a||!a.is_admin){req.resume();return send(res,403,{error:'Нет доступа'})}
+      const MAXB=200*1024*1024,len=+req.headers['content-length']||0;
+      if(len>MAXB){req.resume();return send(res,413,{error:'Файл слишком большой (макс. 200 МБ)'})}
+      const chunks=[];let got=0,over=false;
+      await new Promise(ok=>{req.on('data',c=>{got+=c.length;if(got>MAXB){over=true;return}chunks.push(c)});req.on('end',ok);req.on('error',ok);req.on('aborted',ok)});
+      if(over)return send(res,413,{error:'Файл слишком большой (макс. 200 МБ)'});
+      const buf=Buffer.concat(chunks);
+      if(buf.length<1024)return send(res,400,{error:'Файл слишком мал'});
+      if(buf[0]!==0x4d||buf[1]!==0x5a)return send(res,400,{error:'Это не .exe (нет заголовка MZ)'});
+      try{
+        const target=findLoaderExe()||path.join(__dirname,'files','ForevLoader.exe');
+        fs.mkdirSync(path.dirname(target),{recursive:true});
+        const prev=target+'.prev';
+        if(fs.existsSync(target)){try{fs.copyFileSync(target,prev);const m=db.prepare("SELECT key,value FROM settings WHERE key IN ('loader_version','loader_note')").all();for(const r of m)db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run('prev_'+r.key,r.value)}catch{}}
+        const tmp=target+'.tmp';fs.writeFileSync(tmp,buf);fs.renameSync(tmp,target);
+        const sha=crypto.createHash('sha256').update(buf).digest('hex');
+        let note='';try{note=decodeURIComponent(String(req.headers['x-loader-note']||''))}catch{}
+        const ver=String(req.headers['x-loader-version']||'').slice(0,40),setv=(k,v)=>db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run(k,v);
+        if(ver)try{db.prepare('INSERT INTO changelog(version,title,text,ts) VALUES(?,?,?,?)').run(ver,'Обновление лоадера',note.slice(0,300),Date.now())}catch{}
+        setv('loader_version',ver);setv('loader_note',note.slice(0,300));setv('loader_sha',sha);
+        logAudit(a.id,'loader_upload',path.basename(target),buf.length+' bytes '+ver,reqIp(req));
+        return send(res,200,{ok:true,size:buf.length,sha256:sha,has_placeholder:buf.indexOf(Buffer.from(DL_PLACEHOLDER,'ascii'))!==-1});
+      }catch(e){return send(res,500,{error:'Не удалось сохранить файл: '+(e.code||e.message)})}
+    }
+    if(req.method==='GET'&&(req.url.startsWith('/api/chat/list')||req.url==='/api/public/info')&&ext.get(req,res,{send,authUser}))return;
     if(req.method==='GET'&&req.url.startsWith('/api/chat/list')){
       const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'},{'Cache-Control':'no-store'});
       const now=Date.now();chatSeen.set(u.id,now);for(const [k,v] of chatSeen)if(now-v>45000)chatSeen.delete(k);
@@ -876,12 +904,14 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{list:rows,full,last,me:u.id,admin:!!u.is_admin,online:chatSeen.size},{'Cache-Control':'no-store'});
     }
     if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'Не найдено'});
-    const url=req.url,strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password'].includes(url);
+    const url=req.url,strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password','/api/login/2fa'].includes(url);
     if(strict?rl('a'+ip,12,3e5):rl('g'+ip,100,3e5))return send(res,429,{error:'Слишком много попыток, подождите'});
     const b=await body(req);
     const bad=(m,c=400)=>send(res,c,{error:m});
     const tokOk=()=>{const t=process.env.ADMIN_TOKEN||'',h=String(req.headers['x-admin-token']||''),A=Buffer.from(t),B=Buffer.from(h);return t&&A.length===B.length&&crypto.timingSafeEqual(A,B)};
 
+    if(url==='/api/login/2fa'&&ext.login2fa(b,req,res,{send,reqIp,logLogin,login}))return;
+    if(ext.post(url,b,req,res,{send,authUser,tx,addTime,logAudit,reqIp}))return;
     if(url==='/api/chat/send'){
       const u=authUser(req);if(!u)return bad('Не авторизован',401);
       const t=String(b.text||'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/\s+/g,' ').trim().slice(0,300);
@@ -897,6 +927,21 @@ const srv=http.createServer(async(req,res)=>{
     if(url.startsWith('/api/admin/')){
       const a=authUser(req);
       if(!(a&&a.is_admin)&&!(url==='/api/admin/genkey'&&tokOk()))return bad('Нет доступа',403);
+      if(url==='/api/admin/loader/info'){
+        const f=findLoaderExe();if(!f)return send(res,200,{exists:false});
+        const st=fs.statSync(f),g=k=>(db.prepare('SELECT value FROM settings WHERE key=?').get(k)||{}).value||'';
+        let sha=g('loader_sha');if(!sha){try{sha=crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')}catch{}}
+        return send(res,200,{exists:true,size:st.size,mtime:st.mtimeMs,version:g('loader_version'),note:g('loader_note'),sha256:sha,has_prev:fs.existsSync(f+'.prev')});
+      }
+      if(url==='/api/admin/loader/rollback'){
+        const f=findLoaderExe();if(!f||!fs.existsSync(f+'.prev'))return bad('Нет предыдущей версии');
+        const cur=f+'.cur';fs.renameSync(f,cur);fs.renameSync(f+'.prev',f);fs.renameSync(cur,f+'.prev');
+        for(const k of ['loader_version','loader_note']){const a1=db.prepare('SELECT value FROM settings WHERE key=?').get(k),b1=db.prepare('SELECT value FROM settings WHERE key=?').get('prev_'+k);
+          db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run(k,b1?b1.value:'');db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run('prev_'+k,a1?a1.value:'')}
+        db.prepare("DELETE FROM settings WHERE key='loader_sha'").run();
+        logAudit(a.id,'loader_rollback','','',ip);
+        return send(res,200,{ok:true});
+      }
       if(url==='/api/admin/chat/del'){db.prepare('DELETE FROM chat_msgs WHERE id=?').run(+b.id);return send(res,200,{ok:true})}
       if(url==='/api/admin/chat/clear'){db.exec('DELETE FROM chat_msgs');return send(res,200,{ok:true})}
       if(url==='/api/admin/genkey'){
@@ -1607,7 +1652,9 @@ const srv=http.createServer(async(req,res)=>{
         return bad('Неверный логин или пароль',401);
       }
       if(f.banned)return bad('Аккаунт заблокирован'+(f.ban_reason?': '+f.ban_reason:''),403);
-      logLogin(f.id,ip,'web',1);clearFails(ip);
+      clearFails(ip);
+      if(ext.totpOn(f.id))return send(res,200,{need_2fa:true,pt:ext.pend(f.id)});
+      ext.onLogin(f.id,ip);logLogin(f.id,ip,'web',1);
       return send(res,200,{ok:true},login(res,f.id,req));
     }
     if(url==='/api/logout'){
@@ -1681,6 +1728,7 @@ const srv=http.createServer(async(req,res)=>{
     if(url==='/api/password'){
       const row=db.prepare('SELECT * FROM users WHERE id=?').get(u.id);
       if(!pwOk(row,b.old))return bad('Текущий пароль неверный');
+      if(ext.totpOn(u.id)&&!ext.totpCheck(u.id,b.code))return bad('Нужен верный код 2FA',403);
       if(typeof b.new!=='string'||b.new.length<8)return bad('Новый пароль минимум 8 символов');
       const salt=crypto.randomBytes(16).toString('hex');
       db.prepare('UPDATE users SET hash=?,salt=? WHERE id=?').run(hashPw(b.new,salt),salt,u.id);
@@ -1769,11 +1817,11 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{list});
     }
     if(url==='/api/devices'){
-      return send(res,200,{max:u.max_dev,list:db.prepare('SELECT id,name,first_seen,last_seen FROM devices WHERE user_id=? ORDER BY last_seen DESC').all(u.id)});
+      return send(res,200,{max:u.max_dev,cd:ext.hwidCd(u.id),list:db.prepare('SELECT id,name,first_seen,last_seen FROM devices WHERE user_id=? ORDER BY last_seen DESC').all(u.id)});
     }
     if(url==='/api/device/del'){
       const usr=db.prepare('SELECT reset_count,max_resets FROM users WHERE id=?').get(u.id);
-      if((usr.reset_count||0)>=(usr.max_resets||3))return bad('Достигнут лимит сбросов устройств ('+(usr.max_resets||3)+')');
+      const cd=ext.hwidCd(u.id);if(cd>0)return bad('Сброс устройства доступен через '+(cd>=DAY?Math.ceil(cd/DAY)+' дн.':Math.ceil(cd/36e5)+' ч.'));
       const dev=db.prepare('SELECT hwid,name FROM devices WHERE id=? AND user_id=?').get(+b.id,u.id);
       const r=db.prepare('DELETE FROM devices WHERE id=? AND user_id=?').run(+b.id,u.id);
       if(r.changes){
