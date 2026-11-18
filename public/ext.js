@@ -206,9 +206,9 @@ window.showConfigs=async function(){await _sc();if(!user)return;try{const m=awai
 window.cfgFav=async id=>{await post('/api/config/fav',{id});showConfigs()};window.cfgRate=async(id,v)=>{if(!v)return;await post('/api/config/rate',{id,stars:+v});toast('Оценка сохранена');showConfigs()};
 
 /* ===== Админ-вкладки ===== */
-const tabs=[['Дашборд','ap19'],['Чат-модерация','ap20'],['Роли','ap21'],['Массовые','ap22'],['Антифрод','ap23'],['Контент','ap24']];
+const tabs=[['Дашборд','ap19'],['FL валюта','ap25'],['Чат-модерация','ap20'],['Роли','ap21'],['Массовые','ap22'],['Антифрод','ap23'],['Контент','ap24']];
 function injectAdmin(){const sg=$('seg');if(!sg||$('ap19')||!user||!user.is_admin)return;
- tabs.forEach((t,i)=>{const b=document.createElement('button');b.textContent=t[0];b.onclick=()=>at(19+i);sg.appendChild(b);const p=document.createElement('div');p.id=t[1];p.style.display='none';$('ap18').after(p);p.dataset.x=1});
+ tabs.forEach((t,i)=>{const b=document.createElement('button');b.textContent=t[0];b.dataset.panel=t[1];b.onclick=()=>atPanel(t[1]);sg.appendChild(b);const p=document.createElement('div');p.id=t[1];p.style.display='none';$('ap18').after(p);p.dataset.x=1});
  // порядок: ap18 → ... добавляем после последнего
  let prev=$('ap18');tabs.forEach(t=>{const p=$(t[1]);prev.after(p);prev=p});
  $('ap19').innerHTML='<div id="dashB">Загрузка…</div>';
@@ -216,8 +216,38 @@ function injectAdmin(){const sg=$('seg');if(!sg||$('ap19')||!user||!user.is_admi
  $('ap21').innerHTML='<p style="color:var(--m);font-size:13px">Модератор — чат (мут, бан, удаление, слова). Support — пока метка для тикетов.</p><div class="xrow"><input id="rlId" placeholder="ID пользователя" type="number"><select id="rlR"><option value="moderator">moderator</option><option value="support">support</option><option value="">снять роль</option></select><button class="btn sm" onclick="rlSet()">Назначить</button></div><div id="rlList"></div>';
  $('ap22').innerHTML='<div class="xrow"><input id="bkQ" placeholder="Ник / e-mail содержит"><select id="bkS"><option value="">Любая подписка</option><option value="active">Активна</option><option value="none">Нет подписки</option><option value="expiring">Истекает</option></select><input id="bkD" type="number" value="3" style="width:70px" title="Дней до конца"><select id="bkB"><option value="">Все</option><option value="0">Не в бане</option><option value="1">В бане</option></select><button class="btn sm" onclick="bkPrev()">Предпросмотр</button></div><div id="bkOut"></div><div class="xrow" id="bkAct" style="display:none"><input id="bkDays" type="number" placeholder="Дней" style="width:90px"><button class="btn sm" onclick="bkDo(\'grant\')">Выдать дни</button><input id="bkTxt" placeholder="Текст уведомления" style="flex:1"><button class="btn sm" onclick="bkDo(\'notify\')">Разослать</button><button class="btn sm ghost" onclick="bkCsv()">Экспорт CSV</button></div>';
  $('ap23').innerHTML='<div class="xrow"><input id="frId" type="number" placeholder="ID пользователя"><button class="btn sm" onclick="frUser()">Карточка риска</button><button class="btn sm ghost" onclick="loadFraud()">Обновить кластеры</button></div><div id="frUser"></div><div id="frList"></div>';
- $('ap24').innerHTML='<h4>FAQ</h4><div class="xrow"><input id="fq" placeholder="Вопрос" style="flex:1"><input id="fa" placeholder="Ответ" style="flex:2"><button class="btn sm" onclick="ctAdd(\'faq\')">Добавить</button></div><div id="ctFaq"></div><h4>Changelog</h4><div class="xrow"><input id="cv" placeholder="Версия" style="width:90px"><input id="ct" placeholder="Заголовок" style="flex:1"><input id="cx" placeholder="Описание" style="flex:2"><button class="btn sm" onclick="ctAdd(\'cl\')">Добавить</button></div><div id="ctCl"></div><h4>Отзывы</h4><div id="ctRv"></div>'}
-window.at=function(i){injectAdmin();const sg=$('seg');[...sg.children].forEach((b,k)=>{const el=$('ap'+k);if(el)el.style.display=k===i?'':'none';b.classList.toggle('on',k===i)});sg.children[i]?.scrollIntoView({inline:'center',block:'nearest'});
+ $('ap24').innerHTML='<h4>FAQ</h4><div class="xrow"><input id="fq" placeholder="Вопрос" style="flex:1"><input id="fa" placeholder="Ответ" style="flex:2"><button class="btn sm" onclick="ctAdd(\'faq\')">Добавить</button></div><div id="ctFaq"></div><h4>Changelog</h4><div class="xrow"><input id="cv" placeholder="Версия" style="width:90px"><input id="ct" placeholder="Заголовок" style="flex:1"><input id="cx" placeholder="Описание" style="flex:2"><button class="btn sm" onclick="ctAdd(\'cl\')">Добавить</button></div><div id="ctCl"></div><h4>Отзывы</h4><div id="ctRv"></div>';
+ if($('ap25'))$('ap25').innerHTML=`<h3 style="margin:0 0 12px">FL — начисление</h3>
+<p style="font-size:13px;color:var(--m);margin:0 0 12px">Можно начислить себе, любому нику или всем сразу. Отрицательная сумма = списание.</p>
+<div class="xrow" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">
+ <input id="admFlTo" placeholder="Ник (пусто = себе)" style="flex:1;min-width:140px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)">
+ <input id="admFlAm" type="number" placeholder="Сумма ±" style="width:120px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)">
+</div>
+<div class="xrow" style="gap:8px;flex-wrap:wrap">
+ <button class="btn sm" onclick="admFlGive()">Применить</button>
+ <button class="btn sm ghost" onclick="admFlSelf()">Себе</button>
+ <button class="btn sm ghost" onclick="admFlAll()">Всем</button>
+</div>
+<p id="admFlMsg" style="font-size:13px;margin-top:12px;color:var(--m)"></p>`;
+}
+window.admFlGive=async()=>{const msg=$('admFlMsg');try{const r=await post('/api/admin/fl/give',{to:($('admFlTo').value||'').trim(),amount:+$('admFlAm').value});if(msg)msg.textContent=r.username+': '+r.fl+' FL';toast(r.username+': '+r.fl+' FL');try{loadFl()}catch{}}catch(e){if(msg)msg.textContent=e.message;toast(e.message,1)}};
+window.admFlSelf=async()=>{const amt=+$('admFlAm').value;if(!amt)return toast('Укажите сумму',1);const msg=$('admFlMsg');try{const r=await post('/api/admin/fl/give',{to:'',amount:amt});if(msg)msg.textContent='Себе: '+r.fl+' FL';toast('Себе: '+r.fl+' FL');try{loadFl()}catch{}}catch(e){if(msg)msg.textContent=e.message;toast(e.message,1)}};
+window.admFlAll=async()=>{const amt=+$('admFlAm').value;if(!amt)return toast('Укажите сумму',1);if(!confirm('Начислить '+amt+' FL ВСЕМ?'))return;const msg=$('admFlMsg');try{const r=await post('/api/admin/fl/give',{all:1,amount:amt});if(msg)msg.textContent='Готово: '+r.count+' чел.';toast('Готово: '+r.count+' чел.');try{loadFl()}catch{}}catch(e){if(msg)msg.textContent=e.message;toast(e.message,1)}};
+
+window.atPanel=function(pid){injectAdmin();const sg=$('seg');
+ // hide all admin panels ap0-ap30 and our extras
+ for(let k=0;k<=30;k++){const el=$('ap'+k);if(el)el.style.display='none'}
+ tabs.forEach(t=>{const el=$(t[1]);if(el)el.style.display='none'});
+ const show=$(pid);if(show)show.style.display='';
+ if(sg)[...sg.children].forEach(b=>{b.classList.toggle('on',b.dataset.panel===pid||(!b.dataset.panel&&('ap'+[...sg.children].indexOf(b))===pid))});
+ if(pid==='ap19')try{loadDash()}catch{}
+ if(pid==='ap20')try{cmLoad()}catch{}
+ if(pid==='ap21')try{rlLoad()}catch{}
+ if(pid==='ap23')try{loadFraud()}catch{}
+ if(pid==='ap24')try{ctLoad()}catch{}
+};
+window.at=function(i){injectAdmin();const pid='ap'+i;if(typeof atPanel==='function')return atPanel(pid);
+ const sg=$('seg');[...sg.children].forEach((b,k)=>{const el=$('ap'+k);if(el)el.style.display=k===i?'':'none';b.classList.toggle('on',k===i)});sg.children[i]?.scrollIntoView({inline:'center',block:'nearest'});
  ([null,lk,ul,pli,()=>tlist(1),nli,stt,loadSet,loadAud,loadChart,loadCoup,loadTop,loadIp,null,()=>{},loadHwidLog,loadCfgAdm,licList,ldInfo,loadDash,loadChatMod,loadRoles,null,loadFraud,loadContent][i]||(()=>{}))()};
 window.loadDash=async()=>{try{const d=await post('/api/admin/dash'),f=d.funnel,mx=Math.max(1,...d.series.map(s=>Math.max(s[0],s[1])));
  const pc=(a,b)=>b?Math.round(a/b*100)+'%':'—',delta=d.regs_prev?Math.round((d.regs-d.regs_prev)/d.regs_prev*100):null;
@@ -333,7 +363,10 @@ window.fmOpenCat=async id=>{
  fmCat=id;document.querySelectorAll('.fm-nav button').forEach(b=>b.classList.toggle('on',b.dataset.c===id));
  const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
  try{
-  const r=await post('/api/forum/list',{cat:id});
+  const r=await Promise.race([
+    post('/api/forum/list',{cat:id}),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Таймаут сервера (проверьте деплой ext.js)')),10000))
+  ]);
   if(r.error)throw new Error(r.error);
   const canPost=!r.meta.staff||r.staff;
   let html=canPost?`<div style="margin-bottom:12px"><input id="fmT" placeholder="Заголовок" style="width:100%;margin-bottom:6px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><textarea id="fmB" placeholder="Текст поста…" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;resize:vertical"></textarea><button class="btn sm" style="margin-top:6px" onclick="fmCreate()">Опубликовать</button></div>`:`<p style="font-size:13px;color:var(--m);margin-bottom:12px">Раздел staff-only — писать может только администратор (EmirDI1804).</p>`;
