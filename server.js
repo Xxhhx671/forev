@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS tariffs(
   price_note TEXT DEFAULT '',
   created INTEGER
 );`);
+db.exec('CREATE TABLE IF NOT EXISTS chat_msgs(id INTEGER PRIMARY KEY,user_id INTEGER,text TEXT,ts INTEGER)');
+const chatSeen=new Map(),chatLast=new Map();
 db.exec("UPDATE users SET ref_code=lower(hex(randomblob(4))) WHERE ref_code IS NULL OR ref_code=''");
 db.prepare('UPDATE users SET frozen_at=? WHERE frozen=1 AND frozen_at=0').run(Date.now());
 
@@ -862,6 +864,17 @@ const srv=http.createServer(async(req,res)=>{
         reseller:resellerInfo,
         activity});
     }
+    if(req.method==='GET'&&req.url.startsWith('/api/chat/list')){
+      const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'},{'Cache-Control':'no-store'});
+      const now=Date.now();chatSeen.set(u.id,now);for(const [k,v] of chatSeen)if(now-v>45000)chatSeen.delete(k);
+      const after=Math.max(0,+(new URL(req.url,'http://x').searchParams.get('after'))||0);
+      const full=after===0;
+      const rows=(full?db.prepare('SELECT * FROM (SELECT m.id,m.user_id uid,m.text,m.ts,u.username,u.avatar,u.is_admin FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id ORDER BY m.id DESC LIMIT 100) ORDER BY id ASC').all()
+        :db.prepare('SELECT m.id,m.user_id uid,m.text,m.ts,u.username,u.avatar,u.is_admin FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id WHERE m.id>? ORDER BY m.id ASC LIMIT 100').all(after))
+        .map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin}));
+      const last=db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs').get().m;
+      return send(res,200,{list:rows,full,last,me:u.id,admin:!!u.is_admin,online:chatSeen.size},{'Cache-Control':'no-store'});
+    }
     if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'Не найдено'});
     const url=req.url,strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password'].includes(url);
     if(strict?rl('a'+ip,12,3e5):rl('g'+ip,100,3e5))return send(res,429,{error:'Слишком много попыток, подождите'});
@@ -869,10 +882,23 @@ const srv=http.createServer(async(req,res)=>{
     const bad=(m,c=400)=>send(res,c,{error:m});
     const tokOk=()=>{const t=process.env.ADMIN_TOKEN||'',h=String(req.headers['x-admin-token']||''),A=Buffer.from(t),B=Buffer.from(h);return t&&A.length===B.length&&crypto.timingSafeEqual(A,B)};
 
+    if(url==='/api/chat/send'){
+      const u=authUser(req);if(!u)return bad('Не авторизован',401);
+      const t=String(b.text||'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/\s+/g,' ').trim().slice(0,300);
+      if(!t)return bad('Пустое сообщение');
+      const now=Date.now(),lt=chatLast.get(u.id)||0;
+      if(!u.is_admin&&now-lt<1200)return bad('Не так быстро');
+      chatLast.set(u.id,now);chatSeen.set(u.id,now);
+      const r=db.prepare('INSERT INTO chat_msgs(user_id,text,ts) VALUES(?,?,?)').run(u.id,t,now);
+      db.prepare('DELETE FROM chat_msgs WHERE id<=(SELECT MAX(id)-500 FROM chat_msgs)').run();
+      return send(res,200,{ok:true,id:Number(r.lastInsertRowid)});
+    }
     // ---------- админка (сессия админа; genkey ещё и по x-admin-token) ----------
     if(url.startsWith('/api/admin/')){
       const a=authUser(req);
       if(!(a&&a.is_admin)&&!(url==='/api/admin/genkey'&&tokOk()))return bad('Нет доступа',403);
+      if(url==='/api/admin/chat/del'){db.prepare('DELETE FROM chat_msgs WHERE id=?').run(+b.id);return send(res,200,{ok:true})}
+      if(url==='/api/admin/chat/clear'){db.exec('DELETE FROM chat_msgs');return send(res,200,{ok:true})}
       if(url==='/api/admin/genkey'){
         const inf=!!b.inf,days=inf?0:clamp(b.days,1,3650,30),dev=clamp(b.devices,1,99,1),n=clamp(b.count,1,50,1);
         const note=String(b.note||'').slice(0,200),prefix=String(b.prefix||'FOREV').replace(/[^A-Z0-9]/g,'').slice(0,12)||'FOREV';
