@@ -136,7 +136,7 @@ api.get=(req,res,C)=>{
 // ---- POST ----
 api.post=(url,b,req,res,C)=>{
  const {send}=C,bad=(m,c=400)=>(send(res,c,{error:m}),true),ok=o=>(send(res,200,o),true);
- const u0=C.authUser(req);if(!u0)return false;const me=row(u0.id)||u0;if(!me)return false;const admin=!!me.is_admin,mod=admin||me.role==='moderator';
+ const u0=C.authUser(req);if(!u0)return false;const me=row(u0.id)||u0;if(!me)return false;const admin=!!(+me.is_admin||me.is_admin===true||me.is_admin==='1');const mod=admin||me.role==='moderator'||isStaff(me);
  // chat
  if(url==='/api/chat/send'){
   if(me.chat_banned)return bad('Вы заблокированы в чате',403);
@@ -215,26 +215,9 @@ if(url==='/api/fl/equip'){
  if(id&&!db.prepare('SELECT 1 FROM fl_items WHERE user_id=? AND kind=? AND item=?').get(me.id,k,id))return bad('Сначала купите');
  db.prepare(k==='color'?'UPDATE users SET nick_color=? WHERE id=?':'UPDATE users SET badge=? WHERE id=?').run(id,me.id);return ok({ok:true});
 }
-if(!url.startsWith('/api/admin/'))return false;
 
- // ---- чат-модерация (админ или модератор) ----
- if(url.startsWith('/api/admin/chat/')){
-  if(!mod)return bad('Нет доступа',403);
-  const tgt=()=>db.prepare('SELECT id,username,is_admin FROM users WHERE id=?').get(+b.id);
-  if(url==='/api/admin/chat/del'){const m=db.prepare('SELECT m.text,u.username FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id WHERE m.id=?').get(+b.id);db.prepare('DELETE FROM chat_msgs WHERE id=?').run(+b.id);if(m)modLog(me.id,'del',m.username,m.text);return ok({ok:true})}
-  if(url==='/api/admin/chat/clear'){if(!admin)return bad('Только админ',403);db.exec('DELETE FROM chat_msgs');modLog(me.id,'clear','','');return ok({ok:true})}
-  if(url==='/api/admin/chat/mute'){const t=tgt();if(!t||t.is_admin)return bad('Нельзя');const m=Math.min(43200,Math.max(1,+b.minutes||10));db.prepare('UPDATE users SET chat_muted_until=? WHERE id=?').run(Date.now()+m*6e4,t.id);modLog(me.id,'mute',t.username,m+' мин '+(b.reason||''));return ok({ok:true})}
-  if(url==='/api/admin/chat/unmute'){const t=tgt();if(!t)return bad('Нет');db.prepare('UPDATE users SET chat_muted_until=0,chat_banned=0 WHERE id=?').run(t.id);modLog(me.id,'unmute',t.username,'');return ok({ok:true})}
-  if(url==='/api/admin/chat/ban'){const t=tgt();if(!t||t.is_admin)return bad('Нельзя');db.prepare('UPDATE users SET chat_banned=1 WHERE id=?').run(t.id);modLog(me.id,'ban',t.username,b.reason||'');return ok({ok:true})}
-  if(url==='/api/admin/chat/state')return ok({slow:+(get('chat_slow')||0),words:db.prepare('SELECT word FROM chat_words ORDER BY word').all().map(x=>x.word),log:db.prepare('SELECT l.*,u.username adm FROM chat_log l LEFT JOIN users u ON u.id=l.admin_id ORDER BY l.id DESC LIMIT 60').all(),muted:db.prepare("SELECT id,username,chat_muted_until,chat_banned FROM users WHERE chat_banned=1 OR chat_muted_until>?").all(Date.now())});
-  if(url==='/api/admin/chat/slow'){set('chat_slow',Math.min(300,Math.max(0,+b.sec||0)));modLog(me.id,'slow',b.sec,'');return ok({ok:true})}
-  if(url==='/api/admin/chat/word_add'){const w=slim(b.word).toLowerCase().slice(0,40);if(w)db.prepare('INSERT OR IGNORE INTO chat_words VALUES(?)').run(w);return ok({ok:true})}
-  if(url==='/api/admin/chat/word_del'){db.prepare('DELETE FROM chat_words WHERE word=?').run(String(b.word||''));return ok({ok:true})}
-  return false;
- }
-
- // ---- Forum / Profile (любой авторизованный) ----
- if(url==='/api/forum/cats'){
+// ---- forum / profile / upload (must be BEFORE admin gate) ----
+if(url==='/api/forum/cats'){
   const counts=Object.fromEntries(db.prepare('SELECT cat,COUNT(*) c FROM forum_posts GROUP BY cat').all().map(r=>[r.cat,r.c]));
   return ok({cats:Object.entries(FORUM_CATS).map(([id,c])=>({id,name:c.name,staff:!!c.staff,group:c.group,count:counts[id]||0})),staff:isStaff(me)});
  }
@@ -328,23 +311,51 @@ if(!url.startsWith('/api/admin/'))return false;
   db.prepare('DELETE FROM profile_comments WHERE id=?').run(id);return ok({ok:true});
  }
 
+if(!url.startsWith('/api/admin/'))return false;
+
+ // ---- чат-модерация (админ или модератор) ----
+ if(url.startsWith('/api/admin/chat/')){
+  if(!mod)return bad('Нет доступа',403);
+  const tgt=()=>db.prepare('SELECT id,username,is_admin FROM users WHERE id=?').get(+b.id);
+  if(url==='/api/admin/chat/del'){const m=db.prepare('SELECT m.text,u.username FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id WHERE m.id=?').get(+b.id);db.prepare('DELETE FROM chat_msgs WHERE id=?').run(+b.id);if(m)modLog(me.id,'del',m.username,m.text);return ok({ok:true})}
+  if(url==='/api/admin/chat/clear'){if(!admin)return bad('Только админ',403);db.exec('DELETE FROM chat_msgs');modLog(me.id,'clear','','');return ok({ok:true})}
+  if(url==='/api/admin/chat/mute'){const t=tgt();if(!t||t.is_admin)return bad('Нельзя');const m=Math.min(43200,Math.max(1,+b.minutes||10));db.prepare('UPDATE users SET chat_muted_until=? WHERE id=?').run(Date.now()+m*6e4,t.id);modLog(me.id,'mute',t.username,m+' мин '+(b.reason||''));return ok({ok:true})}
+  if(url==='/api/admin/chat/unmute'){const t=tgt();if(!t)return bad('Нет');db.prepare('UPDATE users SET chat_muted_until=0,chat_banned=0 WHERE id=?').run(t.id);modLog(me.id,'unmute',t.username,'');return ok({ok:true})}
+  if(url==='/api/admin/chat/ban'){const t=tgt();if(!t||t.is_admin)return bad('Нельзя');db.prepare('UPDATE users SET chat_banned=1 WHERE id=?').run(t.id);modLog(me.id,'ban',t.username,b.reason||'');return ok({ok:true})}
+  if(url==='/api/admin/chat/state')return ok({slow:+(get('chat_slow')||0),words:db.prepare('SELECT word FROM chat_words ORDER BY word').all().map(x=>x.word),log:db.prepare('SELECT l.*,u.username adm FROM chat_log l LEFT JOIN users u ON u.id=l.admin_id ORDER BY l.id DESC LIMIT 60').all(),muted:db.prepare("SELECT id,username,chat_muted_until,chat_banned FROM users WHERE chat_banned=1 OR chat_muted_until>?").all(Date.now())});
+  if(url==='/api/admin/chat/slow'){set('chat_slow',Math.min(300,Math.max(0,+b.sec||0)));modLog(me.id,'slow',b.sec,'');return ok({ok:true})}
+  if(url==='/api/admin/chat/word_add'){const w=slim(b.word).toLowerCase().slice(0,40);if(w)db.prepare('INSERT OR IGNORE INTO chat_words VALUES(?)').run(w);return ok({ok:true})}
+  if(url==='/api/admin/chat/word_del'){db.prepare('DELETE FROM chat_words WHERE word=?').run(String(b.word||''));return ok({ok:true})}
+  return false;
+ }
+
+ // ---- Forum / Profile (любой авторизованный) ----
+
+
  if(!admin)return false;
 
  // ---- FL (админ) ----
 
  if(url==='/api/admin/fl/give'){
-  const amt=Math.trunc(+b.amount);if(!amt||Math.abs(amt)>1e7)return bad('Сумма: не 0 и не больше 10 000 000 по модулю');
-  // all users
+  if(!admin)return bad('Только админ',403);
+  const amt=Math.trunc(+b.amount);if(!amt||Math.abs(amt)>1e7)return bad('Сумма: не 0 и |сумма| ≤ 10 000 000');
+  try{db.prepare('SELECT fl FROM users LIMIT 1').get()}catch(e){try{db.exec('ALTER TABLE users ADD COLUMN fl INTEGER DEFAULT 0')}catch{}}
   if(b.all){
    const users=db.prepare('SELECT id,username,fl FROM users').all();
-   let n=0;C.tx(()=>{for(const t of users){if(amt<0&&(t.fl||0)+amt<0)continue;flAdd(t.id,amt,amt>0?'Выдано всем (админ)':'Списано у всех (админ)');n++}});
-   C.logAudit(me.id,'fl_give_all','',String(amt)+' x'+n);return ok({ok:true,count:n,amount:amt});
+   let n=0;
+   for(const u of users){try{if(amt<0&&(u.fl||0)+amt<0)continue;flAdd(u.id,amt,amt>0?'Выдано всем (админ)':'Списано у всех (админ)');n++}catch{}}
+   try{C.logAudit&&C.logAudit(me.id,'fl_give_all','',String(amt)+' x'+n)}catch{}
+   return ok({ok:true,count:n,amount:amt});
   }
   const name=String(b.to||'').trim().replace(/^@/,'');
-  const t=name?db.prepare('SELECT id,username,fl FROM users WHERE username=?').get(name):db.prepare('SELECT id,username,fl FROM users WHERE id=?').get(me.id);
+  let t=null;
+  if(!name||name==='me'||name==='self')t=db.prepare('SELECT id,username,fl FROM users WHERE id=?').get(me.id);
+  else t=db.prepare('SELECT id,username,fl FROM users WHERE username=? COLLATE NOCASE').get(name);
   if(!t)return bad('Пользователь не найден',404);
   if(amt<0&&(t.fl||0)+amt<0)return bad('У пользователя только '+(t.fl||0)+' FL');
-  flAdd(t.id,amt,amt>0?'Выдано админом':'Списано админом');notify(t.id,(amt>0?'+':'')+amt+' FL (админ)');C.logAudit(me.id,'fl_give',t.username,String(amt));
+  flAdd(t.id,amt,amt>0?'Выдано админом':'Списано админом');
+  try{notify(t.id,(amt>0?'+':'')+amt+' FL (админ)')}catch{}
+  try{C.logAudit&&C.logAudit(me.id,'fl_give',t.username,String(amt))}catch{}
   return ok({ok:true,username:t.username,fl:flBal(t.id)});
  }
  if(url==='/api/admin/fl/config'){
