@@ -45,6 +45,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.6 'Segoe UI',system-ui,san
 body.lock,body:not(.ready){overflow:hidden}
 button{font:inherit;color:inherit}
 #cv{position:fixed;inset:0;z-index:0}
+#forumPage{position:relative;z-index:1}
 main,footer{position:relative;z-index:1}
 #pg{position:fixed;top:0;left:0;height:2px;width:0;background:var(--r);z-index:50;box-shadow:0 0 10px var(--r)}
 /* preloader */
@@ -2425,4 +2426,4 @@ function ldUpload(){if(!ldFile)return;if(!confirm('Заменить лоадер
   x.onerror=()=>{$('ldBar').style.display='none';$('ldPct').textContent='';toast('Нет связи с сервером',1);$('ldGo').disabled=false};
   x.send(ldFile)}
 async function ldRollback(){if(!confirm('Вернуть предыдущую версию лоадера?'))return;try{await api('/api/admin/loader/rollback',{});toast('Возвращена предыдущая версия');ldInfo()}catch(e){toast(e.message,1)}}
-</script><script src="/ext.js?v=fl3"></script></body></html>
+</script><script src="/ext.js?v=fl4"></script></body></html>
