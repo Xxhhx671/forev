@@ -61,6 +61,7 @@ const flst=document.createElement('style');flst.textContent=".fl-ic{display:inli
 document.body.insertAdjacentHTML('beforeend','<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'+"<linearGradient id=\"flg-gold\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3a8\"/><stop offset=\".5\" stop-color=\"#ffc02e\"/><stop offset=\"1\" stop-color=\"#e5800a\"/></linearGradient>\n<linearGradient id=\"flg-gold2\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe98f\"/><stop offset=\".55\" stop-color=\"#f5a912\"/><stop offset=\"1\" stop-color=\"#b9650a\"/></linearGradient>\n<linearGradient id=\"flg-moon\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#d9ccff\"/><stop offset=\".55\" stop-color=\"#8b86ff\"/><stop offset=\"1\" stop-color=\"#4a5de0\"/></linearGradient>\n<linearGradient id=\"flg-bolt\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fffbc2\"/><stop offset=\".5\" stop-color=\"#ffd23a\"/><stop offset=\"1\" stop-color=\"#ff9a0a\"/></linearGradient>\n<linearGradient id=\"flg-fo\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ff6a3d\"/><stop offset=\".6\" stop-color=\"#f03a3a\"/><stop offset=\"1\" stop-color=\"#c41f4a\"/></linearGradient>\n<linearGradient id=\"flg-fi\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3a0\"/><stop offset=\"1\" stop-color=\"#ffa21a\"/></linearGradient>\n<linearGradient id=\"flg-shine\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#fff\" stop-opacity=\"0\"/><stop offset=\".5\" stop-color=\"#fff\" stop-opacity=\".85\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></linearGradient>\n<clipPath id=\"flg-cp-gem\"><path d=\"M12 2.5L18.5 8L21.5 11.5L12 21.2L2.5 11.5L5.5 8Z\"/></clipPath>\n<clipPath id=\"flg-cp-crown\"><path d=\"M3.2 8.2L7.6 12.2L12 3.8L16.4 12.2L20.8 8.2L19 19.4H5Z\"/></clipPath>"+'</defs></svg>');
 const FLB={"star":"<g class=\"fa-spark\"><path d=\"M12 2.2l2.1 5.6 6 .3-4.6 3.8 1.5 5.8L12 14.9 7 17.7l1.5-5.8L4 8.1l6-.3z\" fill=\"url(#flg-gold)\" stroke=\"#ffe08a\" stroke-width=\".4\" stroke-linejoin=\"round\"/><circle class=\"fa-tw\" cx=\"18.5\" cy=\"4\" r=\"1.2\" fill=\"#fff6c8\"/><circle class=\"fa-tw2\" cx=\"5.2\" cy=\"6\" r=\".9\" fill=\"#fff6c8\"/></g>","moon":"<g class=\"fa-rock\"><path d=\"M20.5 13.2A8.5 8.5 0 1 1 10.8 3.4 6.6 6.6 0 0 0 20.5 13.2Z\" fill=\"url(#flg-moon)\" stroke=\"#c8b8ff\" stroke-width=\".4\"/><circle class=\"fa-tw\" cx=\"17.8\" cy=\"5.4\" r=\"1.2\" fill=\"#efe8ff\"/><circle class=\"fa-tw2\" cx=\"14.2\" cy=\"3.2\" r=\".75\" fill=\"#efe8ff\"/></g>","bolt":"<g class=\"fa-shake\"><path d=\"M13.4 1.8 5.2 13.2h5.4L9.4 22.2 18.6 9.6h-5.2z\" fill=\"url(#flg-bolt)\" stroke=\"#ffb020\" stroke-width=\".55\" stroke-linejoin=\"round\"/><path class=\"fa-flash\" d=\"M13.4 1.8 5.2 13.2h5.4L9.4 22.2 18.6 9.6h-5.2z\" fill=\"#fff\"/></g>","fire":"<g><path class=\"fa-flame\" d=\"M12 2.4C13.2 5.8 18.6 8.5 18.6 14.2c0 3.9-2.9 7.2-6.6 7.2S5.4 18.1 5.4 14.2c0-2.6 1.3-4.4 2.6-5.8.3 1.8 1.2 2.8 2.2 3.2C9.6 8.4 10.5 4.8 12 2.4Z\" fill=\"url(#flg-fo)\"/><path class=\"fa-flame2\" d=\"M12 11.8c.9 2 3.3 3.1 3.3 5.5 0 1.95-1.45 3.3-3.3 3.3s-3.3-1.35-3.3-3.3c0-2 2-3.15 3.3-5.5Z\" fill=\"url(#flg-fi)\"/></g>"};
 const flBadge=(id,s)=>FLB[id]?`<svg class="fl-ic" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${FLB[id]}</svg>`:'';
+window.FLB=FLB;window.flBadge=flBadge;
 
 /* ===== Чат ===== */
 let rpl=0;const muted=()=>{try{return JSON.parse(localStorage.ch_mute||'[]')}catch{return[]}};
@@ -289,20 +290,6 @@ window.faqF=v=>{v=v.toLowerCase();document.querySelectorAll('#xfl details').forE
 
 /* ===== FORUM + PUBLIC PROFILE ===== */
 const fst2=document.createElement('style');fst2.textContent=`
-.fm-wrap{display:grid;grid-template-columns:220px 1fr;gap:14px;min-height:420px}
-@media(max-width:720px){.fm-wrap{grid-template-columns:1fr}}
-.fm-nav{display:flex;flex-direction:column;gap:4px}
-.fm-nav h5{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--m);margin:10px 0 4px;padding:0 8px}
-.fm-nav button{text-align:left;border:0;background:transparent;color:var(--fg);padding:10px 12px;border-radius:10px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600}
-.fm-nav button:hover{background:rgba(255,255,255,.04)}
-.fm-nav button.on{background:rgba(59,158,255,.12);color:#8ec8ff}
-.fm-nav .staff-tag{font-size:10px;color:#f59e0b;margin-left:6px;font-weight:800}
-.fm-main{min-width:0}
-.fm-post{border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px;background:#0b0f16;cursor:pointer;transition:border-color .2s}
-.fm-post:hover{border-color:rgba(59,158,255,.35)}
-.fm-post b{display:block;font-size:15px;margin-bottom:4px}
-.fm-post small{color:var(--m)}
-.fm-body{white-space:pre-wrap;line-height:1.55;font-size:14px;margin:10px 0}
 .pf-ov{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.72);display:flex;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto;backdrop-filter:blur(6px)}
 .pf-box{width:min(560px,100%);background:#0b0f16;border:1px solid var(--bd);border-radius:18px;overflow:hidden;position:relative;margin-bottom:40px}
 .pf-ban{height:140px;background:linear-gradient(135deg,#1a2a44,#0d1522);background-size:cover;background-position:center;position:relative}
@@ -332,67 +319,6 @@ window.switchCabTab=function(tab){
  if(tabs)[...tabs.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
 };
 window.openFlTab=function(){if(!user)return;inject();if(typeof goCab==='function')goCab();switchCabTab('fl')};
-let fmCat='global',fmStaff=false;
-const FM_DEFAULT_CATS=[
- {id:'news',name:'News',staff:1,group:'Staff',count:0},
- {id:'updates',name:'Updates',staff:1,group:'Staff',count:0},
- {id:'global',name:'Global',staff:0,group:'Community',count:0},
- {id:'cheats',name:'Cheats',staff:0,group:'Community',count:0},
- {id:'crack',name:'Crack',staff:0,group:'Community',count:0},
- {id:'sources',name:'Исходники читов',staff:0,group:'Community',count:0},
- {id:'guides',name:'Гайды',staff:0,group:'Community',count:0}
-];
-function fmRenderNav(cats,staff){
- const groups={};(cats||[]).forEach(c=>{(groups[c.group]=groups[c.group]||[]).push(c)});
- let nav='';Object.keys(groups).forEach(g=>{nav+=`<h5>${esc(g)}</h5>`+groups[g].map(c=>`<button type="button" data-c="${c.id}" class="${c.id===fmCat?'on':''}" onclick="fmOpenCat('${c.id}')">${esc(c.name)}${c.staff?'<span class="staff-tag">staff</span>':''} <small style="opacity:.5">${c.count||0}</small></button>`).join('')});
- return nav;
-}
-
-async function loadForum(){
- const root=$('fmRoot');if(!root)return;
- // мгновенно рисуем разделы, без ожидания сети
- root.innerHTML=`<div class="fm-wrap"><div class="fm-nav">${fmRenderNav(FM_DEFAULT_CATS,false)}</div><div class="fm-main" id="fmMain"><small style="color:var(--m)">Загрузка ленты…</small></div></div>`;
- fmOpenCat(fmCat);
- try{
-  const r=await post('/api/forum/cats',{});
-  if(r&&r.cats){fmStaff=!!r.staff;const nav=root.querySelector('.fm-nav');if(nav)nav.innerHTML=fmRenderNav(r.cats,r.staff)}
- }catch(e){/* категории уже на экране */}
-}
-
-window.loadForum=loadForum; // loadForum внутри IIFE — без этого openForum() в index.html её не видит
-window.fmOpenCat=async id=>{
- fmCat=id;document.querySelectorAll('.fm-nav button').forEach(b=>b.classList.toggle('on',b.dataset.c===id));
- const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
- try{
-  const r=await Promise.race([
-    post('/api/forum/list',{cat:id}),
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Таймаут сервера (проверьте деплой ext.js)')),10000))
-  ]);
-  if(r.error)throw new Error(r.error);
-  const canPost=!r.meta.staff||r.staff;
-  let html=canPost?`<div style="margin-bottom:12px"><input id="fmT" placeholder="Заголовок" style="width:100%;margin-bottom:6px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg)"><textarea id="fmB" placeholder="Текст поста…" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit;resize:vertical"></textarea><button class="btn sm" style="margin-top:6px" onclick="fmCreate()">Опубликовать</button></div>`:`<p style="font-size:13px;color:var(--m);margin-bottom:12px">Раздел staff-only — писать может только администратор (EmirDI1804).</p>`;
-  html+=(r.list||[]).map(p=>`<div class="fm-post" onclick="fmView(${p.id})"><b>${esc(p.title)}</b><small>@${esc(p.username)} · ${dt(p.ts)} · ${p.replies} отв.</small><div style="margin-top:6px;font-size:13px;color:#9aa3b5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div></div>`).join('')||'<small>Пока пусто — будьте первым</small>';
-  main.innerHTML=html;
- }catch(e){main.innerHTML='<small style="color:#ff6b8a">'+esc(e.message||'Ошибка')+'</small>'}
-};
-window.fmCreate=async()=>{try{await post('/api/forum/create',{cat:fmCat,title:$('fmT').value,body:$('fmB').value});toast('Опубликовано');fmOpenCat(fmCat)}catch(e){toast(e.message,1)}};
-window.fmView=async id=>{
- const main=$('fmMain');if(!main)return;main.innerHTML='<small>Загрузка…</small>';
- try{
-  const r=await post('/api/forum/get',{id});
-  if(r.error)throw new Error(r.error);
-  const p=r.post;
-  main.innerHTML=`<button class="btn sm ghost" onclick="fmOpenCat('${esc(p.cat)}')">← Назад</button>
-   <h3 style="margin:12px 0 4px">${esc(p.title)}</h3>
-   <small style="color:var(--m)"><span style="cursor:pointer;color:#8ec8ff" onclick="openUserProfile('${esc(p.username)}')">@${esc(p.username)}</span> · ${dt(p.ts)}</small>
-   <div class="fm-body">${esc(p.body)}</div>
-   <h4 style="margin:16px 0 8px">Ответы (${(r.replies||[]).length})</h4>
-   <div id="fmRep">${(r.replies||[]).map(x=>`<div class="fm-post" style="cursor:default"><small><span style="cursor:pointer;color:#8ec8ff" onclick="openUserProfile('${esc(x.username)}')">@${esc(x.username)}</span> · ${dt(x.ts)}</small><div class="fm-body" style="margin:6px 0 0">${esc(x.body)}</div></div>`).join('')||'<small>Нет ответов</small>'}</div>
-   <textarea id="fmR" placeholder="Ваш ответ…" rows="2" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--fg);font:inherit"></textarea>
-   <button class="btn sm" style="margin-top:6px" onclick="fmReply(${id})">Ответить</button>`;
- }catch(e){main.innerHTML='<small style="color:#ff6b8a">'+esc(e.message||'Ошибка')+'</small>'}
-};
-window.fmReply=async id=>{try{await post('/api/forum/reply',{post_id:id,body:$('fmR').value});fmView(id)}catch(e){toast(e.message,1)}};
 
 window.openUserProfile=async function(name){
  if(!name||!user)return;

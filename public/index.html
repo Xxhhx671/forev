@@ -1769,7 +1769,7 @@ document.addEventListener('mousemove',e=>{const c=e.target.closest&&e.target.clo
 function tm(s){const on=s===undefined?!$('menu').classList.contains('on'):!!s;
  $('menu').classList.toggle('on',on);$('mv').classList.toggle('on',on);$('bgr').classList.toggle('on',on);document.body.classList.toggle('lock',on)}
 function go(id){tm(0);if(id==='top'||user)return scrollTo({top:0,behavior:'smooth'});$(id).scrollIntoView({behavior:'smooth'})}
-function goCab(){tm(0);const fp=$('forumPage');if(fp)fp.style.display='none';$('land').style.display='none';$('cab').style.display='block';scrollTo({top:0,behavior:'smooth'})}
+function goCab(){tm(0);if(/^#forum/.test(location.hash))history.replaceState(null,'',location.pathname+location.search);const fp=$('forumPage');if(fp)fp.style.display='none';$('land').style.display='none';$('cab').style.display='block';scrollTo({top:0,behavior:'smooth'})}
 function openForum(){tm(0);if(!user){openM('log');return}$('land').style.display='none';$('cab').style.display='none';const fp=$('forumPage');if(fp){fp.style.display='block'}scrollTo({top:0,behavior:'smooth'});if(typeof loadForum==='function')loadForum();else{const fr=$('fmRoot');if(fr)fr.innerHTML='<small style="color:#ff6b8a">Не загрузился ext.js — обновите страницу (Ctrl+F5)</small>'}}
 window.openForum=openForum;window.goCab=goCab;
 const arr='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
@@ -2426,4 +2426,4 @@ function ldUpload(){if(!ldFile)return;if(!confirm('Заменить лоадер
   x.onerror=()=>{$('ldBar').style.display='none';$('ldPct').textContent='';toast('Нет связи с сервером',1);$('ldGo').disabled=false};
   x.send(ldFile)}
 async function ldRollback(){if(!confirm('Вернуть предыдущую версию лоадера?'))return;try{await api('/api/admin/loader/rollback',{});toast('Возвращена предыдущая версия');ldInfo()}catch(e){toast(e.message,1)}}
-</script><script src="/ext.js?v=fl4"></script></body></html>
+</script><script src="/ext.js?v=fl5"></script><script src="/forum.js?v=2"></script></body></html>
