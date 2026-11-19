@@ -1459,10 +1459,10 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
 <div id="profPreview" style="position:relative;height:100px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#1a2a44,#0d1522);margin-bottom:36px;background-size:cover;background-position:center">
   <div id="profAvWrap" style="position:absolute;left:50%;bottom:-28px;transform:translateX(-50%);width:56px;height:56px;border-radius:50%;border:3px solid var(--sf,#0b0f16);overflow:hidden;background:#16202f;display:grid;place-items:center;font-weight:900;font-size:20px"></div>
 </div>
-<label class="btn sm ghost" style="display:inline-flex;margin:0 6px 8px 0;cursor:pointer">📷 Баннер из галереи
+<label class="btn sm ghost" style="display:inline-flex;align-items:center;gap:7px;margin:0 6px 8px 0;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="4"/><path d="M6.5 6.5h.01"/></svg> Баннер
   <input type="file" accept="image/*" id="bannerFile" style="display:none" onchange="pickImage(this,'banner')">
 </label>
-<label class="btn sm ghost" style="display:inline-flex;margin:0 0 8px;cursor:pointer">📷 Аватар из галереи
+<label class="btn sm ghost" style="display:inline-flex;align-items:center;gap:7px;margin:0 0 8px;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> Аватар
   <input type="file" accept="image/*" id="avatarFile" style="display:none" onchange="pickImage(this,'avatar')">
 </label>
 <input type="hidden" id="bannerUrl" value="">
@@ -2339,6 +2339,7 @@ function toggleTheme(){const t=document.documentElement.classList.contains('ligh
 async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),banner=$('bannerUrl')?$('bannerUrl').value.trim():'',bio=$('bioText')?$('bioText').value.trim():'',theme=$('themeSel').value;await api('/api/profile',{avatar,banner,bio,theme});if(user){user.avatar=avatar;user.banner=banner;user.bio=bio;user.theme=theme}applyTheme(theme);try{await api('/api/profile/save',{avatar,banner,bio})}catch{}updProfPreview();toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
 function updProfPreview(){const b=$('profPreview'),w=$('profAvWrap');if(!b||!user)return;const ban=($('bannerUrl')&&$('bannerUrl').value)||user.banner||'';const av=($('avatarUrl')&&$('avatarUrl').value)||user.avatar||'';if(ban){b.style.backgroundImage='url('+ban+')'}else{b.style.backgroundImage='';}if(w){if(av)w.innerHTML='<img src="'+String(av).replace(/"/g,'')+'" style="width:100%;height:100%;object-fit:cover">';else w.textContent=(user.username||'?')[0].toUpperCase()}}
 function compressImage(file,maxW,qual){return new Promise((resolve,reject)=>{
+  if(file.size>10*1024*1024)return reject(new Error('Файл слишком большой (макс 10МБ)'));
   const fr=new FileReader();
   fr.onerror=()=>reject(new Error('Не удалось прочитать файл'));
   fr.onload=()=>{const img=new Image();
@@ -2354,7 +2355,7 @@ async function pickImage(input,kind){
   if(!f.type.startsWith('image/'))return toast('Выберите изображение',1);
   try{
     toast('Сжимаем фото…');
-    const data=await compressImage(f, kind==='banner'?1200:512, kind==='banner'?0.72:0.78);
+    const data=await compressImage(f, kind==='banner'?1920:800, kind==='banner'?0.85:0.88);
     const r=await api('/api/upload/image',{data});
     if(kind==='banner'){$('bannerUrl').value=r.url;if(user)user.banner=r.url}
     else{$('avatarUrl').value=r.url;if(user)user.avatar=r.url}
