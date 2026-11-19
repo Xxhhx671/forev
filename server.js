@@ -756,6 +756,11 @@ const srv=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&!req.url.startsWith('/api/')){
       if(req.url==='/health'){res.writeHead(200,{'Content-Type':'text/plain'});return res.end('ok')}
       let p=req.url.split('?')[0];if(p==='/')p='/index.html';
+      {const im=p.match(/^\/img\/([a-f0-9]{18})$/);
+        if(im){const row=db.prepare('SELECT mime,data FROM images WHERE id=?').get(im[1]);
+          if(!row){res.writeHead(404);return res.end('Not found')}
+          res.writeHead(200,{'Content-Type':row.mime,'Cache-Control':'public, max-age=31536000, immutable','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*','Cross-Origin-Resource-Policy':'cross-origin'});
+          return res.end(row.data)}}
       const f=path.join(PUB,path.normalize(p));
       if(f.startsWith(PUB+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile()){
         const headers={'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':['.html','.js','.css'].includes(path.extname(f))?'no-cache':'public, max-age=86400'};

@@ -7,7 +7,8 @@ run('ALTER TABLE chat_msgs ADD COLUMN channel TEXT DEFAULT \'general\'');
 run('ALTER TABLE chat_msgs ADD COLUMN atts TEXT DEFAULT \'[]\'');
 run("ALTER TABLE notifications ADD COLUMN kind TEXT DEFAULT 'system'");
 run("ALTER TABLE notifications ADD COLUMN link TEXT DEFAULT ''");
-db.exec(`CREATE TABLE IF NOT EXISTS chat_log(id INTEGER PRIMARY KEY,admin_id INTEGER,action TEXT,target TEXT,details TEXT,ts INTEGER);
+db.exec(`CREATE TABLE IF NOT EXISTS images(id TEXT PRIMARY KEY,mime TEXT,data BLOB,user_id INTEGER,ts INTEGER);
+CREATE TABLE IF NOT EXISTS chat_log(id INTEGER PRIMARY KEY,admin_id INTEGER,action TEXT,target TEXT,details TEXT,ts INTEGER);
 CREATE TABLE IF NOT EXISTS chat_words(word TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS chat_reactions(msg_id INTEGER,user_id INTEGER,emoji TEXT,PRIMARY KEY(msg_id,user_id,emoji));
 CREATE TABLE IF NOT EXISTS chat_channels(id TEXT PRIMARY KEY,name TEXT,descr TEXT DEFAULT '',kind TEXT DEFAULT 'public',sort INTEGER DEFAULT 0);
@@ -309,15 +310,17 @@ if(url.startsWith('/api/forum/'))return forum.post(url,b,me,req,res,C);
   return ok({ok:true,banner,avatar,bio});
  }
  if(url==='/api/upload/image'){
-  // base64 data URL — store directly in DB (no filesystem needed)
   const raw=String(b.data||'');
   const m=raw.match(/^data:image\/(jpeg|jpg|png|webp|gif);base64,([A-Za-z0-9+/=]+)$/i);
   if(!m)return bad('Нужна картинка (JPEG/PNG/WebP)');
   const buf=Buffer.from(m[2],'base64');
   if(buf.length<100)return bad('Файл слишком маленький');
   if(buf.length>10485760)return bad('Файл слишком большой (макс 10МБ)');
-  // return the data URL directly — saved as avatar/banner field in DB
-  return ok({ok:true,url:raw});
+  // картинка хранится в БД, в профиль уходит короткая ссылка /img/<id> (поля avatar/banner ограничены 500-800 символами)
+  const mime='image/'+(m[1].toLowerCase()==='jpg'?'jpeg':m[1].toLowerCase());
+  const iid=crypto.randomBytes(9).toString('hex');
+  db.prepare('INSERT INTO images(id,mime,data,user_id,ts) VALUES(?,?,?,?,?)').run(iid,mime,buf,me.id,Date.now());
+  return ok({ok:true,url:'/img/'+iid});
  }
  if(url==='/api/profile/vote'){
   const tid=+b.id;if(!tid||tid===me.id)return bad('Нельзя');
