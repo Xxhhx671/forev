@@ -309,21 +309,15 @@ if(url.startsWith('/api/forum/'))return forum.post(url,b,me,req,res,C);
   return ok({ok:true,banner,avatar,bio});
  }
  if(url==='/api/upload/image'){
-  // base64 data URL from phone gallery
+  // base64 data URL — store directly in DB (no filesystem needed)
   const raw=String(b.data||'');
   const m=raw.match(/^data:image\/(jpeg|jpg|png|webp|gif);base64,([A-Za-z0-9+/=]+)$/i);
   if(!m)return bad('Нужна картинка (JPEG/PNG/WebP)');
-  const ext=m[1].toLowerCase()==='jpg'?'jpeg':m[1].toLowerCase();
   const buf=Buffer.from(m[2],'base64');
   if(buf.length<100)return bad('Файл слишком маленький');
-  if(buf.length>900000)return bad('Файл слишком большой (макс ~700КБ после сжатия)');
-  const fs=require('fs'),path=require('path');
-  const dir=path.join(__dirname,'public','uploads');
-  try{fs.mkdirSync(dir,{recursive:true})}catch{}
-  const name='u'+me.id+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
-  fs.writeFileSync(path.join(dir,name),buf);
-  const url='/uploads/'+name;
-  return ok({ok:true,url});
+  if(buf.length>2097152)return bad('Файл слишком большой (макс 2МБ)');
+  // return the data URL directly — saved as avatar/banner field in DB
+  return ok({ok:true,url:raw});
  }
  if(url==='/api/profile/vote'){
   const tid=+b.id;if(!tid||tid===me.id)return bad('Нельзя');
