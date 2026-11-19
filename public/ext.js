@@ -331,8 +331,9 @@ window.openUserProfile=async function(name){
   const u=r.user;
   let fx=null;
   try{const fr=await fetch((window.API_BASE||'')+'/api/forum/user?id='+u.id,{credentials:'include'});fx=await fr.json();if(fx.error)fx=null}catch{}
-  const ban=u.banner?`style="background-image:url('${esc(u.banner).replace(/'/g,'')}')"`:'';
-  const av=u.avatar?`<img src="${esc(u.avatar)}" alt="">`:(u.username[0]||'?').toUpperCase();
+  const _ab=x=>(typeof x==='string'&&x[0]==='/'&&window.API_BASE)?window.API_BASE+x:x;
+  const ban=u.banner?`style="background-image:url('${esc(_ab(u.banner)).replace(/'/g,'')}')"`:'';
+  const av=u.avatar?`<img src="${esc(_ab(u.avatar))}" alt="" onerror="this.replaceWith(document.createTextNode('${esc((u.username[0]||'?').toUpperCase())}'))">`:(u.username[0]||'?').toUpperCase();
   const likeOn=r.myVote===1?' on-like':'',disOn=r.myVote===-1?' on-dis':'';
   const fu=fx&&fx.user||{};
   const rank=fu.rank?`<span style="color:${esc(fu.rank_color||'#9ca3af')};font-weight:700">${esc(fu.rank)}</span>`:'';
