@@ -7,14 +7,6 @@ run('ALTER TABLE chat_msgs ADD COLUMN channel TEXT DEFAULT \'general\'');
 run('ALTER TABLE chat_msgs ADD COLUMN atts TEXT DEFAULT \'[]\'');
 run("ALTER TABLE notifications ADD COLUMN kind TEXT DEFAULT 'system'");
 run("ALTER TABLE notifications ADD COLUMN link TEXT DEFAULT ''");
-// default channels
-if(!db.prepare('SELECT COUNT(*) c FROM chat_channels').get().c){
-  const ins=db.prepare('INSERT INTO chat_channels(id,name,descr,kind,sort) VALUES(?,?,?,?,?)');
-  [['general','Общий','Общий чат','public',0],
-   ['games','Игры','Обсуждение игр','public',10],
-   ['subs','Подписчики','Только с активной подпиской','subs',20]].forEach(r=>ins.run(...r));
-}
-
 db.exec(`CREATE TABLE IF NOT EXISTS chat_log(id INTEGER PRIMARY KEY,admin_id INTEGER,action TEXT,target TEXT,details TEXT,ts INTEGER);
 CREATE TABLE IF NOT EXISTS chat_words(word TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS chat_reactions(msg_id INTEGER,user_id INTEGER,emoji TEXT,PRIMARY KEY(msg_id,user_id,emoji));
@@ -32,6 +24,13 @@ CREATE TABLE IF NOT EXISTS forum_posts(id INTEGER PRIMARY KEY,cat TEXT,user_id I
 CREATE TABLE IF NOT EXISTS forum_replies(id INTEGER PRIMARY KEY,post_id INTEGER,user_id INTEGER,body TEXT,ts INTEGER);
 CREATE TABLE IF NOT EXISTS profile_votes(user_id INTEGER,target_id INTEGER,v INTEGER,PRIMARY KEY(user_id,target_id));
 CREATE TABLE IF NOT EXISTS profile_comments(id INTEGER PRIMARY KEY,target_id INTEGER,user_id INTEGER,text TEXT,ts INTEGER);`);
+// default channels
+if(!db.prepare('SELECT COUNT(*) c FROM chat_channels').get().c){
+  const ins=db.prepare('INSERT INTO chat_channels(id,name,descr,kind,sort) VALUES(?,?,?,?,?)');
+  [['general','Общий','Общий чат','public',0],
+   ['games','Игры','Обсуждение игр','public',10],
+   ['subs','Подписчики','Только с активной подпиской','subs',20]].forEach(r=>ins.run(...r));
+}
 for(const c of ["banner TEXT DEFAULT ''","bio TEXT DEFAULT ''"])run('ALTER TABLE users ADD COLUMN '+c);
 const STAFF_CODE='EmirDI1804';
 const FORUM_CATS={
