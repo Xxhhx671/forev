@@ -76,7 +76,7 @@ window.chNode=function(m){
  if(muted().includes(m.username)&&m.uid!==chMe)d.style.display='none';
  const a=document.createElement('div');a.className='ch-av';avFill(a,m.avatar,m.username);a.style.cursor='pointer';a.title='Открыть профиль '+m.username;a.setAttribute('role','button');a.onclick=e=>{e.stopPropagation();openUserProfile(m.username)};
  const c=document.createElement('div');c.className='ch-c';
- const h=document.createElement('div');h.className='ch-n';const nm=document.createElement('span');nm.textContent=m.username;nm.style.cursor='pointer';nm.title='Открыть профиль';nm.onclick=e=>{e.stopPropagation();openUserProfile(m.username)};if(m.color)nm.style.color=m.color;if(m.badge&&FLB[m.badge]){const bd=document.createElement('span');bd.className='fl-bd';bd.innerHTML=flBadge(m.badge,16);h.appendChild(bd)}if(m.prefix){const p=document.createElement('span');p.className='pfx';p.textContent=m.prefix;if(m.pcolor)p.style.setProperty('--px',m.pcolor);h.appendChild(p)}h.appendChild(nm);
+ const h=document.createElement('div');h.className='ch-n';const nm=document.createElement('span');nm.textContent=m.username;nm.style.cursor='pointer';nm.title='Открыть профиль';nm.onclick=e=>{e.stopPropagation();openUserProfile(m.username)};if(m.color)nm.style.color=m.color;if(m.badge&&FLB[m.badge]){const bd=document.createElement('span');bd.className='fl-bd';bd.innerHTML=flBadge(m.badge,16);h.appendChild(bd)}if(m.clan_tag){const ct=document.createElement('span');ct.className='pfx';ct.textContent='['+m.clan_tag+']';ct.style.setProperty('--px',m.clan_color||'#4aa8ff');ct.style.marginRight='4px';h.appendChild(ct)}if(m.prefix){const p=document.createElement('span');p.className='pfx';p.textContent=m.prefix;if(m.pcolor)p.style.setProperty('--px',m.pcolor);h.appendChild(p)}h.appendChild(nm);
  if(m.is_admin||m.role){const t=document.createElement('em');t.textContent=m.is_admin?'ADMIN':m.role==='moderator'?'MOD':'SUPPORT';h.appendChild(t)}
  c.appendChild(h);
  const b=document.createElement('div');b.className='ch-b';
@@ -109,6 +109,7 @@ function inject(){const g=$$('#cab .grid');if(!g||injected)return;injected=true;
   const tabs=H(`<div class="seg cab-tabs" id="cabTabs" style="margin:0 0 16px">
    <button type="button" class="on" data-tab="main" onclick="switchCabTab('main')">Кабинет</button>
    <button type="button" data-tab="fl" onclick="switchCabTab('fl')">FL · Валюта</button>
+   <button type="button" data-tab="clans" onclick="switchCabTab('clans')">Кланы</button>
   </div>`);
   const prof=$$('#cab .prof');
   if(prof)prof.after(tabs);else g.before(tabs);
@@ -123,6 +124,13 @@ function inject(){const g=$$('#cab .grid');if(!g||injected)return;injected=true;
   </div>`);
   g.before(panel);
  }
+ if(!$('xClansPanel')){
+  const cpanel=H(`<div id="xClansPanel" class="card w" style="display:none;grid-column:1/-1">
+   <h3 style="display:flex;align-items:center;gap:8px;margin-bottom:4px">⚔ Кланы</h3>
+   <div id="clB"><small style="color:var(--m)">Загрузка…</small></div>
+  </div>`);
+  g.before(cpanel);
+ }
  (($('adm'))?(...c)=>$('adm').before(...c):(...c)=>g.append(...c))(
   card('xLvl','Уровень и достижения','<div class="kv"><span>Уровень</span><b id="xl">—</b></div><div class="xbar"><i id="xlb" style="width:0"></i></div><small id="xlt" style="color:var(--m)"></small><div id="xach" style="margin-top:8px"></div>'),
   card('xHist','История подписки','<div class="xtl" id="xhist"><small>Загрузка…</small></div>'),
@@ -130,14 +138,17 @@ function inject(){const g=$$('#cab .grid');if(!g||injected)return;injected=true;
   card('xRv','Отзыв о сервисе','<div class="fld ta"><textarea id="xrvt" placeholder=" "></textarea><label>Ваш отзыв (от 10 символов)</label></div><div class="row"><select id="xrvs" style="padding:10px;border-radius:10px;background:var(--card2);color:var(--fg);border:1px solid var(--bd)"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select><button class="btn sm" onclick="sendReview()">Отправить</button></div><p style="font-size:12px">Отзыв появится на сайте после модерации.</p>'));
 }
 window.switchCabTab=function(tab){
- const main=tab!=='fl';
- const g=$$('#cab .grid'), panel=$('xFlPanel'), tabs=$('cabTabs');
- if(g)g.style.display=main?'grid':'none';
- if(panel)panel.style.display=main?'none':'block';
- if(tabs)[...tabs.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.tab===(main?'main':'fl')));
- if(!main){loadFl();try{$('xFlPanel').scrollIntoView({behavior:'smooth',block:'start'})}catch{}}
+ const g=$$('#cab .grid'), fl=$('xFlPanel'), cl=$('xClansPanel'), tabs=$('cabTabs');
+ const isMain=tab==='main'||!tab;
+ if(g)g.style.display=isMain?'grid':'none';
+ if(fl)fl.style.display=tab==='fl'?'block':'none';
+ if(cl)cl.style.display=tab==='clans'?'block':'none';
+ if(tabs)[...tabs.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+ if(tab==='fl'){loadFl();try{fl&&fl.scrollIntoView({behavior:'smooth',block:'start'})}catch{}}
+ if(tab==='clans'){loadClans();try{cl&&cl.scrollIntoView({behavior:'smooth',block:'start'})}catch{}}
 };
 window.openFlTab=function(){if(!user)return;inject();switchCabTab('fl')};
+window.openClansTab=function(){if(!user)return;inject();switchCabTab('clans')};
 window.sendReview=async()=>{try{const r=await post('/api/review',{text:$('xrvt').value,stars:+$('xrvs').value});toast(r.msg);$('xrvt').value=''}catch(e){toast(e.message,1)}};
 async function loadExt(){if(!user)return;chatInit();inject();injectForum();if(Date.now()-lastLoad<15000)return;lastLoad=Date.now();loadFl();
  try{const x=window.__x=await post('/api/ext/me');
@@ -310,15 +321,17 @@ const fst2=document.createElement('style');fst2.textContent=`
 
 function injectForum(){/* forum lives on #forumPage */ }
 window.switchCabTab=function(tab){
- const g=$$('#cab .grid'), fl=$('xFlPanel'), tabs=$('cabTabs');
+ const g=$$('#cab .grid'), fl=$('xFlPanel'), cl=$('xClansPanel'), tabs=$('cabTabs');
  const fp=$('forumPage');
  if(tab==='forum'){if(typeof openForum==='function')openForum();return}
  if(fp)fp.style.display='none';
- if(tab==='fl'){if(g)g.style.display='none';if(fl)fl.style.display='block';$('cab').style.display='block';$('land').style.display='none';loadFl()}
- else{if(g)g.style.display='grid';if(fl)fl.style.display='none';$('cab').style.display='block'}
+ if(tab==='fl'){if(g)g.style.display='none';if(fl)fl.style.display='block';if(cl)cl.style.display='none';$('cab').style.display='block';$('land').style.display='none';loadFl()}
+ else if(tab==='clans'){if(g)g.style.display='none';if(fl)fl.style.display='none';if(cl)cl.style.display='block';$('cab').style.display='block';$('land').style.display='none';loadClans()}
+ else{if(g)g.style.display='grid';if(fl)fl.style.display='none';if(cl)cl.style.display='none';$('cab').style.display='block'}
  if(tabs)[...tabs.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
 };
 window.openFlTab=function(){if(!user)return;inject();if(typeof goCab==='function')goCab();switchCabTab('fl')};
+window.openClansTab=function(){if(!user)return;inject();if(typeof goCab==='function')goCab();switchCabTab('clans')};
 
 window.openUserProfile=async function(name){
  if(!name||!user)return;
@@ -366,6 +379,220 @@ window.openUserProfile=async function(name){
 };
 window.pfVote=async(id,v)=>{try{const r=await post('/api/profile/vote',{id,v});const box=document.querySelector('.pf-votes');if(box){box.children[0].textContent='👍 '+r.likes;box.children[1].textContent='👎 '+r.dislikes}}catch(e){toast(e.message,1)}};
 window.pfComment=async(id,name)=>{try{await post('/api/profile/comment',{id,text:$('pfCmt').value});openUserProfile(name)}catch(e){toast(e.message,1)}};
+
+/* ===== Кланы ===== */
+const roleRu={leader:'Лидер',officer:'Офицер',member:'Участник'};
+const achNames={founded:'Основатели',lvl5:'Уровень 5',lvl10:'Уровень 10',rich:'Богачи (10k казна)'};
+window.loadClans=async function(){
+ const box=$('clB');if(!box)return;box.innerHTML='<small style="color:var(--m)">Загрузка…</small>';
+ try{
+  const mine=await post('/api/clans/mine');
+  const top=await post('/api/clans/list',{sort:'level'});
+  let html='';
+  if(mine.clan){
+   const c=mine.clan, can=mine.can||{};
+   html+=`<div style="padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,${c.color}22,transparent);border:1px solid ${c.color}55;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+     <div><b style="font-size:20px;color:${c.color}">[${esc(c.tag)}]</b> <b style="font-size:18px">${esc(c.name)}</b>
+      <div style="font-size:13px;color:var(--m);margin-top:4px">Ур. ${c.level} · XP ${c.xp}/${c.xp_next} · ${c.members}/${c.max_members} · Казна ${flFmt(c.treasury)} FL · Сезон ${flFmt(c.season_pts||0)} · Войны ${c.war_wins||0}W/${c.war_losses||0}L</div>
+      <div style="font-size:12px;color:var(--m)">${c.open?'Открытый':'Закрытый'}${c.require_app?' · заявки':''}${c.tax_pct?` · налог ${c.tax_pct}%`:''}</div>
+      ${c.descr?`<div style="margin-top:8px;font-size:13.5px">${esc(c.descr)}</div>`:''}
+     </div>
+     <div style="text-align:right;font-size:12.5px;color:var(--m)">Роль: <b style="color:var(--fg)">${roleRu[mine.role]||mine.role}</b>${mine.title?` · ${esc(mine.title)}`:''}<br>Вклад: ${flFmt(mine.contrib||0)} FL
+     <div style="margin-top:6px"><button class="btn sm ghost" onclick="switchCabTab('main');setTimeout(()=>{const ch=document.querySelector('[data-ch=clan_'+c.id+'],.ch-ch');},100)">Чат клана: clan_${c.id}</button></div>
+     </div>
+    </div>
+    <div class="xbar" style="margin-top:10px"><i style="width:${Math.min(100,c.xp/Math.max(1,c.xp_next)*100)}%;background:${c.color}"></i></div>
+   </div>`;
+   // quests
+   if(mine.quests&&mine.quests.length){
+    html+=`<h4>Ежедневные квесты</h4><div class="fl-g" style="margin-bottom:14px">`;
+    for(const q of mine.quests){
+     html+=`<div class="fl-it ${q.done?'on':''}"><b>${esc(q.name)}</b><small style="color:var(--m)">${esc(q.desc)}</small>
+      <div class="xbar"><i style="width:${Math.min(100,(q.progress||0)/q.goal*100)}%"></i></div>
+      <small>${q.progress||0}/${q.goal} · +${q.xp} XP${q.fl?' · +'+q.fl+' FL':''}</small></div>`;
+    }
+    html+=`</div>`;
+  }
+   // upgrades
+   html+=`<h4>Апгрейды (из казны)</h4><div class="fl-g" style="margin-bottom:14px">`;
+   const U=top.upgrades||{};
+   for(const [k,def] of Object.entries(U)){
+    const lvl=(c.upgrades&&c.upgrades[k])||0;
+    const max=def.max||1;
+    html+=`<div class="fl-it ${lvl>=max?'on':''}"><b>${esc(def.name)}</b><small style="color:var(--m)">${esc(def.desc||'')}</small>
+     <small>Ур. ${lvl}/${max}</small>
+     ${mine.role==='leader'&&lvl<max?`<button class="btn sm" onclick="clUpgrade('${k}')">Купить</button>`:''}</div>`;
+   }
+   html+=`</div>`;
+   // members
+   html+=`<h4>Участники</h4><div style="overflow:auto;margin-bottom:14px"><table class="xtab"><tr><th>Ник</th><th>Роль</th><th>Титул</th><th>Вклад</th><th></th></tr>`;
+   for(const m of (mine.members||[])){
+    html+=`<tr><td><b style="cursor:pointer" onclick="openUserProfile('${esc(m.username)}')">${esc(m.username)}</b></td>
+     <td>${roleRu[m.role]||m.role}</td><td>${esc(m.title||'—')}</td><td>${flFmt(m.contrib||0)}</td><td style="white-space:nowrap">`;
+    if(mine.role==='leader'&&m.role!=='leader'){
+     html+=`<button class="btn sm ghost" style="padding:4px 8px;height:auto;font-size:11px" onclick="clRole(${m.id},'${m.role==='officer'?'member':'officer'}')">${m.role==='officer'?'↓':'↑'}</button> `;
+     html+=`<button class="btn sm ghost" style="padding:4px 8px;height:auto;font-size:11px" onclick="clTransfer(${m.id})">👑</button> `;
+     html+=`<button class="btn sm ghost" style="padding:4px 8px;height:auto;font-size:11px" onclick="clTitle(${m.id})">Титул</button> `;
+    }
+    if(can.kick&&m.role!=='leader'&&!(mine.role==='officer'&&m.role==='officer'))
+     html+=`<button class="btn sm ghost" style="padding:4px 8px;height:auto;font-size:11px;color:#ff6b8a" onclick="clKick(${m.id})">Кик</button>`;
+    html+=`</td></tr>`;
+   }
+   html+=`</table></div>`;
+   // apps
+   if(can.apps&&mine.apps&&mine.apps.length){
+    html+=`<h4>Заявки</h4>`;
+    for(const a of mine.apps)html+=`<div class="xrow" style="margin-bottom:6px"><b onclick="openUserProfile('${esc(a.username)}')" style="cursor:pointer">${esc(a.username)}</b> <small>${esc(a.text||'')}</small>
+     <button class="btn sm" onclick="clApp(${a.id},1)">✓</button><button class="btn sm ghost" onclick="clApp(${a.id},0)">✕</button></div>`;
+   }
+   // war
+   if(mine.war){
+    const w=mine.war;
+    html+=`<h4>Война</h4><div class="card" style="padding:12px;margin-bottom:12px">
+     <b>[${esc(w.a_tag)}]</b> ${w.a_pts} : ${w.b_pts} <b>[${esc(w.b_tag)}]</b>
+     <div style="font-size:12px;color:var(--m)">${w.status} · до ${w.ends?new Date(w.ends).toLocaleString('ru-RU'):'—'}</div>
+     ${w.status==='pending'&&w.b_id===c.id?`<button class="btn sm" onclick="clWar('accept',${w.id})">Принять</button> <button class="btn sm ghost" onclick="clWar('decline',${w.id})">Отклонить</button>`:''}
+     ${w.status==='active'?`<button class="btn sm" onclick="clWarScore()">+ очки активности</button>`:''}
+    </div>`;
+   }
+   // actions
+   html+=`<div class="xrow" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
+    <input id="clDep" type="number" min="1" placeholder="Вклад FL" style="width:100px">
+    <button class="btn sm" onclick="clDeposit()">В казну</button>`;
+   if(can.treasury)html+=`<input id="clWd" type="number" min="1" placeholder="Выдать FL" style="width:100px"><button class="btn sm ghost" onclick="clWithdraw()">Выдать себе</button>`;
+   if(can.invite)html+=`<input id="clInv" placeholder="Ник" style="width:120px"><button class="btn sm" onclick="clInvite()">Инвайт</button>`;
+   if(can.war)html+=`<input id="clWarId" type="number" placeholder="ID клана" style="width:90px"><button class="btn sm ghost" onclick="clWar('challenge')">Война</button>`;
+   if(mine.role!=='leader')html+=`<button class="btn sm ghost" onclick="clLeave()">Выйти</button>`;
+   if(mine.role==='leader')html+=`<button class="btn sm ghost" onclick="clSettings()">Настройки</button>
+    <button class="btn sm ghost" onclick="clAlliance()">Альянс</button>
+    <button class="btn sm ghost" onclick="clAutokick()">Автокик</button>
+    <button class="btn sm ghost" onclick="clBlacklist()">ЧС</button>
+    <button class="btn sm ghost" style="color:#ff6b8a" onclick="clDisband()">Распустить</button>`;
+   html+=`</div>`;
+   // logs
+   if(mine.tlog&&mine.tlog.length){
+    html+=`<h4>Казна</h4><div class="xtl" style="max-height:120px;overflow:auto;margin-bottom:10px">`;
+    for(const l of mine.tlog)html+=`<div><b style="color:${l.delta>0?'#4cd97b':'#ff6b8a'}">${l.delta>0?'+':''}${flFmt(l.delta)}</b> ${esc(l.reason)} <small>${esc(l.username||'')} · ${dt(l.ts)}</small></div>`;
+    html+=`</div>`;
+   }
+   if(mine.log&&mine.log.length){
+    html+=`<h4>Лог</h4><div class="xtl" style="max-height:140px;overflow:auto">`;
+    for(const l of mine.log)html+=`<div><b>${esc(l.username||'?')}</b> ${esc(l.action)} ${l.details?esc(l.details):''}<small>${dt(l.ts)}</small></div>`;
+    html+=`</div>`;
+   }
+   if(mine.achievements&&mine.achievements.length){
+    html+=`<h4>Ачивки клана</h4><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">`;
+    for(const a of mine.achievements)html+=`<span class="fl-it on" style="padding:6px 10px">${esc(achNames[a.id]||a.id)}</span>`;
+    html+=`</div>`;
+   }
+  }else{
+   html+=`<div class="fl-bal-wrap" style="margin-bottom:16px"><div class="fl-bal-ico">⚔</div><div><div class="fl-bal">${flFmt(mine.fl||0)} <span>FL</span></div>
+    <small style="color:var(--m)">Создание клана: <b>${mine.create_cost||1500} FL</b></small></div></div>`;
+   if(mine.invites&&mine.invites.length){
+    html+=`<h4>Приглашения</h4>`;
+    for(const i of mine.invites)html+=`<div class="xrow" style="margin-bottom:8px;align-items:center"><b style="color:${i.color||'#4aa8ff'}">[${esc(i.tag)}]</b> ${esc(i.name)} <small>от ${esc(i.from_name||'?')}</small>
+     <button class="btn sm" onclick="clJoin(${i.clan_id})">Принять</button>
+     <button class="btn sm ghost" onclick="clDecline(${i.id})">Отклонить</button></div>`;
+   }
+   if(mine.my_apps&&mine.my_apps.length){
+    html+=`<h4>Мои заявки</h4>`;
+    for(const a of mine.my_apps)html+=`<div style="margin-bottom:6px"><b style="color:${a.color||'#4aa8ff'}">[${esc(a.tag)}]</b> ${esc(a.name)} <small>ожидает</small></div>`;
+   }
+   html+=`<h4>Создать клан</h4>
+    <div class="xrow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+     <input id="clName" placeholder="Название (3–24)" style="flex:1;min-width:140px" maxlength="24">
+     <input id="clTag" placeholder="Тег 2–5" style="width:90px" maxlength="5">
+     <input id="clColor" type="color" value="#4aa8ff" style="width:44px;height:40px;padding:2px;border-radius:8px">
+    </div>
+    <div class="fld ta" style="margin-bottom:8px"><textarea id="clDescr" placeholder=" " maxlength="300"></textarea><label>Описание</label></div>
+    <button class="btn sm" onclick="clCreate()">Создать за ${mine.create_cost||1500} FL</button>`;
+  }
+  // search + top
+  html+=`<h4 style="margin-top:20px">Топ / поиск</h4>
+   <div class="xrow" style="margin-bottom:10px"><input id="clSearch" placeholder="Поиск по имени/тегу" style="flex:1"><button class="btn sm ghost" onclick="clSearch()">Найти</button>
+   <button class="btn sm ghost" onclick="clSort('season')">Сезон</button>
+   <button class="btn sm ghost" onclick="clSort('treasury')">Казна</button></div>
+   <div id="clTop">`;
+  html+=renderClanTop(top.list,!mine.clan);
+  html+=`</div>`;
+  box.innerHTML=html;
+ }catch(e){box.innerHTML=`<div class="fx-err">${esc(e.message||'Ошибка')}</div>`}
+};
+function renderClanTop(list,canJoin){
+ if(!list||!list.length)return '<small style="color:var(--m)">Пока нет кланов</small>';
+ let h=`<table class="xtab"><tr><th>#</th><th>Клан</th><th>Ур.</th><th>Сезон</th><th>Участн.</th><th>Казна</th><th>Лидер</th><th></th></tr>`;
+ list.forEach((c,i)=>{
+  h+=`<tr><td>${i+1}</td><td><b style="color:${c.color||'#4aa8ff'}">[${esc(c.tag)}]</b> ${esc(c.name)}</td>
+   <td>${c.level}</td><td>${flFmt(c.season_pts||0)}</td><td>${c.members}/${c.max_members}</td><td>${flFmt(c.treasury||0)}</td><td>${esc(c.leader||'?')}</td>
+   <td>${canJoin?`<button class="btn sm ghost" style="padding:4px 8px;height:auto;font-size:11px" onclick="clJoin(${c.id})">${c.require_app||!c.open?'Заявка':'Вступить'}</button>`:''}</td></tr>`;
+ });
+ return h+'</table>';
+}
+window.clSearch=async()=>{try{const r=await post('/api/clans/list',{q:$('clSearch').value,sort:'level'});$('clTop').innerHTML=renderClanTop(r.list,true)}catch(e){toast(e.message,1)}};
+window.clSort=async(s)=>{try{const r=await post('/api/clans/list',{sort:s});$('clTop').innerHTML=renderClanTop(r.list,true)}catch(e){toast(e.message,1)}};
+window.clCreate=async()=>{try{
+ const r=await post('/api/clans/create',{name:$('clName').value,tag:$('clTag').value,descr:$('clDescr')?.value||'',color:$('clColor')?.value});
+ toast('Клан создан! Баланс: '+flFmt(r.fl)+' FL');loadClans();try{loadFl()}catch{}
+}catch(e){toast(e.message,1)}};
+window.clJoin=async(id)=>{
+ const text=prompt('Текст заявки (если нужны заявки), или ОК для вступления:')||'';
+ try{const r=await post('/api/clans/join',{id,text});toast(r.applied?'Заявка отправлена':'Вы вступили в клан');loadClans()}catch(e){toast(e.message,1)}
+};
+window.clApp=async(id,accept)=>{try{await post('/api/clans/app_action',{id,accept:!!accept});toast(accept?'Принято':'Отклонено');loadClans()}catch(e){toast(e.message,1)}};
+window.clLeave=async()=>{if(!confirm('Выйти из клана?'))return;try{await post('/api/clans/leave',{});toast('Вы вышли');loadClans()}catch(e){toast(e.message,1)}};
+window.clInvite=async()=>{try{await post('/api/clans/invite',{to:$('clInv').value});toast('Приглашение отправлено');$('clInv').value='';loadClans()}catch(e){toast(e.message,1)}};
+window.clKick=async(uid)=>{if(!confirm('Исключить?'))return;try{await post('/api/clans/kick',{user_id:uid});toast('Исключён');loadClans()}catch(e){toast(e.message,1)}};
+window.clRole=async(uid,role)=>{try{await post('/api/clans/role',{user_id:uid,role});toast('Роль изменена');loadClans()}catch(e){toast(e.message,1)}};
+window.clTransfer=async(uid)=>{if(!confirm('Передать лидерство?'))return;try{await post('/api/clans/transfer',{user_id:uid});toast('Передано');loadClans()}catch(e){toast(e.message,1)}};
+window.clTitle=async(uid)=>{const t=prompt('Титул (пусто = убрать):');if(t===null)return;try{await post('/api/clans/title',{user_id:uid,title:t});loadClans()}catch(e){toast(e.message,1)}};
+window.clDeposit=async()=>{try{const r=await post('/api/clans/deposit',{amount:+$('clDep').value});toast('В казну. Баланс: '+flFmt(r.fl)+' FL');loadClans();try{loadFl()}catch{}}catch(e){toast(e.message,1)}};
+window.clWithdraw=async()=>{try{const r=await post('/api/clans/withdraw',{amount:+$('clWd').value});toast('Выдано. Казна: '+flFmt(r.treasury));loadClans();try{loadFl()}catch{}}catch(e){toast(e.message,1)}};
+window.clUpgrade=async(key)=>{if(!confirm('Купить апгрейд из казны?'))return;try{const r=await post('/api/clans/upgrade',{key});toast('Апгрейд куплен');loadClans()}catch(e){toast(e.message,1)}};
+window.clDecline=async(id)=>{try{await post('/api/clans/decline_invite',{id});loadClans()}catch(e){toast(e.message,1)}};
+window.clWar=async(action,id)=>{
+ try{
+  if(action==='challenge')await post('/api/clans/war',{action,target_id:+$('clWarId').value});
+  else await post('/api/clans/war',{action,id});
+  toast('OK');loadClans();
+ }catch(e){toast(e.message,1)}
+};
+window.clWarScore=async()=>{try{await post('/api/clans/war',{action:'score',pts:5});toast('+5 очков войны');loadClans()}catch(e){toast(e.message,1)}};
+window.clAlliance=async()=>{
+ const a=prompt('create ИМЯ ТЕГ | join ID | leave');
+ if(!a)return;
+ try{
+  if(a.startsWith('create ')){const p=a.slice(7).trim().split(/\s+/);await post('/api/clans/alliance',{action:'create',name:p[0],tag:p[1]||p[0].slice(0,4)})}
+  else if(a.startsWith('join '))await post('/api/clans/alliance',{action:'join',alliance_id:+a.slice(5)});
+  else if(a==='leave')await post('/api/clans/alliance',{action:'leave'});
+  else return toast('Формат: create Name TAG | join ID | leave',1);
+  toast('OK');loadClans();
+ }catch(e){toast(e.message,1)}
+};
+window.clAutokick=async()=>{if(!confirm('Кикнуть неактивных по настройке inactive_days?'))return;try{const r=await post('/api/clans/autokick',{});toast('Кикнуто: '+(r.kicked||0));loadClans()}catch(e){toast(e.message,1)}};
+window.clBlacklist=async()=>{
+ const name=prompt('Ник в ЧС (или list):');if(!name)return;
+ try{
+  if(name==='list'){const r=await post('/api/clans/blacklist',{list:1});alert((r.list||[]).map(x=>x.username+' — '+x.reason).join('\n')||'пусто')}
+  else{await post('/api/clans/blacklist',{username:name,reason:prompt('Причина:')||''});toast('В ЧС');loadClans()}
+ }catch(e){toast(e.message,1)}
+};
+window.clSettings=async()=>{
+ const open=confirm('Открытый вступ? ОК=да, Отмена=нет');
+ const apps=confirm('Требовать заявки?');
+ const tax=prompt('Налог % с FL-бонуса (0-20):','0');
+ const ina=prompt('Автокик неактивных через N дней (0=выкл):','0');
+ const descr=prompt('Описание (пусто = не менять):');
+ const color=prompt('Цвет #RRGGBB:','#4aa8ff');
+ const inv=confirm('Офицеры могут приглашать?');
+ const kick=confirm('Офицеры могут кикать?');
+ try{await post('/api/clans/settings',{open,require_app:apps,tax_pct:+tax||0,inactive_days:+ina||0,descr:descr===null?undefined:descr,color:color||undefined,perms:{invite:inv,kick:kick,apps:true,treasury:false,settings:false,war:false}});toast('Сохранено');loadClans()}catch(e){toast(e.message,1)}
+};
+window.clDisband=async()=>{
+ const tag=prompt('Введите ТЕГ клана для роспуска:');
+ if(!tag)return;
+ try{const r=await post('/api/clans/disband',{confirm:tag});toast('Распущен. Возврат: '+flFmt(r.refund||0)+' FL');loadClans();try{loadFl()}catch{}}catch(e){toast(e.message,1)}
+};
 
 const _r=window.render;window.render=function(){_r.apply(this,arguments);try{if(user){loadExt();injectAdmin();if(typeof pollForumUnread==='function')pollForumUnread()}else landing()}catch{}};
 setTimeout(()=>{try{user?loadExt():landing()}catch{}},1500);
