@@ -156,7 +156,7 @@ module.exports=function(db,H){
   const st=getUserStats(r.user_id);
   return {
    uid:r.user_id,username:r.username||'удалён',avatar:r.avatar||'',
-   is_admin:!!r.is_admin,role:r.role||'',color:H.flHex(r.nick_color),badge:H.flBadgeId(r.badge),
+   is_admin:!!r.is_admin,role:r.role||'',color:H.flHex(r.nick_color),badge:H.flBadgeId(r.badge),prefix:r.prefix||'',pcolor:/^#[0-9a-f]{6}$/i.test(r.prefix_color||'')?r.prefix_color:'',
    since:r.ucreated||st.since||0,msgs:st.msgs,
    reputation:st.reputation,rank:st.rank,rank_color:st.rank_color,
    warns:st.warns,banned:st.ban_until>Date.now()
@@ -224,7 +224,7 @@ module.exports=function(db,H){
 
  const hasLinks=s=>/https?:\/\/|www\.|\[url/i.test(s||'');
 
- const USER_COLS='u.username,u.avatar,u.is_admin,u.nick_color,u.badge,u.role';
+ const USER_COLS='u.username,u.avatar,u.is_admin,u.nick_color,u.badge,u.prefix,u.prefix_color,u.role';
 
  // Пересчёт счётчиков пользователя
  const recalcUser=uid=>{
@@ -407,7 +407,7 @@ module.exports=function(db,H){
   // Публичный профиль (расширенный)
   if(url==='/api/forum/user'){
    const id=+qs.get('id')||0;
-   const t=db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,role,nick_color,badge,reputation,post_count,like_received,forum_warns,last_online FROM users WHERE id=?').get(id);
+   const t=db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,role,nick_color,badge,prefix,prefix_color,reputation,post_count,like_received,forum_warns,last_online FROM users WHERE id=?').get(id);
    if(!t)return send({error:'Пользователь не найден'},404);
    const st=getUserStats(id);
    const recentPosts=db.prepare(`SELECT id,title,ts,cat,views FROM forum_posts WHERE user_id=? AND deleted=0 ORDER BY ts DESC LIMIT 10`).all(id);
@@ -416,7 +416,7 @@ module.exports=function(db,H){
     .map(a=>({code:a.code,ts:a.ts,...(ACHIEVEMENTS[a.code]||{title:a.code,desc:''})}));
    return send({
     user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',
-     created:t.created,is_admin:!!t.is_admin,role:t.role||'',color:H.flHex(t.nick_color),badge:H.flBadgeId(t.badge),
+     created:t.created,is_admin:!!t.is_admin,role:t.role||'',color:H.flHex(t.nick_color),badge:H.flBadgeId(t.badge),prefix:t.prefix||'',pcolor:/^#[0-9a-f]{6}$/i.test(t.prefix_color||'')?t.prefix_color:'',
      reputation:st.reputation,msgs:st.msgs,likes:st.likes,warns:st.warns,last_online:st.last_online,
      rank:st.rank,rank_color:st.rank_color},
     recentPosts,recentReplies,achievements:achs

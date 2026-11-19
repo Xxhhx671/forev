@@ -1,6 +1,7 @@
 // FOREV EXT — расширения: 2FA, чат-модерация, роли, достижения, дашборд, антифрод, массовые действия, FAQ/отзывы
 module.exports=function(db,crypto){
 const DAY=864e5,run=s=>{try{db.exec(s)}catch{}};
+run("ALTER TABLE users ADD COLUMN prefix TEXT DEFAULT ''");run("ALTER TABLE users ADD COLUMN prefix_color TEXT DEFAULT ''");
 for(const c of ["totp_secret TEXT DEFAULT ''","totp_on INTEGER DEFAULT 0","role TEXT DEFAULT ''","chat_muted_until INTEGER DEFAULT 0","chat_banned INTEGER DEFAULT 0"])run('ALTER TABLE users ADD COLUMN '+c);
 run('ALTER TABLE chat_msgs ADD COLUMN reply_to INTEGER DEFAULT 0');run('ALTER TABLE chat_msgs ADD COLUMN to_user INTEGER DEFAULT 0');
 run('ALTER TABLE chat_msgs ADD COLUMN channel TEXT DEFAULT \'general\'');
@@ -105,6 +106,7 @@ const flBonus=(uid,ip)=>{try{
 const flCat=k=>k==='color'?FL_COLORS:k==='badge'?FL_BADGES:null;
 const flPrice=(k,id)=>{const c=flCat(k),it=c&&Object.prototype.hasOwnProperty.call(c,id)?c[id]:null;return it?it[2]:0};
 const flHex=id=>Object.prototype.hasOwnProperty.call(FL_COLORS,id)?FL_COLORS[id][1]:'';
+const flPx=c=>/^#[0-9a-f]{6}$/i.test(String(c||''))?String(c):'';
 const flBadgeId=id=>Object.prototype.hasOwnProperty.call(FL_BADGES,id)?id:'';
 
 // ---- GET ----
@@ -127,7 +129,7 @@ api.get=(req,res,C)=>{
     const uu=db.prepare('SELECT sub_until,inf FROM users WHERE id=?').get(u.id);
     if(!(uu&&(uu.inf||(uu.sub_until||0)>now)))return C.send(res,403,{error:'Канал только для подписчиков'},NOCACHE),true;
   }
-  const sel=`SELECT m.id,m.user_id uid,m.text,m.ts,m.to_user,m.reply_to,m.channel,m.atts,u.username,u.avatar,u.is_admin,u.role,u.nick_color,u.badge,t.username to_name,r.text rtext,ru.username runame FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id LEFT JOIN users t ON t.id=m.to_user LEFT JOIN chat_msgs r ON r.id=m.reply_to LEFT JOIN users ru ON ru.id=r.user_id WHERE m.channel=? AND (m.to_user=0 OR m.to_user=? OR m.user_id=? OR ?=1)`;
+  const sel=`SELECT m.id,m.user_id uid,m.text,m.ts,m.to_user,m.reply_to,m.channel,m.atts,u.username,u.avatar,u.is_admin,u.role,u.nick_color,u.badge,u.prefix,u.prefix_color,t.username to_name,r.text rtext,ru.username runame FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id LEFT JOIN users t ON t.id=m.to_user LEFT JOIN chat_msgs r ON r.id=m.reply_to LEFT JOIN users ru ON ru.id=r.user_id WHERE m.channel=? AND (m.to_user=0 OR m.to_user=? OR m.user_id=? OR ?=1)`;
   const rows=(full?db.prepare('SELECT * FROM ('+sel+' ORDER BY m.id DESC LIMIT 120) ORDER BY id').all(channel,u.id,u.id,mod?1:0):db.prepare(sel+' AND m.id>? ORDER BY m.id LIMIT 120').all(channel,u.id,u.id,mod?1:0,after));
   const ids=rows.map(r=>r.id);
   const reactMap={};
@@ -139,7 +141,7 @@ api.get=(req,res,C)=>{
   }
   const parseAtts=s=>{try{const a=JSON.parse(s||'[]');return Array.isArray(a)?a:[]}catch{return[]}};
   const mapped=rows.map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,channel:r.channel||'general',atts:parseAtts(r.atts),
-    username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin,role:r.role||'',color:flHex(r.nick_color),badge:flBadgeId(r.badge),
+    username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin,role:r.role||'',color:flHex(r.nick_color),badge:flBadgeId(r.badge),prefix:r.prefix||'',pcolor:flPx(r.prefix_color),
     to:r.to_user?r.to_name:'',reply:r.reply_to&&r.runame?{id:r.reply_to,username:r.runame,text:String(r.rtext||'').slice(0,80)}:null,
     reactions:reactMap[r.id]||[]}));
   const me=row(u.id);
@@ -154,14 +156,14 @@ api.get=(req,res,C)=>{
   if(url.startsWith('/api/forum/'))return forum.get(url,qs,u,req,res,C),true;
   if(url==='/api/profile/view'){
    const name=String(qs.get('u')||'').trim().replace(/^@/,'');
-   const t=name?db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,is_super,role,nick_color,badge,fl FROM users WHERE username=?').get(name):null;
+   const t=name?db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,is_super,role,nick_color,badge,prefix,prefix_color,fl FROM users WHERE username=?').get(name):null;
    if(!t)return C.send(res,404,{error:'Пользователь не найден'}),true;
    const likes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=1').get(t.id).c;
    const dislikes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=-1').get(t.id).c;
    const my=db.prepare('SELECT v FROM profile_votes WHERE user_id=? AND target_id=?').get(u.id,t.id);
    const comments=db.prepare('SELECT c.id,c.text,c.ts,c.user_id,u.username,u.avatar FROM profile_comments c LEFT JOIN users u ON u.id=c.user_id WHERE c.target_id=? ORDER BY c.id DESC LIMIT 50').all(t.id)
     .map(c=>({id:c.id,text:c.text,ts:c.ts,uid:c.user_id,username:c.username||'?',avatar:c.avatar||''}));
-   return C.send(res,200,{user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),fl:t.fl||0},likes,dislikes,myVote:my?my.v:0,comments,me:u.id}),true;
+   return C.send(res,200,{user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),prefix:t.prefix||'',pcolor:flPx(t.prefix_color),fl:t.fl||0},likes,dislikes,myVote:my?my.v:0,comments,me:u.id}),true;
   }
  }
 
@@ -295,14 +297,14 @@ if(url==='/api/fl/equip'){
 if(url.startsWith('/api/forum/'))return forum.post(url,b,me,req,res,C);
  if(url==='/api/profile/view'){
   const name=String(b.u||b.username||'').trim().replace(/^@/,'');
-  const t=name?db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,is_super,role,nick_color,badge,fl FROM users WHERE username=?').get(name):null;
+  const t=name?db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,is_super,role,nick_color,badge,prefix,prefix_color,fl FROM users WHERE username=?').get(name):null;
   if(!t)return bad('Пользователь не найден',404);
   const likes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=1').get(t.id).c;
   const dislikes=db.prepare('SELECT COUNT(*) c FROM profile_votes WHERE target_id=? AND v=-1').get(t.id).c;
   const my=db.prepare('SELECT v FROM profile_votes WHERE user_id=? AND target_id=?').get(me.id,t.id);
   const comments=db.prepare('SELECT c.id,c.text,c.ts,c.user_id,u.username,u.avatar FROM profile_comments c LEFT JOIN users u ON u.id=c.user_id WHERE c.target_id=? ORDER BY c.id DESC LIMIT 50').all(t.id)
    .map(c=>({id:c.id,text:c.text,ts:c.ts,uid:c.user_id,username:c.username||'?',avatar:c.avatar||''}));
-  return ok({user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),fl:t.fl||0},likes,dislikes,myVote:my?my.v:0,comments,me:me.id});
+  return ok({user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),prefix:t.prefix||'',pcolor:flPx(t.prefix_color),fl:t.fl||0},likes,dislikes,myVote:my?my.v:0,comments,me:me.id});
  }
  if(url==='/api/profile/save'){
   const banner=String(b.banner||'').slice(0,800),avatar=String(b.avatar||'').slice(0,800),bio=String(b.bio||'').slice(0,500);

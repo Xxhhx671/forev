@@ -935,6 +935,7 @@ const srv=http.createServer(async(req,res)=>{
         const bak=DBP+'.pre-restore-'+Date.now();
         fs.copyFileSync(DBP,bak);
         fs.writeFileSync(DBP+'.restore-tmp',buf);
+        for(const x of ['-wal','-shm','-journal']){try{fs.unlinkSync(DBP+x)}catch{}}
         fs.renameSync(DBP+'.restore-tmp',DBP);
         try{logAudit(a.id,'restore_upload',buf.length+' bytes','')}catch{}
         setTimeout(()=>process.exit(0),400);
@@ -1059,10 +1060,10 @@ const srv=http.createServer(async(req,res)=>{
           try{deepUserIdsByHwid(q).forEach(id=>ids.add(id))}catch{}
           const idList=[...ids].slice(0,50);
           users=idList.length
-            ? db.prepare(`SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,is_tester,is_super,reset_count,max_resets,suspicious,reseller_keys,reseller_limit,reg_ip,trial_hwid FROM users WHERE id IN (${idList.map(()=>'?').join(',')}) ORDER BY id DESC`).all(...idList).map(u=>({...u,active:active(u)}))
+            ? db.prepare(`SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,is_tester,is_super,prefix,prefix_color,reset_count,max_resets,suspicious,reseller_keys,reseller_limit,reg_ip,trial_hwid FROM users WHERE id IN (${idList.map(()=>'?').join(',')}) ORDER BY id DESC`).all(...idList).map(u=>({...u,active:active(u)}))
             : [];
         } else {
-          users=db.prepare('SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,is_tester,is_super,reset_count,max_resets,suspicious,reseller_keys,reseller_limit FROM users WHERE username LIKE ? OR email LIKE ? OR note LIKE ? ORDER BY id DESC LIMIT 30').all(like,like,like).map(u=>({...u,active:active(u)}));
+          users=db.prepare('SELECT id,username,email,created,sub_until,inf,frozen,freeze_left,max_dev,is_admin,banned,note,is_reseller,is_tester,is_super,prefix,prefix_color,reset_count,max_resets,suspicious,reseller_keys,reseller_limit FROM users WHERE username LIKE ? OR email LIKE ? OR note LIKE ? ORDER BY id DESC LIMIT 30').all(like,like,like).map(u=>({...u,active:active(u)}));
         }
         return send(res,200,{users});
       }
@@ -1147,6 +1148,7 @@ const srv=http.createServer(async(req,res)=>{
         try{
           const bak=DBP+'.pre-restore-'+Date.now();
           fs.copyFileSync(DBP,bak);
+          for(const x of ['-wal','-shm','-journal']){try{fs.unlinkSync(DBP+x)}catch{}}
           fs.copyFileSync(src,DBP);
           logAudit(a.id,'restore',name,'from backups');
           setTimeout(()=>process.exit(0),300);
@@ -1174,6 +1176,15 @@ const srv=http.createServer(async(req,res)=>{
         db.prepare('UPDATE users SET is_reseller=? WHERE id=?').run(b.enable?1:0,+b.id);
         logAudit(a.id,'reseller',b.id,b.enable?'on':'off');
         return send(res,200,{ok:true});
+      }
+      if(url==='/api/admin/prefix'){
+        if(!a||!a.is_admin)return bad('Нет доступа',403);
+        if(!db.prepare('SELECT id FROM users WHERE id=?').get(+b.id))return bad('Пользователь не найден',404);
+        const text=String(b.text||'').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,16);
+        const color=/^#[0-9a-f]{6}$/i.test(String(b.color||''))?String(b.color):'';
+        db.prepare('UPDATE users SET prefix=?,prefix_color=? WHERE id=?').run(text,text?color:'',+b.id);
+        logAudit(a.id,'prefix',b.id,text||'снят');
+        return send(res,200,{ok:true,prefix:text,color});
       }
       if(url==='/api/admin/tester'){
         if(!a||!a.is_admin)return bad('Нет доступа',403);
