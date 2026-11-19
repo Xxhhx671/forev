@@ -86,6 +86,213 @@ db.exec(`CREATE TABLE IF NOT EXISTS fl_log(id INTEGER PRIMARY KEY,user_id INTEGE
 CREATE INDEX IF NOT EXISTS fl_log_u ON fl_log(user_id,id);
 CREATE TABLE IF NOT EXISTS fl_items(user_id INTEGER,kind TEXT,item TEXT,ts INTEGER,PRIMARY KEY(user_id,kind,item));
 CREATE TABLE IF NOT EXISTS fl_bonus_ip(ip TEXT,user_id INTEGER,ts INTEGER);`);
+
+// ---- Кланы (расширенная система) ----
+const CLAN_CREATE_COST=1500;
+const CLAN_UPGRADES={
+  slots:{name:'Слоты участников',desc:'+5 к максимуму участников',max:6,cost:l=>400+l*200,apply:(c,l)=>db.prepare('UPDATE clans SET max_members=? WHERE id=?').run(15+l*5,c.id)},
+  bonus:{name:'Бонус FL',desc:'+% к ежедневному бонусу участников',max:5,cost:l=>500+l*300,apply:()=>{}},
+  xpboost:{name:'Ускорение XP',desc:'+20% XP клана за вклады',max:5,cost:l=>350+l*250,apply:()=>{}},
+  tax:{name:'Налог с заработков',desc:'% FL участников в казну (при входе)',max:5,cost:l=>200+l*150,apply:()=>{}},
+  emblem:{name:'Эмблема',desc:'Кастомная эмблема клана',max:1,cost:()=>800,apply:()=>{}},
+  prefix:{name:'Клановый префикс',desc:'Тег [TAG] у всех участников',max:1,cost:()=>600,apply:()=>{}}
+};
+db.exec(`CREATE TABLE IF NOT EXISTS clans(
+  id INTEGER PRIMARY KEY,
+  name TEXT UNIQUE COLLATE NOCASE,
+  tag TEXT UNIQUE COLLATE NOCASE,
+  descr TEXT DEFAULT '',
+  color TEXT DEFAULT '#4aa8ff',
+  emblem TEXT DEFAULT '',
+  leader_id INTEGER NOT NULL,
+  treasury INTEGER DEFAULT 0,
+  level INTEGER DEFAULT 1,
+  xp INTEGER DEFAULT 0,
+  max_members INTEGER DEFAULT 15,
+  open INTEGER DEFAULT 0,
+  require_app INTEGER DEFAULT 1,
+  season_pts INTEGER DEFAULT 0,
+  war_wins INTEGER DEFAULT 0,
+  war_losses INTEGER DEFAULT 0,
+  alliance_id INTEGER DEFAULT 0,
+  tax_pct INTEGER DEFAULT 0,
+  inactive_days INTEGER DEFAULT 0,
+  perms TEXT DEFAULT '{}',
+  upgrades TEXT DEFAULT '{}',
+  created INTEGER
+);
+CREATE TABLE IF NOT EXISTS clan_members(
+  clan_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  role TEXT DEFAULT 'member',
+  joined INTEGER,
+  contrib INTEGER DEFAULT 0,
+  last_active INTEGER DEFAULT 0,
+  quest_day TEXT DEFAULT '',
+  quest_progress TEXT DEFAULT '{}',
+  title TEXT DEFAULT '',
+  PRIMARY KEY(clan_id, user_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS clan_members_user ON clan_members(user_id);
+CREATE TABLE IF NOT EXISTS clan_invites(
+  id INTEGER PRIMARY KEY,
+  clan_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  from_id INTEGER,
+  ts INTEGER,
+  UNIQUE(clan_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS clan_apps(
+  id INTEGER PRIMARY KEY,
+  clan_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  text TEXT DEFAULT '',
+  ts INTEGER,
+  UNIQUE(clan_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS clan_log(
+  id INTEGER PRIMARY KEY,
+  clan_id INTEGER,
+  user_id INTEGER,
+  action TEXT,
+  details TEXT,
+  ts INTEGER
+);
+CREATE INDEX IF NOT EXISTS clan_log_c ON clan_log(clan_id,id);
+CREATE TABLE IF NOT EXISTS clan_treasury_log(
+  id INTEGER PRIMARY KEY,
+  clan_id INTEGER,
+  user_id INTEGER,
+  delta INTEGER,
+  reason TEXT,
+  ts INTEGER
+);
+CREATE TABLE IF NOT EXISTS clan_blacklist(
+  clan_id INTEGER,
+  user_id INTEGER,
+  by_id INTEGER,
+  reason TEXT DEFAULT '',
+  ts INTEGER,
+  PRIMARY KEY(clan_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS clan_wars(
+  id INTEGER PRIMARY KEY,
+  a_id INTEGER,
+  b_id INTEGER,
+  status TEXT DEFAULT 'pending',
+  a_pts INTEGER DEFAULT 0,
+  b_pts INTEGER DEFAULT 0,
+  started INTEGER,
+  ends INTEGER,
+  winner_id INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS clan_alliances(
+  id INTEGER PRIMARY KEY,
+  name TEXT,
+  tag TEXT,
+  created INTEGER
+);
+CREATE TABLE IF NOT EXISTS clan_alliance_members(
+  alliance_id INTEGER,
+  clan_id INTEGER UNIQUE,
+  joined INTEGER,
+  PRIMARY KEY(alliance_id, clan_id)
+);
+CREATE TABLE IF NOT EXISTS clan_achievements(
+  clan_id INTEGER,
+  ach_id TEXT,
+  ts INTEGER,
+  PRIMARY KEY(clan_id, ach_id)
+);
+CREATE TABLE IF NOT EXISTS clan_quests_done(
+  clan_id INTEGER,
+  user_id INTEGER,
+  quest_id TEXT,
+  day TEXT,
+  PRIMARY KEY(clan_id, user_id, quest_id, day)
+);`);
+// soft migrations for old DBs
+for(const s of [
+  "ALTER TABLE clans ADD COLUMN require_app INTEGER DEFAULT 1",
+  "ALTER TABLE clans ADD COLUMN season_pts INTEGER DEFAULT 0",
+  "ALTER TABLE clans ADD COLUMN war_wins INTEGER DEFAULT 0",
+  "ALTER TABLE clans ADD COLUMN war_losses INTEGER DEFAULT 0",
+  "ALTER TABLE clans ADD COLUMN alliance_id INTEGER DEFAULT 0",
+  "ALTER TABLE clans ADD COLUMN tax_pct INTEGER DEFAULT 0",
+  "ALTER TABLE clans ADD COLUMN inactive_days INTEGER DEFAULT 0",
+  "ALTER TABLE clans ADD COLUMN perms TEXT DEFAULT '{}'",
+  "ALTER TABLE clans ADD COLUMN upgrades TEXT DEFAULT '{}'",
+  "ALTER TABLE clan_members ADD COLUMN last_active INTEGER DEFAULT 0",
+  "ALTER TABLE clan_members ADD COLUMN quest_day TEXT DEFAULT ''",
+  "ALTER TABLE clan_members ADD COLUMN quest_progress TEXT DEFAULT '{}'",
+  "ALTER TABLE clan_members ADD COLUMN title TEXT DEFAULT ''"
+])try{db.exec(s)}catch{}
+
+const clanGet=id=>db.prepare('SELECT * FROM clans WHERE id=?').get(id);
+const clanOf=uid=>{const m=db.prepare('SELECT * FROM clan_members WHERE user_id=?').get(uid);return m?{...m,clan:clanGet(m.clan_id)}:null};
+const clanMemberCount=cid=>(db.prepare('SELECT COUNT(*) c FROM clan_members WHERE clan_id=?').get(cid)||{}).c||0;
+const clanLog=(cid,uid,action,details)=>db.prepare('INSERT INTO clan_log(clan_id,user_id,action,details,ts) VALUES(?,?,?,?,?)').run(cid,uid,String(action).slice(0,40),String(details||'').slice(0,200),Date.now());
+const clanTLog=(cid,uid,delta,reason)=>db.prepare('INSERT INTO clan_treasury_log(clan_id,user_id,delta,reason,ts) VALUES(?,?,?,?,?)').run(cid,uid,delta,String(reason).slice(0,120),Date.now());
+const clanLevelMax=lv=>Math.min(50,10+lv*5);
+const clanNeedXp=lv=>lv*lv*100;
+const clanParse=(s,d)=>{try{return JSON.parse(s||'')||d}catch{return d}};
+const clanUpgrades=c=>clanParse(c.upgrades,{});
+const clanPerms=c=>{
+  const d={invite:1,kick:1,apps:1,treasury:0,settings:0,war:0};
+  return Object.assign(d,clanParse(c.perms,{}));
+};
+const clanCan=(m,perm)=>{
+  if(!m||!m.clan)return false;
+  if(m.role==='leader')return true;
+  if(m.role!=='officer')return false;
+  return !!clanPerms(m.clan)[perm];
+};
+const clanAddXp=(cid,n)=>{
+  const c=clanGet(cid);if(!c||!n)return;
+  const ups=clanUpgrades(c);
+  if(ups.xpboost)n=Math.floor(n*(1+0.2*(ups.xpboost||0)));
+  let xp=(c.xp||0)+n,lv=c.level||1,maxm=c.max_members||15;
+  const baseSlots=15+(ups.slots||0)*5;
+  while(xp>=clanNeedXp(lv)&&lv<20){xp-=clanNeedXp(lv);lv++;maxm=Math.max(baseSlots,clanLevelMax(lv))}
+  maxm=Math.max(maxm,baseSlots);
+  db.prepare('UPDATE clans SET xp=?,level=?,max_members=?,season_pts=season_pts+? WHERE id=?').run(xp,lv,maxm,n,cid);
+  // achievements
+  try{
+    if(lv>=5)db.prepare('INSERT OR IGNORE INTO clan_achievements(clan_id,ach_id,ts) VALUES(?,?,?)').run(cid,'lvl5',Date.now());
+    if(lv>=10)db.prepare('INSERT OR IGNORE INTO clan_achievements(clan_id,ach_id,ts) VALUES(?,?,?)').run(cid,'lvl10',Date.now());
+    if((c.treasury||0)>=10000)db.prepare('INSERT OR IGNORE INTO clan_achievements(clan_id,ach_id,ts) VALUES(?,?,?)').run(cid,'rich',Date.now());
+  }catch{}
+};
+const clanTouch=(cid,uid)=>db.prepare('UPDATE clan_members SET last_active=? WHERE clan_id=? AND user_id=?').run(Date.now(),cid,uid);
+const CLAN_QUESTS=[
+  {id:'chat10',name:'Общительный',desc:'10 сообщений в чате',goal:10,xp:30,fl:5},
+  {id:'deposit50',name:'Меценат',desc:'Вложить 50 FL в казну',goal:50,xp:40,fl:0},
+  {id:'forum3',name:'Форумчанин',desc:'3 сообщения на форуме',goal:3,xp:25,fl:5},
+  {id:'login',name:'Присутствие',desc:'Зайти на сайт',goal:1,xp:15,fl:2}
+];
+const clanDay=()=>new Date().toISOString().slice(0,10);
+const clanQuestProg=(m)=>{
+  const day=clanDay();
+  if(m.quest_day!==day)return {};
+  return clanParse(m.quest_progress,{});
+};
+const clanQuestInc=(uid,qid,add=1)=>{
+  const m=db.prepare('SELECT * FROM clan_members WHERE user_id=?').get(uid);if(!m)return;
+  const day=clanDay();
+  let prog=m.quest_day===day?clanParse(m.quest_progress,{}):{};
+  prog[qid]=(prog[qid]||0)+add;
+  db.prepare('UPDATE clan_members SET quest_day=?,quest_progress=?,last_active=? WHERE user_id=?').run(day,JSON.stringify(prog),Date.now(),uid);
+  const q=CLAN_QUESTS.find(x=>x.id===qid);if(!q)return;
+  if(prog[qid]>=q.goal&&!db.prepare('SELECT 1 FROM clan_quests_done WHERE clan_id=? AND user_id=? AND quest_id=? AND day=?').get(m.clan_id,uid,qid,day)){
+    db.prepare('INSERT OR IGNORE INTO clan_quests_done(clan_id,user_id,quest_id,day) VALUES(?,?,?,?)').run(m.clan_id,uid,qid,day);
+    clanAddXp(m.clan_id,q.xp);
+    if(q.fl>0){flAdd(uid,q.fl,'Квест клана: '+q.name);notify(uid,'Квест «'+q.name+'»: +'+q.xp+' XP клану'+(q.fl?' · +'+q.fl+' FL':''))}
+    else notify(uid,'Квест «'+q.name+'» выполнен: +'+q.xp+' XP клану');
+  }
+};
+// hook login bonus tax into flBonus later via onLogin — tax applied when depositing is enough for now
+const clanTagOf=uid=>{const m=clanOf(uid);if(!m||!m.clan)return null;const ups=clanUpgrades(m.clan);if(!ups.prefix&&m.role!=='leader')return null;return {tag:m.clan.tag,color:m.clan.color,name:m.clan.name,role:m.role}};
+
 // каталог: id -> [название, hex, цена]  /  id -> [значок, название, цена]
 const FL_COLORS={red:['Красный','#ff5c6c',120],orange:['Оранжевый','#ff9f43',120],yellow:['Жёлтый','#ffd93d',120],green:['Зелёный','#4cd97b',120],cyan:['Голубой','#38d6e8',120],blue:['Синий','#5aa2ff',120],purple:['Фиолетовый','#b57bff',120],pink:['Розовый','#ff7eb6',120]};
 // значки рисуются на фронте (SVG по id), первый элемент не используется
@@ -98,8 +305,14 @@ const flSpend=(uid,n,reason,peer)=>{const r=db.prepare('UPDATE users SET fl=fl-?
 const flBal=uid=>(db.prepare('SELECT fl FROM users WHERE id=?').get(uid)||{}).fl||0;
 // бонус за вход: раз в 24 ч; не больше одного аккаунта с одного IP за 24 ч (выключается: fl_ip_limit=0)
 const flBonus=(uid,ip)=>{try{
- const b=flCfg().bonus;if(b<=0)return;const now=Date.now(),u=db.prepare('SELECT fl_bonus_ts t FROM users WHERE id=?').get(uid);if(!u||now-(u.t||0)<DAY)return;
+ let b=flCfg().bonus;if(b<=0)return;const now=Date.now(),u=db.prepare('SELECT fl_bonus_ts t FROM users WHERE id=?').get(uid);if(!u||now-(u.t||0)<DAY)return;
  if(flCfg().ip_limit&&ip&&db.prepare('SELECT 1 FROM fl_bonus_ip WHERE ip=? AND user_id!=? AND ts>? LIMIT 1').get(ip,uid,now-DAY))return;
+ // clan FL bonus upgrade
+ try{const cm=clanOf(uid);if(cm&&cm.clan){const ups=clanUpgrades(cm.clan);if(ups.bonus)b=Math.floor(b*(1+0.1*ups.bonus));
+  // tax
+  const tax=Math.min(20,cm.clan.tax_pct||0);if(tax>0){const cut=Math.floor(b*tax/100);if(cut>0){b-=cut;db.prepare('UPDATE clans SET treasury=treasury+? WHERE id=?').run(cut,cm.clan_id);clanTLog(cm.clan_id,uid,cut,'Налог с бонуса')}}
+  clanTouch(cm.clan_id,uid);clanQuestInc(uid,'login',1);
+ }}catch{}
  db.prepare('UPDATE users SET fl_bonus_ts=? WHERE id=?').run(now,uid);db.prepare('DELETE FROM fl_bonus_ip WHERE ts<?').run(now-2*DAY);
  db.prepare('INSERT INTO fl_bonus_ip(ip,user_id,ts) VALUES(?,?,?)').run(ip||'',uid,now);flAdd(uid,b,'Бонус за вход');notify(uid,'+'+b+' FL за вход');
 }catch{}};
@@ -129,6 +342,12 @@ api.get=(req,res,C)=>{
     const uu=db.prepare('SELECT sub_until,inf FROM users WHERE id=?').get(u.id);
     if(!(uu&&(uu.inf||(uu.sub_until||0)>now)))return C.send(res,403,{error:'Канал только для подписчиков'},NOCACHE),true;
   }
+  // clan channel access
+  if((ch.kind==='clan'||String(channel).startsWith('clan_'))&&!mod){
+    const cid=+String(channel).replace('clan_','');
+    if(!db.prepare('SELECT 1 FROM clan_members WHERE clan_id=? AND user_id=?').get(cid,u.id))
+      return C.send(res,403,{error:'Клан-чат только для участников'},NOCACHE),true;
+  }
   const sel=`SELECT m.id,m.user_id uid,m.text,m.ts,m.to_user,m.reply_to,m.channel,m.atts,u.username,u.avatar,u.is_admin,u.role,u.nick_color,u.badge,u.prefix,u.prefix_color,t.username to_name,r.text rtext,ru.username runame FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id LEFT JOIN users t ON t.id=m.to_user LEFT JOIN chat_msgs r ON r.id=m.reply_to LEFT JOIN users ru ON ru.id=r.user_id WHERE m.channel=? AND (m.to_user=0 OR m.to_user=? OR m.user_id=? OR ?=1)`;
   const rows=(full?db.prepare('SELECT * FROM ('+sel+' ORDER BY m.id DESC LIMIT 120) ORDER BY id').all(channel,u.id,u.id,mod?1:0):db.prepare(sel+' AND m.id>? ORDER BY m.id LIMIT 120').all(channel,u.id,u.id,mod?1:0,after));
   const ids=rows.map(r=>r.id);
@@ -140,12 +359,24 @@ api.get=(req,res,C)=>{
     }
   }
   const parseAtts=s=>{try{const a=JSON.parse(s||'[]');return Array.isArray(a)?a:[]}catch{return[]}};
-  const mapped=rows.map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,channel:r.channel||'general',atts:parseAtts(r.atts),
+  const mapped=rows.map(r=>{
+    let ctag=null;try{ctag=clanTagOf(r.uid)}catch{}
+    return {id:r.id,uid:r.uid,text:r.text,ts:r.ts,channel:r.channel||'general',atts:parseAtts(r.atts),
     username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin,role:r.role||'',color:flHex(r.nick_color),badge:flBadgeId(r.badge),prefix:r.prefix||'',pcolor:flPx(r.prefix_color),
+    clan_tag:ctag?ctag.tag:'',clan_color:ctag?ctag.color:'',
     to:r.to_user?r.to_name:'',reply:r.reply_to&&r.runame?{id:r.reply_to,username:r.runame,text:String(r.rtext||'').slice(0,80)}:null,
-    reactions:reactMap[r.id]||[]}));
+    reactions:reactMap[r.id]||[]}});
   const me=row(u.id);
-  const channels=db.prepare('SELECT id,name,descr,kind,sort FROM chat_channels ORDER BY sort,id').all();
+  let channels=db.prepare('SELECT id,name,descr,kind,sort FROM chat_channels ORDER BY sort,id').all();
+  // inject own clan channel if missing from list visibility
+  try{const cm=clanOf(u.id);if(cm&&cm.clan){const cid='clan_'+cm.clan_id;if(!channels.some(x=>x.id===cid))channels=channels.concat([{id:cid,name:'Клан ['+cm.clan.tag+']',descr:'Приватный чат',kind:'clan',sort:50}])}}catch{}
+  // hide other clan channels
+  channels=channels.filter(ch=>{
+    if(ch.kind!=='clan'&&!String(ch.id).startsWith('clan_'))return true;
+    if(mod)return true;
+    const cid=+String(ch.id).replace('clan_','');
+    return !!db.prepare('SELECT 1 FROM clan_members WHERE clan_id=? AND user_id=?').get(cid,u.id);
+  });
   return C.send(res,200,{list:mapped,full,last:db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs WHERE channel=?').get(channel).m,me:u.id,me_name:u.username,admin:mod,online:seen.size,muted:me.chat_muted_until>now?me.chat_muted_until:0,banned:!!me.chat_banned,slow:+(get('chat_slow')||0),inst:BOOT,channel,channels},NOCACHE),true;
  }
  
@@ -163,7 +394,8 @@ api.get=(req,res,C)=>{
    const my=db.prepare('SELECT v FROM profile_votes WHERE user_id=? AND target_id=?').get(u.id,t.id);
    const comments=db.prepare('SELECT c.id,c.text,c.ts,c.user_id,u.username,u.avatar FROM profile_comments c LEFT JOIN users u ON u.id=c.user_id WHERE c.target_id=? ORDER BY c.id DESC LIMIT 50').all(t.id)
     .map(c=>({id:c.id,text:c.text,ts:c.ts,uid:c.user_id,username:c.username||'?',avatar:c.avatar||''}));
-   return C.send(res,200,{user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),prefix:t.prefix||'',pcolor:flPx(t.prefix_color),fl:t.fl||0},likes,dislikes,myVote:my?my.v:0,comments,me:u.id}),true;
+   let clanInfo=null;try{const cm=clanOf(t.id);if(cm&&cm.clan)clanInfo={id:cm.clan.id,name:cm.clan.name,tag:cm.clan.tag,color:cm.clan.color,role:cm.role}}catch{}
+   return C.send(res,200,{user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),prefix:t.prefix||'',pcolor:flPx(t.prefix_color),fl:t.fl||0,clan:clanInfo},likes,dislikes,myVote:my?my.v:0,comments,me:u.id}),true;
   }
  }
 
@@ -184,6 +416,10 @@ api.post=(url,b,req,res,C)=>{
   if(ch.kind==='subs'&&!mod){
     const uu=db.prepare('SELECT sub_until,inf FROM users WHERE id=?').get(me.id);
     if(!(uu&&(uu.inf||(uu.sub_until||0)>Date.now())))return bad('Канал только для подписчиков',403);
+  }
+  if((ch.kind==='clan'||String(channel).startsWith('clan_'))&&!mod){
+    const cid=+String(channel).replace('clan_','');
+    if(!db.prepare('SELECT 1 FROM clan_members WHERE clan_id=? AND user_id=?').get(cid,me.id))return bad('Клан-чат только для участников',403);
   }
   // atts
   let atts='[]';
@@ -214,6 +450,7 @@ api.post=(url,b,req,res,C)=>{
   if(pm){const r=db.prepare('SELECT id FROM users WHERE username=?').get(pm[1]);if(!r)return bad('Пользователь не найден');to=r.id;t=pm[2]}
   const rp=+b.reply||0;last.set(me.id,now);seen.set(me.id,now);
   const r=db.prepare('INSERT INTO chat_msgs(user_id,text,ts,reply_to,to_user,channel,atts) VALUES(?,?,?,?,?,?,?)').run(me.id,t,now,rp,to,channel,atts);
+  try{clanQuestInc(me.id,'chat10',1)}catch{}
   db.prepare('DELETE FROM chat_msgs WHERE id<=(SELECT MAX(id)-2000 FROM chat_msgs)').run();
   const tg=new Set();if(to)tg.add(to);
   for(const m of mentions){const x=db.prepare('SELECT id FROM users WHERE username=?').get(m[1]);if(x&&x.id!==me.id&&tg.size<5)tg.add(x.id)}
@@ -293,6 +530,422 @@ if(url==='/api/fl/equip'){
  db.prepare(k==='color'?'UPDATE users SET nick_color=? WHERE id=?':'UPDATE users SET badge=? WHERE id=?').run(id,me.id);return ok({ok:true});
 }
 
+// ---- Кланы ----
+if(url==='/api/clans/list'){
+ const q=String(b.q||'').trim().toLowerCase();
+ const sort=String(b.sort||'level');
+ const order=sort==='season'?'c.season_pts DESC,c.level DESC':sort==='treasury'?'c.treasury DESC':sort==='members'?'members DESC':'c.level DESC,c.xp DESC,members DESC';
+ let sql=`SELECT c.id,c.name,c.tag,c.color,c.emblem,c.level,c.xp,c.treasury,c.max_members,c.open,c.require_app,c.season_pts,c.war_wins,c.war_losses,c.created,
+   (SELECT COUNT(*) FROM clan_members m WHERE m.clan_id=c.id) members,
+   u.username leader
+   FROM clans c LEFT JOIN users u ON u.id=c.leader_id`;
+ const params=[];
+ if(q){sql+=' WHERE lower(c.name) LIKE ? OR lower(c.tag) LIKE ?';params.push('%'+q+'%','%'+q+'%')}
+ sql+=' ORDER BY '+order+' LIMIT 50';
+ const list=db.prepare(sql).all(...params);
+ return ok({list,create_cost:CLAN_CREATE_COST,upgrades:Object.fromEntries(Object.entries(CLAN_UPGRADES).map(([k,v])=>[k,{name:v.name,desc:v.desc,max:v.max}]))});
+}
+if(url==='/api/clans/mine'){
+ clanQuestInc(me.id,'login',1);
+ const m=clanOf(me.id);
+ if(!m||!m.clan){
+  const inv=db.prepare(`SELECT i.id,i.clan_id,i.ts,c.name,c.tag,c.color,u.username from_name
+   FROM clan_invites i JOIN clans c ON c.id=i.clan_id LEFT JOIN users u ON u.id=i.from_id
+   WHERE i.user_id=? ORDER BY i.ts DESC LIMIT 20`).all(me.id);
+  const apps=db.prepare(`SELECT a.id,a.clan_id,a.ts,a.text,c.name,c.tag,c.color FROM clan_apps a JOIN clans c ON c.id=a.clan_id WHERE a.user_id=? ORDER BY a.ts DESC LIMIT 20`).all(me.id);
+  return ok({clan:null,invites:inv,my_apps:apps,create_cost:CLAN_CREATE_COST,fl:flBal(me.id),quests:CLAN_QUESTS});
+ }
+ const c=m.clan;
+ clanTouch(c.id,me.id);
+ const members=db.prepare(`SELECT cm.user_id id,cm.role,cm.joined,cm.contrib,cm.last_active,cm.title,u.username,u.avatar,u.nick_color,u.badge,u.fl
+   FROM clan_members cm JOIN users u ON u.id=cm.user_id WHERE cm.clan_id=? ORDER BY
+   CASE cm.role WHEN 'leader' THEN 0 WHEN 'officer' THEN 1 ELSE 2 END, cm.joined`).all(c.id);
+ const log=db.prepare(`SELECT l.action,l.details,l.ts,u.username FROM clan_log l LEFT JOIN users u ON u.id=l.user_id
+   WHERE l.clan_id=? ORDER BY l.id DESC LIMIT 25`).all(c.id);
+ const tlog=db.prepare(`SELECT t.delta,t.reason,t.ts,u.username FROM clan_treasury_log t LEFT JOIN users u ON u.id=t.user_id
+   WHERE t.clan_id=? ORDER BY t.id DESC LIMIT 20`).all(c.id);
+ const invOut=db.prepare(`SELECT i.id,i.user_id,i.ts,u.username FROM clan_invites i JOIN users u ON u.id=i.user_id WHERE i.clan_id=? ORDER BY i.ts DESC LIMIT 30`).all(c.id);
+ const appsIn=db.prepare(`SELECT a.id,a.user_id,a.text,a.ts,u.username FROM clan_apps a JOIN users u ON u.id=a.user_id WHERE a.clan_id=? ORDER BY a.ts DESC LIMIT 30`).all(c.id);
+ const ach=db.prepare('SELECT ach_id id,ts FROM clan_achievements WHERE clan_id=?').all(c.id);
+ const ups=clanUpgrades(c);
+ const prog=clanQuestProg(m);
+ const day=clanDay();
+ const quests=CLAN_QUESTS.map(q=>({...q,progress:prog[q.id]||0,done:!!db.prepare('SELECT 1 FROM clan_quests_done WHERE clan_id=? AND user_id=? AND quest_id=? AND day=?').get(c.id,me.id,q.id,day)}));
+ // active war
+ let war=null;
+ try{war=db.prepare(`SELECT w.*,ca.name a_name,ca.tag a_tag,cb.name b_name,cb.tag b_tag FROM clan_wars w
+   LEFT JOIN clans ca ON ca.id=w.a_id LEFT JOIN clans cb ON cb.id=w.b_id
+   WHERE (w.a_id=? OR w.b_id=?) AND w.status IN ('pending','active') ORDER BY w.id DESC LIMIT 1`).get(c.id,c.id)}catch{}
+ let alliance=null;
+ if(c.alliance_id){try{alliance=db.prepare('SELECT id,name,tag FROM clan_alliances WHERE id=?').get(c.alliance_id)}catch{}}
+ return ok({clan:{id:c.id,name:c.name,tag:c.tag,descr:c.descr,color:c.color,emblem:c.emblem,leader_id:c.leader_id,
+   treasury:c.treasury,level:c.level,xp:c.xp,xp_next:clanNeedXp(c.level),max_members:c.max_members,open:!!c.open,require_app:!!c.require_app,
+   season_pts:c.season_pts||0,war_wins:c.war_wins||0,war_losses:c.war_losses||0,tax_pct:c.tax_pct||0,inactive_days:c.inactive_days||0,
+   upgrades:ups,perms:clanPerms(c),created:c.created,members:members.length},
+  role:m.role,contrib:m.contrib||0,title:m.title||'',members,log,tlog,invites_out:invOut,apps:appsIn,achievements:ach,
+  quests,war,alliance,create_cost:CLAN_CREATE_COST,fl:flBal(me.id),
+  can:{invite:clanCan(m,'invite'),kick:clanCan(m,'kick'),apps:clanCan(m,'apps'),treasury:clanCan(m,'treasury'),settings:clanCan(m,'settings'),war:clanCan(m,'war')}});
+}
+if(url==='/api/clans/view'){
+ const id=+b.id||0;const c=clanGet(id);if(!c)return bad('Клан не найден',404);
+ const members=db.prepare(`SELECT cm.role,cm.joined,cm.contrib,cm.title,u.username,u.avatar,u.nick_color,u.badge
+   FROM clan_members cm JOIN users u ON u.id=cm.user_id WHERE cm.clan_id=? ORDER BY
+   CASE cm.role WHEN 'leader' THEN 0 WHEN 'officer' THEN 1 ELSE 2 END, cm.joined`).all(c.id);
+ const leader=(db.prepare('SELECT username FROM users WHERE id=?').get(c.leader_id)||{}).username||'?';
+ const ach=db.prepare('SELECT ach_id id,ts FROM clan_achievements WHERE clan_id=?').all(c.id);
+ return ok({clan:{id:c.id,name:c.name,tag:c.tag,descr:c.descr,color:c.color,emblem:c.emblem,level:c.level,xp:c.xp,treasury:c.treasury,
+   max_members:c.max_members,open:!!c.open,require_app:!!c.require_app,season_pts:c.season_pts||0,war_wins:c.war_wins||0,war_losses:c.war_losses||0,
+   created:c.created,leader,members:members.length,upgrades:clanUpgrades(c)},members,achievements:ach});
+}
+if(url==='/api/clans/create'){
+ if(clanOf(me.id))return bad('Вы уже состоите в клане');
+ const name=String(b.name||'').trim().slice(0,24);
+ const tag=String(b.tag||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
+ const descr=String(b.descr||'').trim().slice(0,300);
+ const color=/^#[0-9a-fA-F]{6}$/.test(String(b.color||''))?String(b.color):'#4aa8ff';
+ if(name.length<3)return bad('Название: минимум 3 символа');
+ if(tag.length<2)return bad('Тег: 2–5 символов (A–Z, 0–9)');
+ if(db.prepare('SELECT 1 FROM clans WHERE name=? OR tag=?').get(name,tag))return bad('Название или тег уже заняты');
+ if(flBal(me.id)<CLAN_CREATE_COST)return bad('Нужно '+CLAN_CREATE_COST+' FL для создания клана');
+ let cid;
+ try{C.tx(()=>{
+  if(!flSpend(me.id,CLAN_CREATE_COST,'Создание клана ['+tag+']'))throw new Error('FLBAL');
+  const r=db.prepare('INSERT INTO clans(name,tag,descr,color,leader_id,created,require_app) VALUES(?,?,?,?,?,?,1)').run(name,tag,descr,color,me.id,Date.now());
+  cid=r.lastInsertRowid;
+  db.prepare('INSERT INTO clan_members(clan_id,user_id,role,joined,last_active) VALUES(?,?,?,?,?)').run(cid,me.id,'leader',Date.now(),Date.now());
+  clanLog(cid,me.id,'create',name+' ['+tag+']');
+  db.prepare('INSERT OR IGNORE INTO clan_achievements(clan_id,ach_id,ts) VALUES(?,?,?)').run(cid,'founded',Date.now());
+ })}catch(e){if(e&&e.message==='FLBAL')return bad('Недостаточно FL: нужно '+CLAN_CREATE_COST);throw e}
+ // create clan chat channel
+ try{db.prepare("INSERT OR IGNORE INTO chat_channels(id,name,descr,kind,sort) VALUES(?,?,?,?,?)").run('clan_'+cid,'Клан ['+tag+']','Приватный чат клана','clan',50)}catch{}
+ notify(me.id,'Клан «'+name+'» ['+tag+'] создан! −'+CLAN_CREATE_COST+' FL');
+ return ok({ok:true,id:cid,fl:flBal(me.id)});
+}
+if(url==='/api/clans/join'){
+ if(clanOf(me.id))return bad('Вы уже в клане');
+ const id=+b.id||0;const c=clanGet(id);if(!c)return bad('Клан не найден');
+ if(db.prepare('SELECT 1 FROM clan_blacklist WHERE clan_id=? AND user_id=?').get(c.id,me.id))return bad('Вы в чёрном списке этого клана');
+ const cnt=clanMemberCount(c.id);
+ if(cnt>=(c.max_members||15))return bad('Клан заполнен');
+ const inv=db.prepare('SELECT id FROM clan_invites WHERE clan_id=? AND user_id=?').get(c.id,me.id);
+ if(inv){
+  db.prepare('INSERT INTO clan_members(clan_id,user_id,role,joined,last_active) VALUES(?,?,?,?,?)').run(c.id,me.id,'member',Date.now(),Date.now());
+  db.prepare('DELETE FROM clan_invites WHERE clan_id=? AND user_id=?').run(c.id,me.id);
+  db.prepare('DELETE FROM clan_invites WHERE user_id=?').run(me.id);
+  db.prepare('DELETE FROM clan_apps WHERE user_id=?').run(me.id);
+  clanLog(c.id,me.id,'join','по приглашению');clanAddXp(c.id,10);
+  notify(c.leader_id,me.username+' вступил в клан ['+c.tag+']');
+  return ok({ok:true});
+ }
+ if(c.require_app||!c.open){
+  const text=String(b.text||'').trim().slice(0,200);
+  if(db.prepare('SELECT 1 FROM clan_apps WHERE clan_id=? AND user_id=?').get(c.id,me.id))return bad('Заявка уже подана');
+  db.prepare('INSERT INTO clan_apps(clan_id,user_id,text,ts) VALUES(?,?,?,?)').run(c.id,me.id,text,Date.now());
+  notify(c.leader_id,'Заявка в клан ['+c.tag+'] от '+me.username);
+  return ok({ok:true,applied:true});
+ }
+ db.prepare('INSERT INTO clan_members(clan_id,user_id,role,joined,last_active) VALUES(?,?,?,?,?)').run(c.id,me.id,'member',Date.now(),Date.now());
+ db.prepare('DELETE FROM clan_invites WHERE user_id=?').run(me.id);
+ db.prepare('DELETE FROM clan_apps WHERE user_id=?').run(me.id);
+ clanLog(c.id,me.id,'join','');clanAddXp(c.id,10);
+ notify(c.leader_id,me.username+' вступил в клан ['+c.tag+']');
+ return ok({ok:true});
+}
+if(url==='/api/clans/app_action'){
+ const m=clanOf(me.id);if(!m||!m.clan||!clanCan(m,'apps'))return bad('Нет прав');
+ const app=db.prepare('SELECT * FROM clan_apps WHERE id=? AND clan_id=?').get(+b.id,m.clan_id);if(!app)return bad('Заявка не найдена');
+ if(b.accept){
+  if(clanOf(app.user_id)){db.prepare('DELETE FROM clan_apps WHERE id=?').run(app.id);return bad('Игрок уже в клане')}
+  if(clanMemberCount(m.clan_id)>=(m.clan.max_members||15))return bad('Клан заполнен');
+  if(db.prepare('SELECT 1 FROM clan_blacklist WHERE clan_id=? AND user_id=?').get(m.clan_id,app.user_id))return bad('В чёрном списке');
+  db.prepare('INSERT INTO clan_members(clan_id,user_id,role,joined,last_active) VALUES(?,?,?,?,?)').run(m.clan_id,app.user_id,'member',Date.now(),Date.now());
+  db.prepare('DELETE FROM clan_apps WHERE user_id=?').run(app.user_id);
+  db.prepare('DELETE FROM clan_invites WHERE user_id=?').run(app.user_id);
+  const uname=(db.prepare('SELECT username FROM users WHERE id=?').get(app.user_id)||{}).username||'?';
+  clanLog(m.clan_id,me.id,'accept',uname);clanAddXp(m.clan_id,10);
+  notify(app.user_id,'Вас приняли в клан ['+m.clan.tag+']');
+ }else{
+  db.prepare('DELETE FROM clan_apps WHERE id=?').run(app.id);
+  notify(app.user_id,'Заявка в клан ['+m.clan.tag+'] отклонена');
+ }
+ return ok({ok:true});
+}
+if(url==='/api/clans/leave'){
+ const m=clanOf(me.id);if(!m||!m.clan)return bad('Вы не в клане');
+ if(m.role==='leader')return bad('Лидер не может выйти — передайте лидерство или распустите клан');
+ db.prepare('DELETE FROM clan_members WHERE clan_id=? AND user_id=?').run(m.clan_id,me.id);
+ clanLog(m.clan_id,me.id,'leave','');
+ return ok({ok:true});
+}
+if(url==='/api/clans/invite'){
+ const m=clanOf(me.id);if(!m||!m.clan||!clanCan(m,'invite'))return bad('Нет прав приглашать');
+ const name=String(b.to||'').trim().replace(/^@/,'');
+ const t=db.prepare('SELECT id,username,banned FROM users WHERE username=?').get(name);
+ if(!t||t.banned)return bad('Пользователь не найден');
+ if(clanOf(t.id))return bad('Игрок уже в клане');
+ if(db.prepare('SELECT 1 FROM clan_blacklist WHERE clan_id=? AND user_id=?').get(m.clan_id,t.id))return bad('Игрок в чёрном списке');
+ if(db.prepare('SELECT 1 FROM clan_invites WHERE clan_id=? AND user_id=?').get(m.clan_id,t.id))return bad('Уже приглашён');
+ if(clanMemberCount(m.clan_id)>=(m.clan.max_members||15))return bad('Клан заполнен');
+ db.prepare('INSERT OR REPLACE INTO clan_invites(clan_id,user_id,from_id,ts) VALUES(?,?,?,?)').run(m.clan_id,t.id,me.id,Date.now());
+ clanLog(m.clan_id,me.id,'invite',t.username);
+ notify(t.id,'Вас пригласили в клан «'+m.clan.name+'» ['+m.clan.tag+'] от '+me.username);
+ return ok({ok:true});
+}
+if(url==='/api/clans/kick'){
+ const m=clanOf(me.id);if(!m||!m.clan||!clanCan(m,'kick'))return bad('Нет прав');
+ const tid=+b.user_id||0;
+ const tm=db.prepare('SELECT * FROM clan_members WHERE clan_id=? AND user_id=?').get(m.clan_id,tid);
+ if(!tm)return bad('Не в клане');
+ if(tm.role==='leader')return bad('Нельзя кикнуть лидера');
+ if(m.role==='officer'&&tm.role==='officer')return bad('Офицер не может кикнуть офицера');
+ const uname=(db.prepare('SELECT username FROM users WHERE id=?').get(tid)||{}).username||'?';
+ db.prepare('DELETE FROM clan_members WHERE clan_id=? AND user_id=?').run(m.clan_id,tid);
+ clanLog(m.clan_id,me.id,'kick',uname);
+ notify(tid,'Вас исключили из клана ['+m.clan.tag+']');
+ return ok({ok:true});
+}
+if(url==='/api/clans/role'){
+ const m=clanOf(me.id);if(!m||!m.clan||m.role!=='leader')return bad('Только лидер');
+ const tid=+b.user_id||0,role=String(b.role||'');
+ if(role!=='officer'&&role!=='member')return bad('Роль: officer или member');
+ const tm=db.prepare('SELECT * FROM clan_members WHERE clan_id=? AND user_id=?').get(m.clan_id,tid);
+ if(!tm||tm.role==='leader')return bad('Нельзя');
+ db.prepare('UPDATE clan_members SET role=? WHERE clan_id=? AND user_id=?').run(role,m.clan_id,tid);
+ const uname=(db.prepare('SELECT username FROM users WHERE id=?').get(tid)||{}).username||'?';
+ clanLog(m.clan_id,me.id,'role',uname+' → '+role);
+ notify(tid,'Вам выдана роль «'+(role==='officer'?'Офицер':'Участник')+'» в клане ['+m.clan.tag+']');
+ return ok({ok:true});
+}
+if(url==='/api/clans/transfer'){
+ const m=clanOf(me.id);if(!m||!m.clan||m.role!=='leader')return bad('Только лидер');
+ const tid=+b.user_id||0;
+ const tm=db.prepare('SELECT * FROM clan_members WHERE clan_id=? AND user_id=?').get(m.clan_id,tid);
+ if(!tm)return bad('Игрок не в клане');
+ C.tx(()=>{
+  db.prepare('UPDATE clan_members SET role=? WHERE clan_id=? AND user_id=?').run('member',m.clan_id,me.id);
+  db.prepare('UPDATE clan_members SET role=? WHERE clan_id=? AND user_id=?').run('leader',m.clan_id,tid);
+  db.prepare('UPDATE clans SET leader_id=? WHERE id=?').run(tid,m.clan_id);
+ });
+ const uname=(db.prepare('SELECT username FROM users WHERE id=?').get(tid)||{}).username||'?';
+ clanLog(m.clan_id,me.id,'transfer',uname);
+ notify(tid,'Вы стали лидером клана ['+m.clan.tag+']');
+ return ok({ok:true});
+}
+if(url==='/api/clans/deposit'){
+ const m=clanOf(me.id);if(!m||!m.clan)return bad('Вы не в клане');
+ const amt=Math.trunc(+b.amount);
+ if(!(amt>=1&&amt<=1e6))return bad('Сумма: от 1 до 1 000 000');
+ try{C.tx(()=>{
+  if(!flSpend(me.id,amt,'Вклад в казну клана ['+m.clan.tag+']'))throw new Error('FLBAL');
+  db.prepare('UPDATE clans SET treasury=treasury+? WHERE id=?').run(amt,m.clan_id);
+  db.prepare('UPDATE clan_members SET contrib=contrib+? WHERE clan_id=? AND user_id=?').run(amt,m.clan_id,me.id);
+  clanTLog(m.clan_id,me.id,amt,'Вклад');
+  clanLog(m.clan_id,me.id,'deposit','+'+amt+' FL');
+  clanAddXp(m.clan_id,Math.floor(amt/10));
+  clanQuestInc(me.id,'deposit50',amt);
+ })}catch(e){if(e&&e.message==='FLBAL')return bad('Недостаточно FL');throw e}
+ return ok({ok:true,fl:flBal(me.id),treasury:(clanGet(m.clan_id)||{}).treasury||0});
+}
+if(url==='/api/clans/withdraw'){
+ const m=clanOf(me.id);if(!m||!m.clan||!clanCan(m,'treasury'))return bad('Нет прав на казну');
+ const amt=Math.trunc(+b.amount);
+ if(!(amt>=1&&amt<=1e6))return bad('Сумма: от 1');
+ const c=clanGet(m.clan_id);if((c.treasury||0)<amt)return bad('В казне недостаточно FL');
+ const toId=b.to_user?+b.to_user:me.id;
+ const tu=db.prepare('SELECT id,username FROM users WHERE id=?').get(toId);if(!tu)return bad('Пользователь не найден');
+ if(!db.prepare('SELECT 1 FROM clan_members WHERE clan_id=? AND user_id=?').get(m.clan_id,toId))return bad('Получатель не в клане');
+ C.tx(()=>{
+  const r=db.prepare('UPDATE clans SET treasury=treasury-? WHERE id=? AND treasury>=?').run(amt,m.clan_id,amt);
+  if(!r.changes)throw new Error('NOFUNDS');
+  flAdd(toId,amt,'Из казны клана ['+m.clan.tag+']');
+  clanTLog(m.clan_id,me.id,-amt,'Выдача → '+tu.username);
+  clanLog(m.clan_id,me.id,'withdraw',amt+' → '+tu.username);
+ });
+ if(toId!==me.id)notify(toId,'+'+amt+' FL из казны клана ['+m.clan.tag+']');
+ return ok({ok:true,treasury:(clanGet(m.clan_id)||{}).treasury||0});
+}
+if(url==='/api/clans/upgrade'){
+ const m=clanOf(me.id);if(!m||!m.clan||m.role!=='leader')return bad('Только лидер');
+ const key=String(b.key||'');
+ const def=CLAN_UPGRADES[key];if(!def)return bad('Неизвестный апгрейд');
+ const ups=clanUpgrades(m.clan);
+ const cur=ups[key]||0;
+ if(cur>=def.max)return bad('Максимальный уровень');
+ const cost=def.cost(cur);
+ if((m.clan.treasury||0)<cost)return bad('Нужно '+cost+' FL в казне');
+ C.tx(()=>{
+  const r=db.prepare('UPDATE clans SET treasury=treasury-? WHERE id=? AND treasury>=?').run(cost,m.clan_id,cost);
+  if(!r.changes)throw new Error('NOFUNDS');
+  ups[key]=cur+1;
+  db.prepare('UPDATE clans SET upgrades=? WHERE id=?').run(JSON.stringify(ups),m.clan_id);
+  def.apply(clanGet(m.clan_id),ups[key]);
+  clanTLog(m.clan_id,me.id,-cost,'Апгрейд: '+def.name+' ур.'+ups[key]);
+  clanLog(m.clan_id,me.id,'upgrade',def.name+' → '+ups[key]);
+ });
+ return ok({ok:true,upgrades:clanUpgrades(clanGet(m.clan_id)),treasury:(clanGet(m.clan_id)||{}).treasury||0});
+}
+if(url==='/api/clans/settings'){
+ const m=clanOf(me.id);if(!m||!m.clan||(m.role!=='leader'&&!clanCan(m,'settings')))return bad('Нет прав');
+ const c=m.clan;
+ const descr=b.descr!==undefined?String(b.descr).trim().slice(0,300):c.descr;
+ const color=/^#[0-9a-fA-F]{6}$/.test(String(b.color||''))?String(b.color):c.color;
+ const open=b.open!==undefined?(b.open?1:0):c.open;
+ const require_app=b.require_app!==undefined?(b.require_app?1:0):c.require_app;
+ const tax_pct=b.tax_pct!==undefined?Math.min(20,Math.max(0,+b.tax_pct|0)):c.tax_pct;
+ const inactive_days=b.inactive_days!==undefined?Math.min(90,Math.max(0,+b.inactive_days|0)):c.inactive_days;
+ const emblem=b.emblem!==undefined?String(b.emblem).slice(0,500):c.emblem;
+ let perms=c.perms;
+ if(b.perms&&m.role==='leader'){const p=clanPerms(c);for(const k of Object.keys(p))if(b.perms[k]!==undefined)p[k]=b.perms[k]?1:0;perms=JSON.stringify(p)}
+ db.prepare('UPDATE clans SET descr=?,color=?,open=?,require_app=?,tax_pct=?,inactive_days=?,emblem=?,perms=? WHERE id=?')
+  .run(descr,color,open,require_app,tax_pct,inactive_days,emblem,typeof perms==='string'?perms:JSON.stringify(perms),m.clan_id);
+ clanLog(m.clan_id,me.id,'settings','');
+ return ok({ok:true});
+}
+if(url==='/api/clans/blacklist'){
+ const m=clanOf(me.id);if(!m||!m.clan||m.role!=='leader')return bad('Только лидер');
+ if(b.list)return ok({list:db.prepare(`SELECT b.user_id id,b.reason,b.ts,u.username FROM clan_blacklist b JOIN users u ON u.id=b.user_id WHERE b.clan_id=? ORDER BY b.ts DESC`).all(m.clan_id)});
+ if(b.remove){db.prepare('DELETE FROM clan_blacklist WHERE clan_id=? AND user_id=?').run(m.clan_id,+b.user_id);return ok({ok:true})}
+ const name=String(b.username||'').trim().replace(/^@/,'');
+ const t=db.prepare('SELECT id,username FROM users WHERE username=?').get(name);if(!t)return bad('Не найден');
+ db.prepare('INSERT OR REPLACE INTO clan_blacklist(clan_id,user_id,by_id,reason,ts) VALUES(?,?,?,?,?)').run(m.clan_id,t.id,me.id,String(b.reason||'').slice(0,100),Date.now());
+ db.prepare('DELETE FROM clan_members WHERE clan_id=? AND user_id=?').run(m.clan_id,t.id);
+ db.prepare('DELETE FROM clan_invites WHERE clan_id=? AND user_id=?').run(m.clan_id,t.id);
+ db.prepare('DELETE FROM clan_apps WHERE clan_id=? AND user_id=?').run(m.clan_id,t.id);
+ clanLog(m.clan_id,me.id,'blacklist',t.username);
+ return ok({ok:true});
+}
+if(url==='/api/clans/title'){
+ const m=clanOf(me.id);if(!m||!m.clan||m.role!=='leader')return bad('Только лидер');
+ const tid=+b.user_id||0;const title=String(b.title||'').trim().slice(0,24);
+ if(!db.prepare('SELECT 1 FROM clan_members WHERE clan_id=? AND user_id=?').get(m.clan_id,tid))return bad('Не в клане');
+ db.prepare('UPDATE clan_members SET title=? WHERE clan_id=? AND user_id=?').run(title,m.clan_id,tid);
+ return ok({ok:true});
+}
+if(url==='/api/clans/disband'){
+ const m=clanOf(me.id);if(!m||!m.clan||m.role!=='leader')return bad('Только лидер');
+ if(String(b.confirm||'')!==m.clan.tag)return bad('Введите тег клана для подтверждения');
+ const refund=Math.floor(CLAN_CREATE_COST*0.3)+(m.clan.treasury||0);
+ C.tx(()=>{
+  const members=db.prepare('SELECT user_id FROM clan_members WHERE clan_id=?').all(m.clan_id);
+  db.prepare('DELETE FROM clan_invites WHERE clan_id=?').run(m.clan_id);
+  db.prepare('DELETE FROM clan_apps WHERE clan_id=?').run(m.clan_id);
+  db.prepare('DELETE FROM clan_members WHERE clan_id=?').run(m.clan_id);
+  db.prepare('DELETE FROM clan_log WHERE clan_id=?').run(m.clan_id);
+  db.prepare('DELETE FROM clan_treasury_log WHERE clan_id=?').run(m.clan_id);
+  db.prepare('DELETE FROM clan_blacklist WHERE clan_id=?').run(m.clan_id);
+  db.prepare('DELETE FROM clan_achievements WHERE clan_id=?').run(m.clan_id);
+  try{db.prepare('DELETE FROM chat_channels WHERE id=?').run('clan_'+m.clan_id)}catch{}
+  db.prepare('DELETE FROM clans WHERE id=?').run(m.clan_id);
+  if(refund>0)flAdd(me.id,refund,'Возврат за роспуск клана');
+  for(const x of members)if(x.user_id!==me.id)notify(x.user_id,'Клан ['+m.clan.tag+'] распущен лидером');
+ });
+ notify(me.id,'Клан распущен. Возврат: '+refund+' FL');
+ return ok({ok:true,fl:flBal(me.id),refund});
+}
+if(url==='/api/clans/decline_invite'){
+ db.prepare('DELETE FROM clan_invites WHERE id=? AND user_id=?').run(+b.id,me.id);
+ return ok({ok:true});
+}
+if(url==='/api/clans/war'){
+ const m=clanOf(me.id);if(!m||!m.clan||!clanCan(m,'war'))return bad('Нет прав');
+ if(b.action==='challenge'){
+  const target=clanGet(+b.target_id);if(!target)return bad('Клан не найден');
+  if(target.id===m.clan_id)return bad('Нельзя');
+  const exists=db.prepare("SELECT 1 FROM clan_wars WHERE status IN ('pending','active') AND ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?))").get(m.clan_id,target.id,target.id,m.clan_id);
+  if(exists)return bad('Уже есть война/вызов');
+  const ends=Date.now()+7*DAY;
+  db.prepare('INSERT INTO clan_wars(a_id,b_id,status,started,ends) VALUES(?,?,?,?,?)').run(m.clan_id,target.id,'pending',Date.now(),ends);
+  notify(target.leader_id,'Клан ['+m.clan.tag+'] вызывает вас на войну!');
+  clanLog(m.clan_id,me.id,'war_challenge','→ ['+target.tag+']');
+  return ok({ok:true});
+ }
+ if(b.action==='accept'||b.action==='decline'){
+  const w=db.prepare("SELECT * FROM clan_wars WHERE id=? AND status='pending'").get(+b.id);if(!w)return bad('Вызов не найден');
+  if(w.b_id!==m.clan_id)return bad('Не ваш вызов');
+  if(b.action==='decline'){db.prepare("UPDATE clan_wars SET status='declined' WHERE id=?").run(w.id);notify((clanGet(w.a_id)||{}).leader_id,'Война отклонена кланом ['+m.clan.tag+']');return ok({ok:true})}
+  db.prepare("UPDATE clan_wars SET status='active',started=?,ends=? WHERE id=?").run(Date.now(),Date.now()+7*DAY,w.id);
+  notify((clanGet(w.a_id)||{}).leader_id,'Война с ['+m.clan.tag+'] началась!');
+  clanLog(m.clan_id,me.id,'war_accept','');
+  return ok({ok:true});
+ }
+ if(b.action==='score'){
+  // add points to own side during active war
+  const w=db.prepare("SELECT * FROM clan_wars WHERE status='active' AND (a_id=? OR b_id=?) ORDER BY id DESC LIMIT 1").get(m.clan_id,m.clan_id);
+  if(!w)return bad('Нет активной войны');
+  if(Date.now()>w.ends){
+    // auto finish
+    const aw=w.a_pts>=w.b_pts?w.a_id:w.b_id;
+    const al=w.a_pts>=w.b_pts?w.b_id:w.a_id;
+    db.prepare("UPDATE clan_wars SET status='finished',winner_id=? WHERE id=?").run(aw,w.id);
+    db.prepare('UPDATE clans SET war_wins=war_wins+1,season_pts=season_pts+100 WHERE id=?').run(aw);
+    db.prepare('UPDATE clans SET war_losses=war_losses+1 WHERE id=?').run(al);
+    return ok({ok:true,finished:true,winner:aw});
+  }
+  const pts=Math.min(50,Math.max(1,+b.pts||1));
+  if(w.a_id===m.clan_id)db.prepare('UPDATE clan_wars SET a_pts=a_pts+? WHERE id=?').run(pts,w.id);
+  else db.prepare('UPDATE clan_wars SET b_pts=b_pts+? WHERE id=?').run(pts,w.id);
+  clanAddXp(m.clan_id,pts);
+  return ok({ok:true});
+ }
+ return bad('Неизвестное действие');
+}
+if(url==='/api/clans/alliance'){
+ const m=clanOf(me.id);if(!m||!m.clan||m.role!=='leader')return bad('Только лидер');
+ if(b.action==='create'){
+  if(m.clan.alliance_id)return bad('Уже в альянсе');
+  const name=String(b.name||'').trim().slice(0,24);const tag=String(b.tag||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4);
+  if(name.length<3||tag.length<2)return bad('Имя и тег альянса');
+  const r=db.prepare('INSERT INTO clan_alliances(name,tag,created) VALUES(?,?,?)').run(name,tag,Date.now());
+  db.prepare('INSERT INTO clan_alliance_members(alliance_id,clan_id,joined) VALUES(?,?,?)').run(r.lastInsertRowid,m.clan_id,Date.now());
+  db.prepare('UPDATE clans SET alliance_id=? WHERE id=?').run(r.lastInsertRowid,m.clan_id);
+  return ok({ok:true,id:r.lastInsertRowid});
+ }
+ if(b.action==='leave'){
+  if(!m.clan.alliance_id)return bad('Не в альянсе');
+  db.prepare('DELETE FROM clan_alliance_members WHERE alliance_id=? AND clan_id=?').run(m.clan.alliance_id,m.clan_id);
+  db.prepare('UPDATE clans SET alliance_id=0 WHERE id=?').run(m.clan_id);
+  return ok({ok:true});
+ }
+ if(b.action==='invite'){
+  if(!m.clan.alliance_id)return bad('Сначала создайте альянс');
+  const tc=clanGet(+b.clan_id);if(!tc||tc.alliance_id)return bad('Клан недоступен');
+  // simple: auto-join for now (invite accepted by target leader via join_alliance)
+  notify(tc.leader_id,'Клан ['+m.clan.tag+'] приглашает в альянс. Примите через /api/clans/alliance join');
+  return ok({ok:true,pending:true,alliance_id:m.clan.alliance_id});
+ }
+ if(b.action==='join'){
+  const aid=+b.alliance_id;if(!aid)return bad('ID альянса');
+  if(m.clan.alliance_id)return bad('Уже в альянсе');
+  const a=db.prepare('SELECT * FROM clan_alliances WHERE id=?').get(aid);if(!a)return bad('Альянс не найден');
+  const cnt=(db.prepare('SELECT COUNT(*) c FROM clan_alliance_members WHERE alliance_id=?').get(aid)||{}).c||0;
+  if(cnt>=5)return bad('Альянс заполнен (макс 5)');
+  db.prepare('INSERT INTO clan_alliance_members(alliance_id,clan_id,joined) VALUES(?,?,?)').run(aid,m.clan_id,Date.now());
+  db.prepare('UPDATE clans SET alliance_id=? WHERE id=?').run(aid,m.clan_id);
+  return ok({ok:true});
+ }
+ return bad('Неизвестное действие');
+}
+if(url==='/api/clans/autokick'){
+ const m=clanOf(me.id);if(!m||!m.clan||m.role!=='leader')return bad('Только лидер');
+ const days=m.clan.inactive_days||0;if(days<=0)return bad('Сначала задайте inactive_days в настройках');
+ const cutoff=Date.now()-days*DAY;
+ const old=db.prepare("SELECT user_id,username FROM clan_members cm JOIN users u ON u.id=cm.user_id WHERE cm.clan_id=? AND cm.role!='leader' AND (cm.last_active IS NULL OR cm.last_active<?)").all(m.clan_id,cutoff);
+ let n=0;
+ for(const x of old){db.prepare('DELETE FROM clan_members WHERE clan_id=? AND user_id=?').run(m.clan_id,x.user_id);clanLog(m.clan_id,me.id,'autokick',x.username);notify(x.user_id,'Исключены из ['+m.clan.tag+'] за неактивность');n++}
+ return ok({ok:true,kicked:n});
+}
+if(url==='/api/clans/season_reset'){
+ if(!admin)return bad('Только админ',403);
+ const top=db.prepare('SELECT id,name,tag,season_pts FROM clans ORDER BY season_pts DESC LIMIT 3').all();
+ for(const t of top){
+  const prize=t===top[0]?2000:t===top[1]?1000:500;
+  const leader=clanGet(t.id);
+  if(leader){flAdd(leader.leader_id,prize,'Приз сезона кланов #'+(top.indexOf(t)+1));notify(leader.leader_id,'Ваш клан ['+t.tag+'] занял место '+(top.indexOf(t)+1)+'! +'+prize+' FL')}
+ }
+ db.prepare('UPDATE clans SET season_pts=0').run();
+ return ok({ok:true,top});
+}
+
 // ---- forum / profile / upload (must be BEFORE admin gate) ----
 if(url.startsWith('/api/forum/'))return forum.post(url,b,me,req,res,C);
  if(url==='/api/profile/view'){
@@ -304,7 +957,8 @@ if(url.startsWith('/api/forum/'))return forum.post(url,b,me,req,res,C);
   const my=db.prepare('SELECT v FROM profile_votes WHERE user_id=? AND target_id=?').get(me.id,t.id);
   const comments=db.prepare('SELECT c.id,c.text,c.ts,c.user_id,u.username,u.avatar FROM profile_comments c LEFT JOIN users u ON u.id=c.user_id WHERE c.target_id=? ORDER BY c.id DESC LIMIT 50').all(t.id)
    .map(c=>({id:c.id,text:c.text,ts:c.ts,uid:c.user_id,username:c.username||'?',avatar:c.avatar||''}));
-  return ok({user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),prefix:t.prefix||'',pcolor:flPx(t.prefix_color),fl:t.fl||0},likes,dislikes,myVote:my?my.v:0,comments,me:me.id});
+  let clanInfo=null;try{const cm=clanOf(t.id);if(cm&&cm.clan)clanInfo={id:cm.clan.id,name:cm.clan.name,tag:cm.clan.tag,color:cm.clan.color,role:cm.role}}catch{}
+  return ok({user:{id:t.id,username:t.username,avatar:t.avatar||'',banner:t.banner||'',bio:t.bio||'',created:t.created,is_admin:!!t.is_admin,is_super:!!t.is_super,role:t.role||'',color:flHex(t.nick_color),badge:flBadgeId(t.badge),prefix:t.prefix||'',pcolor:flPx(t.prefix_color),fl:t.fl||0,clan:clanInfo},likes,dislikes,myVote:my?my.v:0,comments,me:me.id});
  }
  if(url==='/api/profile/save'){
   const banner=String(b.banner||'').slice(0,800),avatar=String(b.avatar||'').slice(0,800),bio=String(b.bio||'').slice(0,500);
