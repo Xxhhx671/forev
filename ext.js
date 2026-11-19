@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS fl_bonus_ip(ip TEXT,user_id INTEGER,ts INTEGER);`);
 // каталог: id -> [название, hex, цена]  /  id -> [значок, название, цена]
 const FL_COLORS={red:['Красный','#ff5c6c',120],orange:['Оранжевый','#ff9f43',120],yellow:['Жёлтый','#ffd93d',120],green:['Зелёный','#4cd97b',120],cyan:['Голубой','#38d6e8',120],blue:['Синий','#5aa2ff',120],purple:['Фиолетовый','#b57bff',120],pink:['Розовый','#ff7eb6',120]};
 // значки рисуются на фронте (SVG по id), первый элемент не используется
-const FL_BADGES={star:['','Искра',150],moon:['','Луна',150],bolt:['','Молния',250],fire:['','Огонь',300]};
+const FL_BADGES={moon:['','Луна',150],fire:['','Огонь',300]};
 const flNum=(k,d)=>{const v=get(k);return v===undefined||v===null||v===''||isNaN(+v)?d:+v};
 const flCfg=()=>({bonus:flNum('fl_login_bonus',1),day_price:flNum('fl_day_price',60),ip_limit:flNum('fl_ip_limit',1)?1:0});
 const flLog=(uid,delta,reason,peer)=>db.prepare('INSERT INTO fl_log(user_id,delta,reason,peer,ts) VALUES(?,?,?,?,?)').run(uid,delta,String(reason).slice(0,120),String(peer||'').slice(0,40),Date.now());
