@@ -1805,7 +1805,7 @@ addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY},{passive:true});
 function ready(){
   if(document.body.classList.contains('ready'))return;
   document.body.classList.add('ready');
-  const p=$('pre');
+  const p=document.getElementById('pre');
   if(p){p.classList.add('out');setTimeout(()=>{try{p.remove()}catch(e){}},700)}
 }
 // multiple safe triggers so preloader never sticks
