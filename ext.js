@@ -315,7 +315,7 @@ if(url.startsWith('/api/forum/'))return forum.post(url,b,me,req,res,C);
   if(!m)return bad('Нужна картинка (JPEG/PNG/WebP)');
   const buf=Buffer.from(m[2],'base64');
   if(buf.length<100)return bad('Файл слишком маленький');
-  if(buf.length>2097152)return bad('Файл слишком большой (макс 2МБ)');
+  if(buf.length>10485760)return bad('Файл слишком большой (макс 10МБ)');
   // return the data URL directly — saved as avatar/banner field in DB
   return ok({ok:true,url:raw});
  }
