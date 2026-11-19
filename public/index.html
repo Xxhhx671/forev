@@ -2337,7 +2337,7 @@ async function showHist(id){try{const r=await api('/api/admin/history',{id});ale
 function applyTheme(t){document.documentElement.classList.toggle('light',t==='light');localStorage.setItem('forev_theme',t);const tb=$('themeBtn');if(tb)tb.innerHTML=ico(t==='light'?'moon':'sun',18)}
 function toggleTheme(){const t=document.documentElement.classList.contains('light')?'dark':'light';applyTheme(t);if(user)saveProfile()}
 async function saveProfile(){try{const avatar=$('avatarUrl').value.trim(),banner=$('bannerUrl')?$('bannerUrl').value.trim():'',bio=$('bioText')?$('bioText').value.trim():'',theme=$('themeSel').value;await api('/api/profile',{avatar,banner,bio,theme});if(user){user.avatar=avatar;user.banner=banner;user.bio=bio;user.theme=theme}applyTheme(theme);try{await api('/api/profile/save',{avatar,banner,bio})}catch{}updProfPreview();toast('Профиль сохранён')}catch(e){toast(e.message,1)}}
-function updProfPreview(){const b=$('profPreview'),w=$('profAvWrap');if(!b||!user)return;const ban=($('bannerUrl')&&$('bannerUrl').value)||user.banner||'';const av=($('avatarUrl')&&$('avatarUrl').value)||user.avatar||'';if(ban){b.style.backgroundImage='url('+ban+')'}else{b.style.backgroundImage='';}if(w){if(av)w.innerHTML='<img src="'+String(av).replace(/"/g,'')+'" style="width:100%;height:100%;object-fit:cover">';else w.textContent=(user.username||'?')[0].toUpperCase()}}
+function updProfPreview(){const b=$('profPreview'),w=$('profAvWrap');if(!b||!user)return;const ban=($('bannerUrl')&&$('bannerUrl').value)||user.banner||'';const av=($('avatarUrl')&&$('avatarUrl').value)||user.avatar||'';if(ban){b.style.backgroundImage='url("'+ban.replace(/"/g,'')+'"')'}else{b.style.backgroundImage='';}if(w){if(av)w.innerHTML='<img src="'+String(av).replace(/"/g,'')+'" style="width:100%;height:100%;object-fit:cover">';else w.textContent=(user.username||'?')[0].toUpperCase()}}
 function compressImage(file,maxW,qual){return new Promise((resolve,reject)=>{
   if(file.size>10*1024*1024)return reject(new Error('Файл слишком большой (макс 10МБ)'));
   const fr=new FileReader();
@@ -2407,7 +2407,7 @@ async function showWl(uid){
 
 /* ===== Аватарки: галерея ===== */
 const AVS=Array.from({length:15},(_,i)=>'/avatars/a'+(i+1)+'.svg');
-function avFill(el,src,name){el.innerHTML='';if(src){const im=new Image();im.alt='';im.src=src;im.onerror=()=>{el.textContent=(name||'?')[0].toUpperCase()};el.appendChild(im)}else el.textContent=(name||'?')[0].toUpperCase()}
+function avFill(el,src,name){el.innerHTML='';if(src){const im=new Image();im.alt='';im.style.cssText='width:100%;height:100%;object-fit:cover;display:block';im.src=src;im.onerror=()=>{el.innerHTML='';el.textContent=(name||'?')[0].toUpperCase()};el.appendChild(im)}else el.textContent=(name||'?')[0].toUpperCase()}
 function buildGallery(){/* gallery removed */}
 function markGallery(){document.querySelectorAll('.agal-i').forEach(b=>b.classList.toggle('on',!!user&&user.avatar===b.dataset.src))}
 async function pickAvatar(src){$('avatarUrl').value=src;await saveProfile();avFill($('av'),src,user&&user.username);markGallery()}
