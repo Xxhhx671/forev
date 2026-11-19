@@ -3,8 +3,26 @@ module.exports=function(db,crypto){
 const DAY=864e5,run=s=>{try{db.exec(s)}catch{}};
 for(const c of ["totp_secret TEXT DEFAULT ''","totp_on INTEGER DEFAULT 0","role TEXT DEFAULT ''","chat_muted_until INTEGER DEFAULT 0","chat_banned INTEGER DEFAULT 0"])run('ALTER TABLE users ADD COLUMN '+c);
 run('ALTER TABLE chat_msgs ADD COLUMN reply_to INTEGER DEFAULT 0');run('ALTER TABLE chat_msgs ADD COLUMN to_user INTEGER DEFAULT 0');
+run('ALTER TABLE chat_msgs ADD COLUMN channel TEXT DEFAULT \'general\'');
+run('ALTER TABLE chat_msgs ADD COLUMN atts TEXT DEFAULT \'[]\'');
+run("ALTER TABLE notifications ADD COLUMN kind TEXT DEFAULT 'system'");
+run("ALTER TABLE notifications ADD COLUMN link TEXT DEFAULT ''");
+// default channels
+if(!db.prepare('SELECT COUNT(*) c FROM chat_channels').get().c){
+  const ins=db.prepare('INSERT INTO chat_channels(id,name,descr,kind,sort) VALUES(?,?,?,?,?)');
+  [['general','Общий','Общий чат','public',0],
+   ['games','Игры','Обсуждение игр','public',10],
+   ['subs','Подписчики','Только с активной подпиской','subs',20]].forEach(r=>ins.run(...r));
+}
+
 db.exec(`CREATE TABLE IF NOT EXISTS chat_log(id INTEGER PRIMARY KEY,admin_id INTEGER,action TEXT,target TEXT,details TEXT,ts INTEGER);
 CREATE TABLE IF NOT EXISTS chat_words(word TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS chat_reactions(msg_id INTEGER,user_id INTEGER,emoji TEXT,PRIMARY KEY(msg_id,user_id,emoji));
+CREATE TABLE IF NOT EXISTS chat_channels(id TEXT PRIMARY KEY,name TEXT,descr TEXT DEFAULT '',kind TEXT DEFAULT 'public',sort INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS chat_channel_subs(channel_id TEXT,user_id INTEGER,PRIMARY KEY(channel_id,user_id));
+CREATE TABLE IF NOT EXISTS forum_sub_reads(user_id INTEGER,kind TEXT,target_id TEXT,last_ts INTEGER DEFAULT 0,PRIMARY KEY(user_id,kind,target_id));
+CREATE TABLE IF NOT EXISTS rep_log(id INTEGER PRIMARY KEY,user_id INTEGER,from_id INTEGER,delta INTEGER,reason TEXT,ts INTEGER);
+
 CREATE TABLE IF NOT EXISTS config_fav(user_id INTEGER,config_id INTEGER,PRIMARY KEY(user_id,config_id));
 CREATE TABLE IF NOT EXISTS config_rate(user_id INTEGER,config_id INTEGER,stars INTEGER,PRIMARY KEY(user_id,config_id));
 CREATE TABLE IF NOT EXISTS faq(id INTEGER PRIMARY KEY,q TEXT,a TEXT,ts INTEGER);
@@ -28,7 +46,16 @@ const FORUM_CATS={
 const isStaff=u=>!!(u&&(u.is_admin||String(u.username||'')===STAFF_CODE));
 
 const get=k=>(db.prepare('SELECT value FROM settings WHERE key=?').get(k)||{}).value,set=(k,v)=>db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run(k,String(v));
-const notify=(uid,t)=>db.prepare('INSERT INTO notifications(user_id,text,read,ts) VALUES(?,?,0,?)').run(uid,t,Date.now());
+const notify=(uid,t,kind='system',link='')=>{
+ try{db.prepare('INSERT INTO notifications(user_id,text,read,ts,kind,link) VALUES(?,?,0,?,?,?)').run(uid,String(t).slice(0,300),Date.now(),kind||'system',link||'')}catch{try{db.prepare('INSERT INTO notifications(user_id,text,read,ts) VALUES(?,?,0,?)').run(uid,String(t).slice(0,300),Date.now())}catch{}}
+};
+const repLog=(uid,fromId,delta,reason)=>{
+ try{
+  db.prepare('INSERT INTO rep_log(user_id,from_id,delta,reason,ts) VALUES(?,?,?,?,?)').run(uid,fromId||0,delta,String(reason||'').slice(0,120),Date.now());
+  db.prepare('UPDATE users SET reputation=MAX(0,COALESCE(reputation,0)+?) WHERE id=?').run(delta,uid);
+ }catch{}
+};
+
 const seen=new Map(),last=new Map(),ment=new Map(),pend=new Map();
 
 // ---- TOTP ----
@@ -91,12 +118,33 @@ api.get=(req,res,C)=>{
  if(url==='/api/chat/list'){
   const u=C.authUser(req);if(!u)return C.send(res,401,{error:'Не авторизован'},{'Cache-Control':'no-store'}),true;
   const now=Date.now();seen.set(u.id,now);for(const [k,v] of seen)if(now-v>45000)seen.delete(k);
-  const after=Math.max(0,+(new URL(req.url,'http://x').searchParams.get('after'))||0),full=after===0,mod=api.isMod(u.id);
-  const sel='SELECT m.id,m.user_id uid,m.text,m.ts,m.to_user,m.reply_to,u.username,u.avatar,u.is_admin,u.role,u.nick_color,u.badge,t.username to_name,r.text rtext,ru.username runame FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id LEFT JOIN users t ON t.id=m.to_user LEFT JOIN chat_msgs r ON r.id=m.reply_to LEFT JOIN users ru ON ru.id=r.user_id WHERE (m.to_user=0 OR m.to_user=? OR m.user_id=? OR ?=1)';
-  const rows=(full?db.prepare('SELECT * FROM ('+sel+' ORDER BY m.id DESC LIMIT 100) ORDER BY id').all(u.id,u.id,mod?1:0):db.prepare(sel+' AND m.id>? ORDER BY m.id LIMIT 100').all(u.id,u.id,mod?1:0,after))
-   .map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin,role:r.role||'',color:flHex(r.nick_color),badge:flBadgeId(r.badge),to:r.to_user?r.to_name:'',reply:r.reply_to&&r.runame?{id:r.reply_to,username:r.runame,text:String(r.rtext||'').slice(0,80)}:null}));
+  const qs=new URL(req.url,'http://x').searchParams;
+  const after=Math.max(0,+(qs.get('after'))||0),full=after===0,mod=api.isMod(u.id);
+  let channel=String(qs.get('channel')||'general').slice(0,32);
+  const ch=db.prepare('SELECT * FROM chat_channels WHERE id=?').get(channel)||{id:'general',kind:'public'};
+  // access check for subs channel
+  if(ch.kind==='subs'&&!mod){
+    const uu=db.prepare('SELECT sub_until,inf FROM users WHERE id=?').get(u.id);
+    if(!(uu&&(uu.inf||(uu.sub_until||0)>now)))return C.send(res,403,{error:'Канал только для подписчиков'},NOCACHE),true;
+  }
+  const sel=`SELECT m.id,m.user_id uid,m.text,m.ts,m.to_user,m.reply_to,m.channel,m.atts,u.username,u.avatar,u.is_admin,u.role,u.nick_color,u.badge,t.username to_name,r.text rtext,ru.username runame FROM chat_msgs m LEFT JOIN users u ON u.id=m.user_id LEFT JOIN users t ON t.id=m.to_user LEFT JOIN chat_msgs r ON r.id=m.reply_to LEFT JOIN users ru ON ru.id=r.user_id WHERE m.channel=? AND (m.to_user=0 OR m.to_user=? OR m.user_id=? OR ?=1)`;
+  const rows=(full?db.prepare('SELECT * FROM ('+sel+' ORDER BY m.id DESC LIMIT 120) ORDER BY id').all(channel,u.id,u.id,mod?1:0):db.prepare(sel+' AND m.id>? ORDER BY m.id LIMIT 120').all(channel,u.id,u.id,mod?1:0,after));
+  const ids=rows.map(r=>r.id);
+  const reactMap={};
+  if(ids.length){
+    for(const x of db.prepare(`SELECT msg_id,emoji,COUNT(*) c,SUM(user_id=?) mine FROM chat_reactions WHERE msg_id IN (${ids.map(()=>'?').join(',')}) GROUP BY msg_id,emoji`).all(u.id,...ids)){
+      if(!reactMap[x.msg_id])reactMap[x.msg_id]=[];
+      reactMap[x.msg_id].push({emoji:x.emoji,count:x.c,mine:!!x.mine});
+    }
+  }
+  const parseAtts=s=>{try{const a=JSON.parse(s||'[]');return Array.isArray(a)?a:[]}catch{return[]}};
+  const mapped=rows.map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,channel:r.channel||'general',atts:parseAtts(r.atts),
+    username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin,role:r.role||'',color:flHex(r.nick_color),badge:flBadgeId(r.badge),
+    to:r.to_user?r.to_name:'',reply:r.reply_to&&r.runame?{id:r.reply_to,username:r.runame,text:String(r.rtext||'').slice(0,80)}:null,
+    reactions:reactMap[r.id]||[]}));
   const me=row(u.id);
-  return C.send(res,200,{list:rows,full,last:db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs').get().m,me:u.id,me_name:u.username,admin:mod,online:seen.size,muted:me.chat_muted_until>now?me.chat_muted_until:0,banned:!!me.chat_banned,slow:+(get('chat_slow')||0),inst:BOOT},NOCACHE),true;
+  const channels=db.prepare('SELECT id,name,descr,kind,sort FROM chat_channels ORDER BY sort,id').all();
+  return C.send(res,200,{list:mapped,full,last:db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs WHERE channel=?').get(channel).m,me:u.id,me_name:u.username,admin:mod,online:seen.size,muted:me.chat_muted_until>now?me.chat_muted_until:0,banned:!!me.chat_banned,slow:+(get('chat_slow')||0),inst:BOOT,channel,channels},NOCACHE),true;
  }
  
  // ---- Forum / Profile GET ----
@@ -128,20 +176,60 @@ api.post=(url,b,req,res,C)=>{
  if(url==='/api/chat/send'){
   if(me.chat_banned)return bad('Вы заблокированы в чате',403);
   if(me.chat_muted_until>Date.now())return bad('Мут в чате ещё '+Math.ceil((me.chat_muted_until-Date.now())/6e4)+' мин.',403);
-  let t=slim(b.text).slice(0,300);if(!t)return bad('Пустое сообщение');
+  let t=slim(b.text).slice(0,500);
+  let channel=String(b.channel||'general').slice(0,32);
+  const ch=db.prepare('SELECT * FROM chat_channels WHERE id=?').get(channel)||{id:'general',kind:'public'};
+  if(ch.kind==='subs'&&!mod){
+    const uu=db.prepare('SELECT sub_until,inf FROM users WHERE id=?').get(me.id);
+    if(!(uu&&(uu.inf||(uu.sub_until||0)>Date.now())))return bad('Канал только для подписчиков',403);
+  }
+  // atts
+  let atts='[]';
+  if(Array.isArray(b.atts)&&b.atts.length){
+    const out=[];
+    for(const a of b.atts.slice(0,4)){
+      const url=String(a.url||'');
+      if(/^\/uploads\/f\d+_[\w.-]+$/.test(url))out.push({url,name:String(a.name||'file').slice(0,80),img:!!a.img});
+    }
+    atts=JSON.stringify(out);
+  }
+  if(!t&&atts==='[]')return bad('Пустое сообщение');
   const now=Date.now(),slow=Math.max(1.2,+(get('chat_slow')||0))*1000;
   if(!mod&&now-(last.get(me.id)||0)<slow)return bad('Медленный режим: подождите '+Math.ceil((slow-(now-(last.get(me.id)||0)))/1000)+' сек.');
-  if(!mod){const lw=t.toLowerCase();for(const w of db.prepare('SELECT word FROM chat_words').all())if(w.word&&lw.includes(w.word))return bad('Сообщение содержит запрещённое слово')}
+  if(!mod&&t){const lw=t.toLowerCase();for(const w of db.prepare('SELECT word FROM chat_words').all())if(w.word&&lw.includes(w.word))return bad('Сообщение содержит запрещённое слово')}
+  // anti-spam: same message
+  try{
+    const prev=db.prepare('SELECT text,ts FROM chat_msgs WHERE user_id=? ORDER BY id DESC LIMIT 3').all(me.id);
+    if(prev.filter(x=>x.text===t&&now-x.ts<60000).length>=2){
+      db.prepare('UPDATE users SET chat_muted_until=? WHERE id=?').run(now+5*60000,me.id);
+      return bad('Повтор сообщений — мут на 5 минут',429);
+    }
+  }catch{}
+  // mention limit
+  const mentions=[...t.matchAll(/@([A-Za-z0-9_]{3,20})/g)];
+  if(!mod&&mentions.length>5)return bad('Слишком много @упоминаний',400);
   let to=0;const pm=t.match(/^\/w\s+(\S+)\s+([\s\S]+)/i);
   if(pm){const r=db.prepare('SELECT id FROM users WHERE username=?').get(pm[1]);if(!r)return bad('Пользователь не найден');to=r.id;t=pm[2]}
   const rp=+b.reply||0;last.set(me.id,now);seen.set(me.id,now);
-  const r=db.prepare('INSERT INTO chat_msgs(user_id,text,ts,reply_to,to_user) VALUES(?,?,?,?,?)').run(me.id,t,now,rp,to);
-  db.prepare('DELETE FROM chat_msgs WHERE id<=(SELECT MAX(id)-1000 FROM chat_msgs)').run();
+  const r=db.prepare('INSERT INTO chat_msgs(user_id,text,ts,reply_to,to_user,channel,atts) VALUES(?,?,?,?,?,?,?)').run(me.id,t,now,rp,to,channel,atts);
+  db.prepare('DELETE FROM chat_msgs WHERE id<=(SELECT MAX(id)-2000 FROM chat_msgs)').run();
   const tg=new Set();if(to)tg.add(to);
-  for(const m of t.matchAll(/@([A-Za-z0-9_]{3,20})/g)){const x=db.prepare('SELECT id FROM users WHERE username=?').get(m[1]);if(x&&x.id!==me.id&&tg.size<4)tg.add(x.id)}
+  for(const m of mentions){const x=db.prepare('SELECT id FROM users WHERE username=?').get(m[1]);if(x&&x.id!==me.id&&tg.size<5)tg.add(x.id)}
   if(rp){const x=db.prepare('SELECT user_id FROM chat_msgs WHERE id=?').get(rp);if(x&&x.user_id!==me.id)tg.add(x.user_id)}
-  for(const id of tg){const k=me.id+':'+id;if(now-(ment.get(k)||0)>6e4){ment.set(k,now);notify(id,(to===id?'Личное сообщение от ':'В чате вас упомянул(а) ')+me.username+': '+t.slice(0,80))}}
+  for(const id of tg){const k=me.id+':'+id;if(now-(ment.get(k)||0)>6e4){ment.set(k,now);notify(id,(to===id?'Личное сообщение от ':'В чате вас упомянул(а) ')+me.username+': '+t.slice(0,80),'chat','')}}
   return ok({ok:true,id:Number(r.lastInsertRowid)});
+ }
+ if(url==='/api/chat/react'){
+  const id=+b.id,emoji=String(b.emoji||'').slice(0,8);
+  const allowed=new Set(['👍','🔥','😂','❤️','👀','👎','🎉','😮']);
+  if(!allowed.has(emoji))return bad('Недопустимая реакция');
+  const msg=db.prepare('SELECT id FROM chat_msgs WHERE id=?').get(id);if(!msg)return bad('Сообщение не найдено',404);
+  const has=db.prepare('SELECT 1 FROM chat_reactions WHERE msg_id=? AND user_id=? AND emoji=?').get(id,me.id,emoji);
+  if(has)db.prepare('DELETE FROM chat_reactions WHERE msg_id=? AND user_id=? AND emoji=?').run(id,me.id,emoji);
+  else db.prepare('INSERT INTO chat_reactions(msg_id,user_id,emoji) VALUES(?,?,?)').run(id,me.id,emoji);
+  const list=db.prepare('SELECT emoji,COUNT(*) c,SUM(user_id=?) mine FROM chat_reactions WHERE msg_id=? GROUP BY emoji').all(me.id,id)
+    .map(x=>({emoji:x.emoji,count:x.c,mine:!!x.mine}));
+  return ok({ok:true,reactions:list});
  }
  // 2FA
  if(url==='/api/2fa/setup'){if(me.totp_on)return bad('2FA уже включена');const s=b32e(crypto.randomBytes(20));db.prepare('UPDATE users SET totp_secret=? WHERE id=?').run(s,me.id);return ok({secret:s,uri:'otpauth://totp/FRV:'+encodeURIComponent(me.username)+'?secret='+s+'&issuer=FRV'})}

@@ -76,6 +76,14 @@ CREATE TABLE IF NOT EXISTS tariffs(
 );`);
 db.exec('CREATE TABLE IF NOT EXISTS chat_msgs(id INTEGER PRIMARY KEY,user_id INTEGER,text TEXT,ts INTEGER)');
 const chatSeen=new Map(),chatLast=new Map();
+const chatSSE=new Set();
+function chatBroadcast(payload){
+  const data='data: '+JSON.stringify(payload)+'\n\n';
+  for(const res of [...chatSSE]){
+    try{res.write(data)}catch{try{chatSSE.delete(res);res.end()}catch{}}
+  }
+}
+
 const ext=require('./ext')(db,crypto);
 db.exec("UPDATE users SET ref_code=lower(hex(randomblob(4))) WHERE ref_code IS NULL OR ref_code=''");
 db.prepare('UPDATE users SET frozen_at=? WHERE frozen=1 AND frozen_at=0').run(Date.now());
@@ -271,7 +279,7 @@ const clamp=(v,a,b,d)=>Math.min(Math.max(Math.floor(+v)||d,a),b);
 const active=u=>!u.frozen&&!!(u.inf||u.sub_until>Date.now());
 function addKeys(days,devices,n,inf,note='',prefix='FOREV',product='',tariff=''){const keys=[],st=db.prepare('INSERT INTO keys(code,days,devices,inf,created,note,product,tariff) VALUES(?,?,?,?,?,?,?,?)');for(let i=0;i<n;i++){const c=prefix+'-'+crypto.randomBytes(8).toString('hex').toUpperCase().match(/.{4}/g).join('-');st.run(c,days,devices,inf?1:0,Date.now(),note,product,tariff);keys.push(c)}return keys}
 function addSubHistory(uid,days,source,details=''){db.prepare('INSERT INTO sub_history(user_id,days,source,details,ts) VALUES(?,?,?,?,?)').run(uid,days,source,details,Date.now())}
-function addNotif(uid,text){db.prepare('INSERT INTO notifications(user_id,text,ts) VALUES(?,?,?)').run(uid,text.slice(0,300),Date.now())}
+function addNotif(uid,text,kind='system',link=''){try{db.prepare('INSERT INTO notifications(user_id,text,ts,kind,link) VALUES(?,?,?,?,?)').run(uid,String(text).slice(0,300),Date.now(),kind||'system',link||'')}catch{try{db.prepare('INSERT INTO notifications(user_id,text,ts) VALUES(?,?,?)').run(uid,String(text).slice(0,300),Date.now())}catch{}}}
 // ========== Система идентификации IP (multi-signal) ==========
 // Собираем: conn IP, всю цепочку XFF/CF, client/real_ip от лоадера, WebRTC/STUN с браузера.
 // Любой публичный IP, с которого уже брали trial, блокирует повторный trial навсегда.
@@ -909,6 +917,25 @@ const srv=http.createServer(async(req,res)=>{
       if(!fu){req.resume();return send(res,401,{error:'Не авторизован'})}
       return await ext.forumUpload(req,res,{send},fu);
     }
+    if(req.method==='POST'&&req.url.split('?')[0]==='/api/admin/backup/restore'){
+      const a=authUser(req);
+      if(!a||!a.is_admin){req.resume();return send(res,403,{error:'Только админ'})}
+      const chunks=[];let got=0,MAX=200*1024*1024;
+      await new Promise(ok=>{req.on('data',c=>{got+=c.length;if(got<=MAX)chunks.push(c)});req.on('end',ok);req.on('error',ok)});
+      if(got<100||got>MAX)return send(res,400,{error:'Некорректный размер файла БД'});
+      const buf=Buffer.concat(chunks);
+      // SQLite header: "SQLite format 3\0"
+      if(buf.toString('utf8',0,16).indexOf('SQLite format 3')!==0)return send(res,400,{error:'Файл не является SQLite базой'});
+      try{
+        const bak=DBP+'.pre-restore-'+Date.now();
+        fs.copyFileSync(DBP,bak);
+        fs.writeFileSync(DBP+'.restore-tmp',buf);
+        fs.renameSync(DBP+'.restore-tmp',DBP);
+        try{logAudit(a.id,'restore_upload',buf.length+' bytes','')}catch{}
+        setTimeout(()=>process.exit(0),400);
+        return send(res,200,{ok:true,msg:'База загружена. Сервер перезапускается… Аккаунты и пароли восстановлены из бэкапа.'});
+      }catch(e){return send(res,500,{error:'Ошибка: '+e.message})}
+    }
     if(req.method==='GET'&&(req.url.startsWith('/api/chat/list')||req.url==='/api/public/info'||req.url.startsWith('/api/forum/')||req.url.startsWith('/api/profile/view'))&&ext.get(req,res,{send,authUser}))return;
     if(req.method==='GET'&&req.url.startsWith('/api/chat/list')){
       const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'},{'Cache-Control':'no-store'});
@@ -920,6 +947,16 @@ const srv=http.createServer(async(req,res)=>{
         .map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin}));
       const last=db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs').get().m;
       return send(res,200,{list:rows,full,last,me:u.id,admin:!!u.is_admin,online:chatSeen.size},{'Cache-Control':'no-store'});
+    }
+    if(req.method==='GET'&&req.url.startsWith('/api/chat/sse')){
+      const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'});
+      res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive'});
+      res.write(':ok\n\n');
+      chatSSE.add(res);
+      chatSeen.set(u.id,Date.now());
+      const hb=setInterval(()=>{try{res.write(':ping\n\n');chatSeen.set(u.id,Date.now())}catch{clearInterval(hb);chatSSE.delete(res)}},25000);
+      req.on('close',()=>{clearInterval(hb);chatSSE.delete(res)});
+      return;
     }
     if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'Не найдено'});
     const url=req.url.split('?')[0],strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password','/api/login/2fa'].includes(url);
@@ -939,6 +976,8 @@ const srv=http.createServer(async(req,res)=>{
       chatLast.set(u.id,now);chatSeen.set(u.id,now);
       const r=db.prepare('INSERT INTO chat_msgs(user_id,text,ts) VALUES(?,?,?)').run(u.id,t,now);
       db.prepare('DELETE FROM chat_msgs WHERE id<=(SELECT MAX(id)-500 FROM chat_msgs)').run();
+      try{chatBroadcast({type:'msg',id:Number(r.lastInsertRowid),uid:u.id,text:t,ts:now,username:u.username,avatar:u.avatar||'',is_admin:!!u.is_admin})}catch{}
+
       return send(res,200,{ok:true,id:Number(r.lastInsertRowid)});
     }
     // ---------- админка (сессия админа; genkey ещё и по x-admin-token) ----------
@@ -1087,6 +1126,27 @@ const srv=http.createServer(async(req,res)=>{
         logAudit(a.id,'backup','db','');
         res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="forev-backup-'+Date.now()+'.db"'});
         return res.end(fs.readFileSync(DBP));
+      }
+      if(url==='/api/admin/backup/list'){
+        const BAK=path.join(path.dirname(DBP),'backups');
+        let list=[];
+        try{list=fs.readdirSync(BAK).filter(f=>f.endsWith('.db')).map(f=>{const st=fs.statSync(path.join(BAK,f));return{name:f,size:st.size,ts:st.mtimeMs}}).sort((a,b)=>b.ts-a.ts)}catch{}
+        return send(res,200,{list,db_path:DBP});
+      }
+      if(url==='/api/admin/backup/restore_file'){
+        // body: {name: 'forev-....db'} from backups folder
+        const name=path.basename(String(b.name||''));
+        if(!/^forev-.+\.db$/.test(name))return bad('Некорректное имя файла');
+        const src=path.join(path.dirname(DBP),'backups',name);
+        if(!fs.existsSync(src))return bad('Файл не найден',404);
+        try{
+          const bak=DBP+'.pre-restore-'+Date.now();
+          fs.copyFileSync(DBP,bak);
+          fs.copyFileSync(src,DBP);
+          logAudit(a.id,'restore',name,'from backups');
+          setTimeout(()=>process.exit(0),300);
+          return send(res,200,{ok:true,msg:'База восстановлена. Сервер перезапускается…'});
+        }catch(e){return bad('Ошибка восстановления: '+e.message,500)}
       }
       if(url==='/api/admin/audit'){
         const list=db.prepare('SELECT a.*,u.username FROM audit a LEFT JOIN users u ON u.id=a.admin_id ORDER BY a.ts DESC LIMIT 100').all();
@@ -1886,11 +1946,20 @@ const srv=http.createServer(async(req,res)=>{
       return send(res,200,{list});
     }
     if(url==='/api/notifs'){
-      const list=db.prepare('SELECT id,text,read,ts FROM notifications WHERE user_id=? ORDER BY ts DESC LIMIT 20').all(u.id);
-      return send(res,200,{list});
+      const kind=String(b.kind||'').slice(0,20);
+      let list;
+      try{
+        list=kind?db.prepare('SELECT id,text,read,ts,kind,link FROM notifications WHERE user_id=? AND kind=? ORDER BY ts DESC LIMIT 50').all(u.id,kind)
+                 :db.prepare('SELECT id,text,read,ts,kind,link FROM notifications WHERE user_id=? ORDER BY ts DESC LIMIT 50').all(u.id);
+      }catch{
+        list=db.prepare('SELECT id,text,read,ts FROM notifications WHERE user_id=? ORDER BY ts DESC LIMIT 50').all(u.id);
+      }
+      const unread=db.prepare('SELECT COUNT(*) c FROM notifications WHERE user_id=? AND read=0').get(u.id).c;
+      return send(res,200,{list,unread});
     }
     if(url==='/api/notifs/read'){
-      db.prepare('UPDATE notifications SET read=1 WHERE user_id=? AND id=?').run(u.id,+b.id);
+      if(b.all)db.prepare('UPDATE notifications SET read=1 WHERE user_id=?').run(u.id);
+      else db.prepare('UPDATE notifications SET read=1 WHERE user_id=? AND id=?').run(u.id,+b.id);
       return send(res,200,{ok:true});
     }
     if(url==='/api/history'){
@@ -1948,3 +2017,21 @@ srv.keepAliveTimeout = 65e3;
 srv.headersTimeout = 66e3;
 
 require('./keepalive')(); // анти-сон, настраивается через PING_URL
+
+// Автобэкап SQLite каждые 6 часов (храним последние 5)
+try{
+  const BAK=path.join(path.dirname(DBP),'backups');
+  fs.mkdirSync(BAK,{recursive:true});
+  const doBackup=()=>{
+    try{
+      const name='forev-'+new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)+'.db';
+      fs.copyFileSync(DBP,path.join(BAK,name));
+      const files=fs.readdirSync(BAK).filter(f=>f.startsWith('forev-')&&f.endsWith('.db')).sort();
+      while(files.length>5){try{fs.unlinkSync(path.join(BAK,files.shift()))}catch{}}
+      console.log('DB backup:',name);
+    }catch(e){console.error('backup fail',e.message)}
+  };
+  setInterval(doBackup,6*3600*1000);
+  setTimeout(doBackup,30e3);
+}catch(e){console.error('backup init',e.message)}
+
