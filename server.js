@@ -1,4 +1,4 @@
-﻿// FOREV EXT вЂ” СЃРµСЂРІРµСЂ Р±РµР· Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№. РќСѓР¶РµРЅ Node.js 22.5+  (Р·Р°РїСѓСЃРє: node server.js)
+// FOREV EXT вЂ” СЃРµСЂРІРµСЂ Р±РµР· Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№. РќСѓР¶РµРЅ Node.js 22.5+  (Р·Р°РїСѓСЃРє: node server.js)
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
 const {DatabaseSync}=require('node:sqlite');
 const DBP=process.env.DB_PATH||path.join(__dirname,'forev.db');
@@ -961,7 +961,7 @@ const srv=http.createServer(async(req,res)=>{
     if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'Не найдено'});
     const url=req.url.split('?')[0],strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password','/api/login/2fa'].includes(url);
     if(strict?rl('a'+ip,12,3e5):rl('g'+ip,100,3e5))return send(res,429,{error:'Слишком много попыток, подождите'});
-    const b=await body(req,url.startsWith('/api/forum/')?7e4:1e4);
+    const b=await body(req,url==='/api/upload/image'?3e6:url.startsWith('/api/forum/')?7e4:1e4);
     const bad=(m,c=400)=>send(res,c,{error:m});
     const tokOk=()=>{const t=process.env.ADMIN_TOKEN||'',h=String(req.headers['x-admin-token']||''),A=Buffer.from(t),B=Buffer.from(h);return t&&A.length===B.length&&crypto.timingSafeEqual(A,B)};
 
