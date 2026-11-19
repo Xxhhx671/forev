@@ -2355,16 +2355,20 @@ function uHue(n){let h=0;n=String(n||'');for(let i=0;i<n.length;i++)h=(h*31+n.ch
 let chTm=null,chLast=0,chOpen=false,chUnread=0,chBusy=false,chMe=0,chAdm=false,chN=0,chNew=0;
 function chatStart(){buildGallery();const b=$('chBtn');if(!b)return;b.style.display='flex';if(chTm)return;chLast=0;chN=0;$('chList').innerHTML='';chLoop(0)}
 function chatStop(){clearTimeout(chTm);chTm=null;chOpen=false;chLast=0;const b=$('chBtn');if(b)b.style.display='none';const p=$('chat');if(p)p.classList.remove('on')}
-function chLoop(d){clearTimeout(chTm);chTm=setTimeout(async()=>{await chPoll();if(user)chLoop()},d!==undefined?d:(document.hidden?30000:(chOpen?2500:15000)))}
-async function chPoll(){if(chBusy||!user)return;chBusy=true;try{
+function chLoop(d){clearTimeout(chTm);chTm=setTimeout(async()=>{try{await chPoll()}catch(e){}if(user)chLoop()},d!==undefined?d:(document.hidden?20000:(chOpen?1500:6000)))}
+let chAgain=false;
+async function chPoll(){if(!user)return;if(chBusy){chAgain=true;return}chBusy=true;try{
   const full=chLast===0||(chOpen&&++chN%10===0);
-  const r=await fetch(API_BASE+'/api/chat/list?after='+(full?0:chLast),{cache:'no-store',credentials:'include'});
+  const r=await fetch(API_BASE+'/api/chat/list?after='+(full?0:chLast),{cache:'no-store',credentials:'include',signal:AbortSignal.timeout(10000)});
   if(r.status===401){chatStop();return}
   const j=await r.json();chMe=j.me;chAdm=j.admin;
   $('chOnline').textContent='онлайн: '+j.online;$('chClear').style.display=chAdm?'':'none';
   if(j.full){const first=chLast===0;chRender(j.list,first);chLast=j.last||0}
   else if(j.list.length){chAppend(j.list,true);chLast=Math.max(chLast,...j.list.map(m=>m.id))}
-}catch(e){}finally{chBusy=false}}
+}catch(e){}finally{chBusy=false;if(chAgain){chAgain=false;setTimeout(chPoll,50)}}}
+addEventListener('visibilitychange',()=>{if(!document.hidden&&user&&chTm)chPoll()});
+addEventListener('online',()=>{if(user&&chTm)chPoll()});
+addEventListener('focus',()=>{if(user&&chTm)chPoll()});
 function chNode(m){
   const d=document.createElement('div');d.className='ch-m'+(m.uid===chMe?' me':'');d.dataset.id=m.id;d.dataset.uid=m.uid;d.dataset.ts=m.ts;d.dataset.pm=m.to?1:0;
   const a=document.createElement('div');a.className='ch-av';avFill(a,m.avatar,m.username);
@@ -2426,4 +2430,4 @@ function ldUpload(){if(!ldFile)return;if(!confirm('Заменить лоадер
   x.onerror=()=>{$('ldBar').style.display='none';$('ldPct').textContent='';toast('Нет связи с сервером',1);$('ldGo').disabled=false};
   x.send(ldFile)}
 async function ldRollback(){if(!confirm('Вернуть предыдущую версию лоадера?'))return;try{await api('/api/admin/loader/rollback',{});toast('Возвращена предыдущая версия');ldInfo()}catch(e){toast(e.message,1)}}
-</script><script src="/ext.js?v=fl5"></script><script src="/forum.js?v=2"></script></body></html>
+</script><script src="/ext.js?v=fl6"></script><script src="/forum.js?v=2"></script></body></html>
