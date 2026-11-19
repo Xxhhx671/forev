@@ -197,7 +197,7 @@ let CATS=null,ME=null,TOK=0;
 const av=(a,s=40)=>`<span class="fx-avw" data-av="${E(a.avatar||'')}" data-u="${E(a.username)}" style="width:${s}px;height:${s}px;font-size:${Math.round(s*.4)}px"></span>`;
 const hydrate=el=>el.querySelectorAll('[data-av]:not([data-ok])').forEach(n=>{n.dataset.ok=1;avFill(n,n.dataset.av?U(n.dataset.av):'',n.dataset.u)});
 const roleOf=a=>a.is_admin?'Администратор':a.role==='moderator'?'Модератор':a.role==='support'?'Поддержка':'';
-const nameHtml=a=>`${a.badge&&window.flBadge&&window.FLB&&FLB[a.badge]?`<span class="fl-bd">${flBadge(a.badge,14)}</span> `:''}<span${a.color?` style="color:${E(a.color)}"`:''}>${E(a.username)}</span>`;
+const nameHtml=a=>`${a.badge&&window.flBadge&&window.FLB&&FLB[a.badge]?`<span class="fl-bd">${flBadge(a.badge,14)}</span> `:''}${a.prefix?`<span class="pfx"${a.pcolor?` style="--px:${E(a.pcolor)}"`:''}>${E(a.prefix)}</span> `:''}<span${a.color?` style="color:${E(a.color)}"`:''}>${E(a.username)}</span>`;
 const ICON_SVG={
  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>',

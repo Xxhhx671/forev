@@ -20,6 +20,7 @@ body{background:var(--bg)!important;color:var(--fg)!important;transition:backgro
 .stat-card{background:var(--card2);border-radius:10px;padding:12px;text-align:center}
 .stat-card b{display:block;font-size:22px;color:var(--r)}
 .stat-card span{font-size:11px;color:var(--m)}
+.pfx{display:inline-block;vertical-align:middle;margin-right:5px;padding:1px 7px;border-radius:6px;font-size:.72em;font-weight:800;letter-spacing:.04em;line-height:1.5;white-space:nowrap;color:var(--px,#ffb020);background:color-mix(in srgb,var(--px,#ffb020) 16%,transparent);border:1px solid color-mix(in srgb,var(--px,#ffb020) 55%,transparent);box-shadow:0 0 10px color-mix(in srgb,var(--px,#ffb020) 28%,transparent)}
 .badge-s{background:#f59e0b;color:#000;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:4px}
 .search-box{display:flex;gap:8px;margin-bottom:12px}
 .hwid-row{font-size:12px;padding:6px 0;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
@@ -1567,7 +1568,7 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
   <p style="font-size:12px;color:var(--m);margin-top:8px">Railway: нужен Volume и DB_PATH на нём. Автобэкап — в backups/ рядом с БД (каждые 6ч).</p>
   <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
     <button class="btn sm ghost" onclick="location.href=(window.API_BASE||'')+'/api/admin/backup'">Скачать бэкап БД</button>
-    <label class="btn sm" style="cursor:pointer">Восстановить из файла<input type="file" accept=".db,application/octet-stream" style="display:none" onchange="fmRestoreUpload(this)"></label>
+    <label class="btn sm" style="cursor:pointer">Восстановить из файла<input type="file" style="display:none" onchange="fmRestoreUpload(this)"></label>
   </div>
   <div class="lst" id="fmBakList" style="margin-top:12px"></div>
 </div>
@@ -1647,6 +1648,7 @@ html.light #cab .btn{color:#fff}html.light #cab .btn.ghost{color:#10151f}
     <div class="fld"><input id="sttxt" placeholder=" "><label>Текст статуса</label></div>
     <button class="btn sm" onclick="setStatus()">Обновить статус</button>
     <button class="btn sm ghost" onclick="doBackup()">Бэкап базы</button>
+    <label class="btn sm" style="cursor:pointer">Вставить бэкап<input type="file" style="display:none" onchange="fmRestoreUpload(this)"></label>
   </div>
   <div id="setinfo"></div>
 </div>
@@ -2235,6 +2237,7 @@ let uT;function ul(){clearTimeout(uT);uT=setTimeout(async()=>{try{const r=await 
     <button class="btn sm ghost" onclick="setNote(${x.id})">Заметка</button>
     <button class="btn sm ghost" onclick="toggleRes(${x.id},${x.is_reseller?0:1})">${x.is_reseller?'Снять реселлера':'Реселлер'}</button>
     <button class="btn sm ghost" onclick="toggleTester(${x.id},${x.is_tester?0:1})">${x.is_tester?'Снять tester':'Tester'}</button>
+    <span style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap"><input class="mi" id="px${x.id}" maxlength="16" placeholder="префикс" value="${esc(x.prefix||'')}" style="max-width:120px"><input type="color" id="pc${x.id}" value="${/^#[0-9a-f]{6}$/i.test(x.prefix_color||'')?x.prefix_color:'#ffb020'}" style="width:34px;height:30px;padding:0;border:0;background:none"><button class="btn sm ghost" onclick="setPrefix(${x.id})">Префикс</button></span>
     ${(x.is_reseller||x.is_admin||x.is_super)?`<span style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap">
       <small>Лимит ключей:</small>
       <button class="btn sm ghost" onclick="adjRslLimit(${x.id},-10)">-10</button>
@@ -2252,6 +2255,7 @@ let uT;function ul(){clearTimeout(uT);uT=setTimeout(async()=>{try{const r=await 
 async function setNote(id){const n=prompt('Заметка к пользователю');if(n===null)return;try{await api('/api/admin/note',{id,note:n});toast('Заметка сохранена');ul()}catch(e){toast(e.message,1)}}
 async function setRslLimit(id){try{const v=Number(($('rl'+id)||{}).value||0); await api('/api/admin/resellerlimit',{id,limit:v}); toast('Лимит обновлён'); ul()}catch(e){toast(e.message,1)}}
 async function adjRslLimit(id,delta){try{const el=$('rl'+id); const cur=Number((el&&el.value)||0); const v=Math.max(0,cur+Number(delta||0)); if(el) el.value=v; await api('/api/admin/resellerlimit',{id,limit:v}); toast('Лимит: '+v); ul()}catch(e){toast(e.message,1)}}
+async function setPrefix(id){try{const text=$('px'+id).value.trim();await api('/api/admin/prefix',{id,text,color:$('pc'+id).value});toast(text?'Префикс «'+text+'» выдан':'Префикс снят');ul()}catch(e){toast(e.message,1)}}
 async function toggleTester(id,on){try{await api('/api/admin/tester',{id,enable:!!on});toast(on?'Tester выдан':'Tester снят');ul()}catch(e){toast(e.message,1)}}
 
 async function toggleRes(id,on){try{await api('/api/admin/reseller',{id,enable:!!on});toast(on?'Реселлер включён':'Выключен');ul()}catch(e){toast(e.message,1)}}
@@ -2290,7 +2294,7 @@ async function stt(){try{const r=await api('/api/admin/stats'),L={users:'Пол�
 async function loadSet(){try{const r=await api('/api/admin/settings',{action:'get'});$('setinfo').innerHTML=`Kill-switch: ${r.killswitch==='1'?'ВКЛ':'выкл'} · Техработы: ${r.maintenance==='1'?'ВКЛ':'выкл'} · Блок VPN: отключён (вход лоадера только по HWID) · Статус: ${esc(r.status)} — ${esc(r.status_text)}`;}catch(e){toast(e.message,1)}}
 async function toggleSet(k){try{const cur=await api('/api/admin/settings',{action:'get'});await api('/api/admin/settings',{[k]:cur[k]!=='1'});loadSet();toast('Обновлено')}catch(e){toast(e.message,1)}}
 async function setStatus(){try{await api('/api/admin/settings',{status:'custom',status_text:$('sttxt').value});loadSet();toast('Статус обновлён')}catch(e){toast(e.message,1)}}
-async function doBackup(){try{const r=await fetch(API_BASE+'/api/admin/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='forev-backup.db';a.click();toast('Бэкап скачан')}catch(e){toast('Ошибка бэкапа',1)}}
+async function doBackup(){try{const r=await fetch(API_BASE+'/api/admin/backup',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'{}'});if(!r.ok)throw 0;const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='forev-backup.db';a.click();toast('Бэкап скачан')}catch(e){toast('Ошибка бэкапа',1)}}
 async function loadAud(){try{const r=await api('/api/admin/audit');$('audl').innerHTML=r.list.map(x=>`<div class="it"><div><b>${esc(x.action)}</b> ${ico('arrR',12)} ${esc(x.target||'')} <small>${esc(x.username||'system')} · ${new Date(x.ts).toLocaleString('ru')} · ${esc(x.details||'')} ${x.ip?'· IP '+esc(x.ip):''}</small></div></div>`).join('')||'<p>Пусто</p>'}catch(e){toast(e.message,1)}}
 let chartInst;
 async function loadChart(){try{const r=await api('/api/admin/chart',{days:30});

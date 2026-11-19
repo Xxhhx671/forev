@@ -76,7 +76,7 @@ window.chNode=function(m){
  if(muted().includes(m.username)&&m.uid!==chMe)d.style.display='none';
  const a=document.createElement('div');a.className='ch-av';avFill(a,m.avatar,m.username);a.style.cursor='pointer';a.title='Открыть профиль '+m.username;a.setAttribute('role','button');a.onclick=e=>{e.stopPropagation();openUserProfile(m.username)};
  const c=document.createElement('div');c.className='ch-c';
- const h=document.createElement('div');h.className='ch-n';const nm=document.createElement('span');nm.textContent=m.username;nm.style.cursor='pointer';nm.title='Открыть профиль';nm.onclick=e=>{e.stopPropagation();openUserProfile(m.username)};if(m.color)nm.style.color=m.color;if(m.badge&&FLB[m.badge]){const bd=document.createElement('span');bd.className='fl-bd';bd.innerHTML=flBadge(m.badge,16);h.appendChild(bd)}h.appendChild(nm);
+ const h=document.createElement('div');h.className='ch-n';const nm=document.createElement('span');nm.textContent=m.username;nm.style.cursor='pointer';nm.title='Открыть профиль';nm.onclick=e=>{e.stopPropagation();openUserProfile(m.username)};if(m.color)nm.style.color=m.color;if(m.badge&&FLB[m.badge]){const bd=document.createElement('span');bd.className='fl-bd';bd.innerHTML=flBadge(m.badge,16);h.appendChild(bd)}if(m.prefix){const p=document.createElement('span');p.className='pfx';p.textContent=m.prefix;if(m.pcolor)p.style.setProperty('--px',m.pcolor);h.appendChild(p)}h.appendChild(nm);
  if(m.is_admin||m.role){const t=document.createElement('em');t.textContent=m.is_admin?'ADMIN':m.role==='moderator'?'MOD':'SUPPORT';h.appendChild(t)}
  c.appendChild(h);
  const b=document.createElement('div');b.className='ch-b';
@@ -343,7 +343,7 @@ window.openUserProfile=async function(name){
   const reps=(fx&&fx.recentReplies||[]).map(p=>`<a href="#forum/t/${p.post_id}" onclick="$('pfOv').remove()" style="display:block;margin:4px 0">${esc(p.title)} <small>#${p.id}</small></a>`).join('')||'<small style="color:var(--m)">Нет ответов</small>';
   $('pfIn').innerHTML=`<div class="pf-ban" ${ban}><div class="pf-av">${av}</div></div>
    <div class="pf-body">
-    <h2 ${u.color?`style="color:${u.color}"`:''}>${u.badge&&FLB[u.badge]?`<span class="fl-bd">${flBadge(u.badge,18)}</span> `:''}${esc(u.username)}</h2>
+    <h2 ${u.color?`style="color:${u.color}"`:''}>${u.badge&&FLB[u.badge]?`<span class="fl-bd">${flBadge(u.badge,18)}</span> `:''}${u.prefix?`<span class="pfx"${u.pcolor?` style="--px:${esc(u.pcolor)}"`:''}>${esc(u.prefix)}</span> `:''}${esc(u.username)}</h2>
     <div style="margin:4px 0;font-size:13px">${rank} ${online}</div>
     <small style="color:var(--m)">${u.is_admin?'ADMIN · ':''}${u.is_super?'SUPER · ':''}с ${u.created?new Date(u.created).toLocaleDateString('ru-RU'):'—'}
      ${fu.msgs!=null?' · сообщений: '+fu.msgs:''}${fu.reputation!=null?' · репутация: '+fu.reputation:''}${fu.likes!=null?' · лайков: '+fu.likes:''}</small>
