@@ -10,11 +10,15 @@ module.exports=function(db,H){
  db.exec(`CREATE TABLE IF NOT EXISTS forum_cats(id TEXT PRIMARY KEY,name TEXT,descr TEXT DEFAULT '',grp TEXT DEFAULT 'Community',staff INTEGER DEFAULT 0,sort INTEGER DEFAULT 0);
  CREATE TABLE IF NOT EXISTS forum_likes(user_id INTEGER,kind TEXT,target_id INTEGER,PRIMARY KEY(user_id,kind,target_id));
  CREATE TABLE IF NOT EXISTS forum_files(url TEXT PRIMARY KEY,user_id INTEGER,name TEXT,size INTEGER,img INTEGER DEFAULT 0,ts INTEGER);`);
+
+ run("ALTER TABLE forum_cats ADD COLUMN icon TEXT DEFAULT ''");
  for(const c of ["views INTEGER DEFAULT 0","closed INTEGER DEFAULT 0","edited_ts INTEGER DEFAULT 0","last_ts INTEGER DEFAULT 0","last_uid INTEGER DEFAULT 0","prefix TEXT DEFAULT ''","atts TEXT DEFAULT '[]'"])run('ALTER TABLE forum_posts ADD COLUMN '+c);
  for(const c of ["edited_ts INTEGER DEFAULT 0","atts TEXT DEFAULT '[]'"])run('ALTER TABLE forum_replies ADD COLUMN '+c);
  run('UPDATE forum_posts SET last_ts=ts WHERE last_ts IS NULL OR last_ts=0');
  run('CREATE INDEX IF NOT EXISTS ix_fp_cat ON forum_posts(cat,pinned,last_ts)');
  run('CREATE INDEX IF NOT EXISTS ix_fr_post ON forum_replies(post_id)');
+ const ICONS=['folder','globe','news','update','target','key','code','book','chat','shield','tools','help','bug','image','download','users'];
+ const DEF_ICON={news:'news',updates:'update',global:'globe',cheats:'target',crack:'key',sources:'code',guides:'book'};
  if(!db.prepare('SELECT COUNT(*) c FROM forum_cats').get().c){
   const ins=db.prepare('INSERT INTO forum_cats(id,name,descr,grp,staff,sort) VALUES(?,?,?,?,?,?)');
   [['news','News','Новости проекта','Staff',1,10],['updates','Updates','Обновления и изменения','Staff',1,20],
@@ -22,6 +26,8 @@ module.exports=function(db,H){
    ['crack','Crack','Crack-раздел','Community',0,50],['sources','Исходники читов','Исходники, наработки','Community',0,60],
    ['guides','Гайды','Инструкции и руководства','Community',0,70]].forEach(r=>ins.run(...r));
  }
+
+ for(const [id,ic] of Object.entries(DEF_ICON))run("UPDATE forum_cats SET icon='"+ic+"' WHERE id='"+id+"' AND (icon IS NULL OR icon='')");
 
  // ---------- утилиты ----------
  const PREFIXES=['','Вопрос','Обсуждение','Помощь','Релиз','Гайд','Баг','Идея'];
@@ -31,7 +37,7 @@ module.exports=function(db,H){
  const flood=(uid,key,max,ms)=>{const k=key+uid,n=Date.now(),a=(hits.get(k)||[]).filter(t=>n-t<ms);a.push(n);hits.set(k,a);return a.length>max};
  const viewSeen=new Map();
  const getCat=id=>db.prepare('SELECT * FROM forum_cats WHERE id=?').get(String(id||''));
- const catOut=c=>({id:c.id,name:c.name,descr:c.descr||'',group:c.grp||'Community',staff:!!c.staff,sort:c.sort||0});
+ const catOut=c=>({id:c.id,name:c.name,descr:c.descr||'',group:c.grp||'Community',staff:!!c.staff,sort:c.sort||0,icon:ICONS.includes(c.icon)?c.icon:'folder'});
  const like=s=>'%'+String(s).replace(/[\\%_]/g,m=>'\\'+m)+'%';
  const parseAtts=s=>{try{const a=JSON.parse(s||'[]');return Array.isArray(a)?a:[]}catch{return[]}};
  const resolveAtts=(uid,list,staff)=>{
@@ -60,7 +66,7 @@ module.exports=function(db,H){
 
  // ---------- GET ----------
  const get=(url,qs,u,req,res,C)=>{
-  const send=(o,c=200)=>(C.send(res,c,o,{'Cache-Control':'no-store'}),true);
+  const send=(o,c=200)=>(C.send(res,c,o,{'Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','CDN-Cache-Control':'no-store','Cloudflare-CDN-Cache-Control':'no-store'}),true);
   const staff=H.isStaff(u);
 
   if(url==='/api/forum/cats'){
@@ -221,9 +227,9 @@ module.exports=function(db,H){
    if(!staff)return bad('Только для администраторов',403);
    const name=oneLine(b.name).slice(0,40);if(name.length<2)return bad('Название: минимум 2 символа');
    const descr=oneLine(b.descr).slice(0,140),grp=oneLine(b.group).slice(0,30)||'Community',st=b.staff?1:0,sort=Math.max(-9999,Math.min(9999,+b.sort||0));
-   const ex=b.id?getCat(b.id):null;
-   if(ex)db.prepare('UPDATE forum_cats SET name=?,descr=?,grp=?,staff=?,sort=? WHERE id=?').run(name,descr,grp,st,sort,ex.id);
-   else{const id='c'+Date.now().toString(36)+crypto.randomBytes(2).toString('hex');db.prepare('INSERT INTO forum_cats(id,name,descr,grp,staff,sort) VALUES(?,?,?,?,?,?)').run(id,name,descr,grp,st,sort)}
+   const icon=ICONS.includes(b.icon)?b.icon:'folder',ex=b.id?getCat(b.id):null;
+   if(ex)db.prepare('UPDATE forum_cats SET name=?,descr=?,grp=?,staff=?,sort=?,icon=? WHERE id=?').run(name,descr,grp,st,sort,icon,ex.id);
+   else{const id='c'+Date.now().toString(36)+crypto.randomBytes(2).toString('hex');db.prepare('INSERT INTO forum_cats(id,name,descr,grp,staff,sort,icon) VALUES(?,?,?,?,?,?,?)').run(id,name,descr,grp,st,sort,icon)}
    return ok({ok:true});
   }
   if(url==='/api/forum/cat_del'){

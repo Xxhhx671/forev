@@ -38,6 +38,8 @@ const b32d=s=>{let bits=0,val=0;const o=[];for(const c of String(s).toUpperCase(
 const hotp=(k,c)=>{const b=Buffer.alloc(8);b.writeBigUInt64BE(BigInt(c));const h=crypto.createHmac('sha1',k).update(b).digest(),o=h[19]&15;return String((((h[o]&127)<<24)|(h[o+1]<<16)|(h[o+2]<<8)|h[o+3])%1e6).padStart(6,'0')};
 const codeOk=(secret,code)=>{if(!secret)return false;const k=b32d(secret),t=Math.floor(Date.now()/3e4);code=String(code||'').replace(/\s/g,'');for(let d=-1;d<=1;d++)if(hotp(k,t+d)===code)return true;return false};
 const row=id=>db.prepare('SELECT id,username,is_admin,role,totp_on,totp_secret,chat_muted_until,chat_banned,created,referred_by FROM users WHERE id=?').get(id);
+const BOOT=crypto.randomBytes(3).toString('hex');
+const NOCACHE={'Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','CDN-Cache-Control':'no-store','Cloudflare-CDN-Cache-Control':'no-store','Surrogate-Control':'no-store'};
 const forum=require('./forum-api')(db,{isStaff:u=>isStaff(u),notify:(id,t)=>notify(id,t),flHex:id=>flHex(id),flBadgeId:id=>flBadgeId(id)});
 const api={
  totpOn:id=>!!(row(id)||{}).totp_on,
@@ -94,7 +96,7 @@ api.get=(req,res,C)=>{
   const rows=(full?db.prepare('SELECT * FROM ('+sel+' ORDER BY m.id DESC LIMIT 100) ORDER BY id').all(u.id,u.id,mod?1:0):db.prepare(sel+' AND m.id>? ORDER BY m.id LIMIT 100').all(u.id,u.id,mod?1:0,after))
    .map(r=>({id:r.id,uid:r.uid,text:r.text,ts:r.ts,username:r.username||'удалён',avatar:r.avatar||'',is_admin:!!r.is_admin,role:r.role||'',color:flHex(r.nick_color),badge:flBadgeId(r.badge),to:r.to_user?r.to_name:'',reply:r.reply_to&&r.runame?{id:r.reply_to,username:r.runame,text:String(r.rtext||'').slice(0,80)}:null}));
   const me=row(u.id);
-  return C.send(res,200,{list:rows,full,last:db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs').get().m,me:u.id,me_name:u.username,admin:mod,online:seen.size,muted:me.chat_muted_until>now?me.chat_muted_until:0,banned:!!me.chat_banned,slow:+(get('chat_slow')||0)},{'Cache-Control':'no-store'}),true;
+  return C.send(res,200,{list:rows,full,last:db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_msgs').get().m,me:u.id,me_name:u.username,admin:mod,online:seen.size,muted:me.chat_muted_until>now?me.chat_muted_until:0,banned:!!me.chat_banned,slow:+(get('chat_slow')||0),inst:BOOT},NOCACHE),true;
  }
  
  // ---- Forum / Profile GET ----
