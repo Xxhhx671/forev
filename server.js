@@ -1,4 +1,4 @@
-// FOREV EXT вЂ” СЃРµСЂРІРµСЂ Р±РµР· Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№. РќСѓР¶РµРЅ Node.js 22.5+  (Р·Р°РїСѓСЃРє: node server.js)
+﻿// FOREV EXT вЂ” СЃРµСЂРІРµСЂ Р±РµР· Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№. РќСѓР¶РµРЅ Node.js 22.5+  (Р·Р°РїСѓСЃРє: node server.js)
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
 const {DatabaseSync}=require('node:sqlite');
 const DBP=process.env.DB_PATH||path.join(__dirname,'forev.db');
@@ -697,7 +697,7 @@ function verifyCaptcha(id,answer,ip){
   return String(answer??'').trim()===c.ans;
 }
 const send=(res,code,obj,h={})=>{res.writeHead(code,{'Content-Type':'application/json','X-Content-Type-Options':'nosniff',...h});res.end(JSON.stringify(obj))};
-const body=req=>new Promise((ok,no)=>{let d='';req.on('data',c=>{d+=c;if(d.length>1e4){no();req.destroy()}});req.on('end',()=>{try{ok(JSON.parse(d||'{}'))}catch{no()}})});
+const body=(req,max=1e4)=>new Promise((ok,no)=>{let d='';req.on('data',c=>{d+=c;if(d.length>max){no();req.destroy()}});req.on('end',()=>{try{ok(JSON.parse(d||'{}'))}catch{no()}})});
 const cookie=req=>Object.fromEntries((req.headers.cookie||'').split(/;\s*/).map(c=>c.split('=')));
 const authUser=req=>{
   const t=cookie(req).sid;if(!t)return null;
@@ -760,6 +760,7 @@ const srv=http.createServer(async(req,res)=>{
             headers['Set-Cookie']=`forev_tid=${tid}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000${SEC}`;
           }
         }
+        if(p.startsWith('/uploads/')){headers['X-Content-Type-Options']='nosniff';if(!/^\.(png|jpe?g|gif|webp)$/i.test(path.extname(f)))headers['Content-Disposition']='attachment'}
         res.writeHead(200,headers);
         return res.end(fs.readFileSync(f));
       }
@@ -903,6 +904,11 @@ const srv=http.createServer(async(req,res)=>{
         return send(res,200,{ok:true,size:buf.length,sha256:sha,has_placeholder:buf.indexOf(Buffer.from(DL_PLACEHOLDER,'ascii'))!==-1});
       }catch(e){return send(res,500,{error:'Не удалось сохранить файл: '+(e.code||e.message)})}
     }
+    if(req.method==='POST'&&req.url.split('?')[0]==='/api/forum/upload'){
+      const fu=authUser(req);
+      if(!fu){req.resume();return send(res,401,{error:'Не авторизован'})}
+      return await ext.forumUpload(req,res,{send},fu);
+    }
     if(req.method==='GET'&&(req.url.startsWith('/api/chat/list')||req.url==='/api/public/info'||req.url.startsWith('/api/forum/')||req.url.startsWith('/api/profile/view'))&&ext.get(req,res,{send,authUser}))return;
     if(req.method==='GET'&&req.url.startsWith('/api/chat/list')){
       const u=authUser(req);if(!u)return send(res,401,{error:'Не авторизован'},{'Cache-Control':'no-store'});
@@ -918,7 +924,7 @@ const srv=http.createServer(async(req,res)=>{
     if(req.method!=='POST'||!req.url.startsWith('/api/'))return send(res,404,{error:'Не найдено'});
     const url=req.url.split('?')[0],strict=['/api/register','/api/login','/api/redeem','/api/client/auth','/api/admin/genkey','/api/password','/api/login/2fa'].includes(url);
     if(strict?rl('a'+ip,12,3e5):rl('g'+ip,100,3e5))return send(res,429,{error:'Слишком много попыток, подождите'});
-    const b=await body(req);
+    const b=await body(req,url.startsWith('/api/forum/')?7e4:1e4);
     const bad=(m,c=400)=>send(res,c,{error:m});
     const tokOk=()=>{const t=process.env.ADMIN_TOKEN||'',h=String(req.headers['x-admin-token']||''),A=Buffer.from(t),B=Buffer.from(h);return t&&A.length===B.length&&crypto.timingSafeEqual(A,B)};
 

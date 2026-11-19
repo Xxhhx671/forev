@@ -38,6 +38,7 @@ const b32d=s=>{let bits=0,val=0;const o=[];for(const c of String(s).toUpperCase(
 const hotp=(k,c)=>{const b=Buffer.alloc(8);b.writeBigUInt64BE(BigInt(c));const h=crypto.createHmac('sha1',k).update(b).digest(),o=h[19]&15;return String((((h[o]&127)<<24)|(h[o+1]<<16)|(h[o+2]<<8)|h[o+3])%1e6).padStart(6,'0')};
 const codeOk=(secret,code)=>{if(!secret)return false;const k=b32d(secret),t=Math.floor(Date.now()/3e4);code=String(code||'').replace(/\s/g,'');for(let d=-1;d<=1;d++)if(hotp(k,t+d)===code)return true;return false};
 const row=id=>db.prepare('SELECT id,username,is_admin,role,totp_on,totp_secret,chat_muted_until,chat_banned,created,referred_by FROM users WHERE id=?').get(id);
+const forum=require('./forum-api')(db,{isStaff:u=>isStaff(u),notify:(id,t)=>notify(id,t),flHex:id=>flHex(id),flBadgeId:id=>flBadgeId(id)});
 const api={
  totpOn:id=>!!(row(id)||{}).totp_on,
  totpCheck:(id,code)=>{const r=row(id);return !!(r&&r.totp_on&&codeOk(r.totp_secret,code))},
@@ -100,23 +101,7 @@ api.get=(req,res,C)=>{
  if(url.startsWith('/api/forum/')||url==='/api/profile/view'){
   const u=C.authUser(req);if(!u)return C.send(res,401,{error:'Не авторизован'}),true;
   const qs=new URL(req.url,'http://x').searchParams;
-  if(url==='/api/forum/cats'){
-   const counts=Object.fromEntries(db.prepare('SELECT cat,COUNT(*) c FROM forum_posts GROUP BY cat').all().map(r=>[r.cat,r.c]));
-   return C.send(res,200,{cats:Object.entries(FORUM_CATS).map(([id,c])=>({id,name:c.name,staff:!!c.staff,group:c.group,count:counts[id]||0})),staff:isStaff(u)}),true;
-  }
-  if(url==='/api/forum/list'){
-   const cat=String(qs.get('cat')||'').slice(0,40);if(!FORUM_CATS[cat])return C.send(res,400,{error:'Категория'}),true;
-   const rows=db.prepare('SELECT p.id,p.cat,p.title,p.body,p.ts,p.pinned,p.user_id,u.username,u.avatar,u.is_admin,(SELECT COUNT(*) FROM forum_replies r WHERE r.post_id=p.id) replies FROM forum_posts p LEFT JOIN users u ON u.id=p.user_id WHERE p.cat=? ORDER BY p.pinned DESC,p.id DESC LIMIT 80').all(cat)
-    .map(r=>({id:r.id,cat:r.cat,title:r.title,body:r.body,ts:r.ts,pinned:!!r.pinned,uid:r.user_id,username:r.username||'?',avatar:r.avatar||'',is_admin:!!r.is_admin,replies:r.replies}));
-   return C.send(res,200,{list:rows,cat,meta:FORUM_CATS[cat],staff:isStaff(u)}),true;
-  }
-  if(url==='/api/forum/post'){
-   const id=+(qs.get('id')||0);const p=db.prepare('SELECT p.*,u.username,u.avatar,u.is_admin FROM forum_posts p LEFT JOIN users u ON u.id=p.user_id WHERE p.id=?').get(id);
-   if(!p)return C.send(res,404,{error:'Не найдено'}),true;
-   const replies=db.prepare('SELECT r.id,r.body,r.ts,r.user_id,u.username,u.avatar,u.is_admin FROM forum_replies r LEFT JOIN users u ON u.id=r.user_id WHERE r.post_id=? ORDER BY r.id').all(id)
-    .map(r=>({id:r.id,body:r.body,ts:r.ts,uid:r.user_id,username:r.username||'?',avatar:r.avatar||'',is_admin:!!r.is_admin}));
-   return C.send(res,200,{post:{id:p.id,cat:p.cat,title:p.title,body:p.body,ts:p.ts,pinned:!!p.pinned,uid:p.user_id,username:p.username,avatar:p.avatar||'',is_admin:!!p.is_admin},replies,staff:isStaff(u)}),true;
-  }
+  if(url.startsWith('/api/forum/'))return forum.get(url,qs,u,req,res,C),true;
   if(url==='/api/profile/view'){
    const name=String(qs.get('u')||'').trim().replace(/^@/,'');
    const t=name?db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,is_super,role,nick_color,badge,fl FROM users WHERE username=?').get(name):null;
@@ -217,46 +202,7 @@ if(url==='/api/fl/equip'){
 }
 
 // ---- forum / profile / upload (must be BEFORE admin gate) ----
-if(url==='/api/forum/cats'){
-  const counts=Object.fromEntries(db.prepare('SELECT cat,COUNT(*) c FROM forum_posts GROUP BY cat').all().map(r=>[r.cat,r.c]));
-  return ok({cats:Object.entries(FORUM_CATS).map(([id,c])=>({id,name:c.name,staff:!!c.staff,group:c.group,count:counts[id]||0})),staff:isStaff(me)});
- }
- if(url==='/api/forum/list'){
-  const cat=String(b.cat||'').slice(0,40);if(!FORUM_CATS[cat])return bad('Категория');
-  const rows=db.prepare('SELECT p.id,p.cat,p.title,p.body,p.ts,p.pinned,p.user_id,u.username,u.avatar,u.is_admin,(SELECT COUNT(*) FROM forum_replies r WHERE r.post_id=p.id) replies FROM forum_posts p LEFT JOIN users u ON u.id=p.user_id WHERE p.cat=? ORDER BY p.pinned DESC,p.id DESC LIMIT 80').all(cat)
-   .map(r=>({id:r.id,cat:r.cat,title:r.title,body:r.body,ts:r.ts,pinned:!!r.pinned,uid:r.user_id,username:r.username||'?',avatar:r.avatar||'',is_admin:!!r.is_admin,replies:r.replies}));
-  return ok({list:rows,cat,meta:FORUM_CATS[cat],staff:isStaff(me)});
- }
- if(url==='/api/forum/get'){
-  const id=+b.id;const p=db.prepare('SELECT p.*,u.username,u.avatar,u.is_admin FROM forum_posts p LEFT JOIN users u ON u.id=p.user_id WHERE p.id=?').get(id);
-  if(!p)return bad('Не найдено',404);
-  const replies=db.prepare('SELECT r.id,r.body,r.ts,r.user_id,u.username,u.avatar,u.is_admin FROM forum_replies r LEFT JOIN users u ON u.id=r.user_id WHERE r.post_id=? ORDER BY r.id').all(id)
-   .map(r=>({id:r.id,body:r.body,ts:r.ts,uid:r.user_id,username:r.username||'?',avatar:r.avatar||'',is_admin:!!r.is_admin}));
-  return ok({post:{id:p.id,cat:p.cat,title:p.title,body:p.body,ts:p.ts,pinned:!!p.pinned,uid:p.user_id,username:p.username,avatar:p.avatar||'',is_admin:!!p.is_admin},replies,staff:isStaff(me)});
- }
- if(url==='/api/forum/create'){
-  const cat=String(b.cat||'');const meta=FORUM_CATS[cat];if(!meta)return bad('Категория');
-  if(meta.staff&&!isStaff(me))return bad('Только staff (код '+STAFF_CODE+')',403);
-  const title=slim(b.title).slice(0,120),body=slim(b.body).slice(0,8000);if(!title||!body)return bad('Заголовок и текст');
-  const r=db.prepare('INSERT INTO forum_posts(cat,user_id,title,body,ts,pinned) VALUES(?,?,?,?,?,0)').run(cat,me.id,title,body,Date.now());
-  return ok({ok:true,id:Number(r.lastInsertRowid)});
- }
- if(url==='/api/forum/reply'){
-  const pid=+b.post_id;const p=db.prepare('SELECT id,cat FROM forum_posts WHERE id=?').get(pid);if(!p)return bad('Пост не найден',404);
-  const body=slim(b.body).slice(0,4000);if(!body)return bad('Пусто');
-  const r=db.prepare('INSERT INTO forum_replies(post_id,user_id,body,ts) VALUES(?,?,?,?)').run(pid,me.id,body,Date.now());
-  return ok({ok:true,id:Number(r.lastInsertRowid)});
- }
- if(url==='/api/forum/del'){
-  const id=+b.id;const p=db.prepare('SELECT * FROM forum_posts WHERE id=?').get(id);if(!p)return bad('Нет',404);
-  if(p.user_id!==me.id&&!isStaff(me))return bad('Нет доступа',403);
-  db.prepare('DELETE FROM forum_replies WHERE post_id=?').run(id);db.prepare('DELETE FROM forum_posts WHERE id=?').run(id);return ok({ok:true});
- }
- if(url==='/api/forum/del_reply'){
-  const id=+b.id;const r=db.prepare('SELECT * FROM forum_replies WHERE id=?').get(id);if(!r)return bad('Нет',404);
-  if(r.user_id!==me.id&&!isStaff(me))return bad('Нет доступа',403);
-  db.prepare('DELETE FROM forum_replies WHERE id=?').run(id);return ok({ok:true});
- }
+if(url.startsWith('/api/forum/'))return forum.post(url,b,me,req,res,C);
  if(url==='/api/profile/view'){
   const name=String(b.u||b.username||'').trim().replace(/^@/,'');
   const t=name?db.prepare('SELECT id,username,avatar,banner,bio,created,is_admin,is_super,role,nick_color,badge,fl FROM users WHERE username=?').get(name):null;
@@ -425,5 +371,6 @@ api.login2fa=(b,req,res,C)=>{
  pend.delete(b.pt);const ip=C.reqIp(req);api.onLogin(r.id,ip);C.logLogin(r.id,ip,'web',1);
  return C.send(res,200,{ok:true},C.login(res,r.id,req)),true;
 };
+api.forumUpload=forum.upload;
 return api;
 };
