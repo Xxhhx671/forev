@@ -127,6 +127,17 @@ const st=document.createElement('style');st.textContent=`
 .fx-pa{padding:18px 12px;text-align:center;background:var(--fx-bg2);border-right:1px solid var(--fx-ln);font-size:12.5px;color:var(--fx-mu)}
 .fx-pa .fx-avw{margin:0 auto 10px}.fx-un{display:block;font-size:14.5px;font-weight:700;color:var(--fg);cursor:pointer;word-break:break-word}.fx-un:hover{color:var(--fx-ac)}
 .fx-role{display:inline-block;margin:6px 0;padding:2px 9px;border-radius:6px;font-size:10.5px;font-weight:800;letter-spacing:.5px;background:rgba(59,158,255,.15);color:var(--fx-ac);text-transform:uppercase}
+.fx-rank{font-size:11px;font-weight:700;margin-top:2px}
+.fx-best{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(52,211,153,.2);color:#34d399}
+.fx-best-post{border-color:rgba(52,211,153,.45)}
+.fx-solved{color:#34d399;font-weight:700}
+.fx-poll{margin:12px 0;padding:14px;border:1px solid var(--fx-ln);border-radius:12px;background:rgba(0,0,0,.15)}
+.fx-poll-q{margin-bottom:10px}
+.fx-poll-opt{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap}
+.fx-poll-bar{flex:1;min-width:80px;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.fx-poll-bar i{display:block;height:100%;background:var(--fx-ac);border-radius:4px}
+.fx-poll-total{margin-top:8px;font-size:12px;color:var(--fx-mu)}
+
 .fx-pc{padding:14px 18px;min-width:0;display:flex;flex-direction:column}
 .fx-ph{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--fx-mu);padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid var(--fx-ln)}
 .fx-body{line-height:1.6;font-size:14.5px;word-break:break-word;overflow-wrap:anywhere;flex:1}
@@ -396,7 +407,11 @@ async function vHome(my){
   });
   h+='</div>';
  });
- h+=`<div class="fx-stats"><span>Тем: <b>${j.stats.threads}</b></span><span>Сообщений: <b>${j.stats.posts}</b></span><span>Участников: <b>${j.stats.members}</b></span></div>`;
+ h+=`<div class="fx-stats"><span>Тем: <b>${j.stats.threads}</b></span><span>Сообщений: <b>${j.stats.posts}</b></span><span>Участников: <b>${j.stats.members}</b></span></div>
+  <div class="fx-bar" style="margin-top:10px">
+   <button class="fx-b g sm" data-a="mine">Мои темы / ответы / подписки</button>
+   <button class="fx-b g sm" data-a="markread">Отметить подписки прочитанными</button>
+  </div>`;
  shell().innerHTML=h;hydrate(R());top();
 }
 
@@ -408,15 +423,15 @@ async function vCat(my,p){
  const c=j.cat;
  let h=bcHtml([{t:'Форум',h:'#forum'},{t:c.group},{t:c.name}])+
  `<div class="fx-bar"><h3>${E(c.name)}${c.staff?' <span class="fx-tag ro">только чтение</span>':''}<small>${E(c.descr)}</small></h3>
-   ${j.canCreate?`<button class="fx-b" data-a="newthread" data-id="${E(c.id)}">＋ Создать тему</button>`:'<span style="color:var(--m);font-size:13px">Темы здесь создают только администраторы</span>'}</div>
+   ${j.canCreate?`<button class="fx-b" data-a="newthread" data-id="${E(c.id)}">＋ Создать тему</button>`:'<span style="color:var(--m);font-size:13px">Темы здесь создают только администраторы</span>'}<button class="fx-b g sm" data-a="sub" data-k="cat" data-id="${E(c.id)}">${j.subbed?'★ Отписаться':'☆ Подписаться'}</button></div>
   <div class="fx-bar"><form class="fx-row" data-a="catfilter" style="flex:1"><input class="fx-in" name="q" value="${E(S.q)}" placeholder="Поиск по темам раздела…" style="flex:1;max-width:340px">
-   <select class="fx-sel" name="sort"><option value="last"${S.sort==='last'?' selected':''}>Последняя активность</option><option value="new"${S.sort==='new'?' selected':''}>Новые темы</option><option value="replies"${S.sort==='replies'?' selected':''}>По ответам</option><option value="views"${S.sort==='views'?' selected':''}>По просмотрам</option></select>
+   <select class="fx-sel" name="sort"><option value="last"${S.sort==='last'?' selected':''}>Последняя активность</option><option value="new"${S.sort==='new'?' selected':''}>Новые темы</option><option value="replies"${S.sort==='replies'?' selected':''}>По ответам</option><option value="views"${S.sort==='views'?' selected':''}>По просмотрам</option><option value="unsolved"${S.sort==='unsolved'?' selected':''}>Нерешённые</option><option value="poll"${S.sort==='poll'?' selected':''}>С опросом</option></select>
    <button class="fx-b g sm">Применить</button></form><small style="color:var(--m)">${j.total} ${plural(j.total,'тема','темы','тем')}</small></div>`;
  if(!j.list.length)h+=`<div class="fx-empty">${S.q?'Ничего не найдено':'В этом разделе пока нет тем'}</div>`;
  else{
   h+='<div class="fx-grp">'+j.list.map(t=>`<div class="fx-th${t.pinned?' pinned':''}" data-a="thread" data-id="${t.id}">
    ${av(t.author,42)}
-   <div class="fx-tm">${t.pinned?'<span class="fx-pin" title="Закреплено">📌</span>':''}${t.closed?'<span class="fx-lock" title="Закрыта">🔒</span>':''}${t.prefix?`<span class="fx-pfx">${E(t.prefix)}</span>`:''}<b>${E(t.title)}</b>
+   <div class="fx-tm">${t.pinned?'<span class="fx-pin" title="Закреплено">📌</span>':''}${t.closed?'<span class="fx-lock" title="Закрыта">🔒</span>':''}${t.solved?'<span class="fx-solved" title="Решено">✓</span> ':''}${t.prefix?`<span class="fx-pfx">${E(t.prefix)}</span>`:''}<b>${E(t.title)}</b>
     <small>${E(t.author.username)} · ${dtf(t.ts)}</small></div>
    <div class="fx-ts"><b>${nfmt(t.replies)}</b><small>ответов</small></div><div class="fx-ts"><b>${nfmt(t.views)}</b><small>просмотров</small></div>
    <div class="fx-tl"><b>${E(t.last_name)}</b>${ago(t.last_ts)}</div></div>`).join('')+'</div>';
@@ -440,17 +455,23 @@ async function vSearch(my,p){
 const RAW={};
 function postHtml(p,kind,n,staff,closedBlock){
  const a=p.author,key=kind+p.id;RAW[key]={who:a.username,body:p.body,title:p.title,prefix:p.prefix,atts:p.atts};
- return `<article class="fx-p" id="fp-${key}" data-key="${key}">
+ const rankHtml=a.rank?`<div class="xtra fx-rank" style="color:${E(a.rank_color||'#9ca3af')}">${E(a.rank)}</div>`:'';
+ const repHtml=typeof a.reputation==='number'?`<div class="xtra">Репутация: ${a.reputation}</div>`:'';
+ const bestBadge=p.is_best?'<span class="fx-best">✓ Лучший ответ</span>':'';
+ return `<article class="fx-p${p.is_best?' fx-best-post':''}" id="fp-${key}" data-key="${key}">
   <aside class="fx-pa">${av(a,64)}<div><span class="fx-un" data-a="profile" data-u="${E(a.username)}">${nameHtml(a)}</span>
-   ${roleOf(a)?`<span class="fx-role">${roleOf(a)}</span>`:''}
-   <div class="xtra">Сообщений: ${a.msgs||0}</div>${a.since?`<div class="xtra">С нами с ${new Date(a.since).toLocaleDateString('ru-RU')}</div>`:''}</div></aside>
-  <div class="fx-pc"><div class="fx-ph"><span>${dtf(p.ts)}</span><span>${kind==='p'?'Тема':'#'+n}</span></div>
+   ${roleOf(a)?`<span class="fx-role">${roleOf(a)}</span>`:''}${rankHtml}
+   <div class="xtra">Сообщений: ${a.msgs||0}</div>${repHtml}${a.since?`<div class="xtra">С нами с ${new Date(a.since).toLocaleDateString('ru-RU')}</div>`:''}</div></aside>
+  <div class="fx-pc"><div class="fx-ph"><span>${dtf(p.ts)}</span><span>${kind==='p'?'Тема':'#'+n}</span>${bestBadge}</div>
    <div class="fx-body">${bb(p.body)}</div>${attsHtml(p.atts)}
    ${p.edited_ts?`<div class="fx-edn">Изменено ${dtf(p.edited_ts)}</div>`:''}
    <div class="fx-pf"><button class="lk${p.liked?' on':''}" data-a="like" data-k="${kind}" data-id="${p.id}">♥ <span>${p.likes||0}</span></button>
-    ${closedBlock?'':`<button data-a="quote" data-key="${key}">❝ Цитировать</button>`}<span class="sp"></span>
-    ${p.can.edit?`<button data-a="edit" data-key="${key}" data-k="${kind}" data-id="${p.id}">✎ Изменить</button>`:''}
-    ${p.can.del?`<button data-a="del" data-k="${kind}" data-id="${p.id}">✕ Удалить</button>`:''}</div></div></article>`;
+    ${closedBlock?'':`<button data-a="quote" data-key="${key}">❝ Цитировать</button>`}
+    <button data-a="report" data-k="${kind}" data-id="${p.id}">⚑ Пожаловаться</button>
+    ${kind==='r'&&CUR&&CUR.post&&CUR.post.can&&CUR.post.can.solve?`<button data-a="solve" data-pid="${CUR.post.id}" data-rid="${p.id}">✓ Решение</button>`:''}
+    <span class="sp"></span>
+    ${p.can&&p.can.edit?`<button data-a="edit" data-key="${key}" data-k="${kind}" data-id="${p.id}">✎ Изменить</button>`:''}
+    ${p.can&&p.can.del?`<button data-a="del" data-k="${kind}" data-id="${p.id}">✕ Удалить</button>`:''}</div></div></article>`;
 }
 let REPLY=null,CUR=null,PENDING_SCROLL=false;
 async function vThread(my,p){
@@ -459,7 +480,16 @@ async function vThread(my,p){
  CUR=j;const t=j.post,c=j.cat;ME=Object.assign({},j.me,{staff:j.staff});
  let h=bcHtml([{t:'Форум',h:'#forum'},{t:c.group},{t:c.name,h:'#forum/c/'+encodeURIComponent(c.id)},{t:t.title.length>60?t.title.slice(0,60)+'…':t.title}])+
   `<h2 class="fx-h">${t.pinned?'📌 ':''}${t.closed?'🔒 ':''}${t.prefix?`<span class="fx-pfx">${E(t.prefix)}</span>`:''}${E(t.title)}</h2>
-  <div class="fx-meta">${E(t.author.username)} · ${dtf(t.ts)} · ${nfmt(t.views)} ${plural(t.views,'просмотр','просмотра','просмотров')} · ${j.total} ${plural(j.total,'ответ','ответа','ответов')}</div>`;
+  <div class="fx-meta">${E(t.author.username)} · ${dtf(t.ts)} · ${nfmt(t.views)} ${plural(t.views,'просмотр','просмотра','просмотров')} · ${j.total} ${plural(j.total,'ответ','ответа','ответов')}${t.solved?' · <span class="fx-solved">✓ Решено</span>':''}</div>
+  <div class="fx-actions" style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap">
+   <button class="fx-b g sm" data-a="sub" data-k="post" data-id="${t.id}">${j.subbed?'★ Отписаться':'☆ Подписаться'}</button>
+   ${t.can&&t.can.solve?`<button class="fx-b g sm" data-a="solve" data-pid="${t.id}" data-rid="0">${t.solved?'Снять «Решено»':'Отметить решённой'}</button>`:''}
+  </div>`;
+ // poll
+ if(j.poll){const pl=j.poll;h+=`<div class="fx-poll"><div class="fx-poll-q"><b>📊 ${E(pl.question)}</b></div>`+
+  pl.options.map(o=>`<div class="fx-poll-opt"><button class="fx-b g sm" data-a="pollvote" data-pid="${pl.id}" data-oid="${o.id}" ${pl.closed||pl.my.includes(o.id)?'disabled':''}>${E(o.text)}</button>
+   <span class="fx-poll-bar"><i style="width:${o.pct}%"></i></span> <small>${o.votes} (${o.pct}%)</small></div>`).join('')+
+  `<div class="fx-poll-total">Всего голосов: ${pl.total}${pl.closed?' · закрыт':''}</div></div>`}
  if(j.staff)h+=`<div class="fx-mod"><b>Модерация:</b>
   <button class="fx-b g sm" data-a="mod" data-m="${t.pinned?'unpin':'pin'}" data-id="${t.id}">${t.pinned?'Открепить':'Закрепить'}</button>
   <button class="fx-b g sm" data-a="mod" data-m="${t.closed?'open':'close'}" data-id="${t.id}">${t.closed?'Открыть тему':'Закрыть тему'}</button>
@@ -467,7 +497,7 @@ async function vThread(my,p){
   <button class="fx-b d sm" data-a="del" data-k="p" data-id="${t.id}">Удалить тему</button></div>`;
  const cb=!j.canReply;
  if(j.page===1)h+=postHtml(t,'p',0,j.staff,cb);
- h+=j.replies.map(r=>postHtml(r,'r',r.n+1,j.staff,cb)).join('');
+ h+=j.replies.map((r,i)=>postHtml(r,'r',(j.page-1)*j.per+i+1,j.staff,cb)).join('');
  h+=pager(j.page,j.pages,'tpage');
  h+='<div id="fxEnd"></div>';
  if(j.canReply)h+='<div style="margin-top:16px"><h4 style="margin:0 0 8px">Ответить в теме</h4><div id="fxReply"></div></div>';
@@ -492,10 +522,29 @@ async function vNew(my,p){
  shell().innerHTML=bcHtml([{t:'Форум',h:'#forum'},{t:c.group},{t:c.name,h:'#forum/c/'+encodeURIComponent(c.id)},{t:'Новая тема'}])+
   `<div class="fx-bar"><h3>Новая тема в «${E(c.name)}»</h3></div>
   <div class="fx-form"><div class="fx-row"><select class="fx-sel" id="fxPfx">${j.prefixes.map(x=>`<option value="${E(x)}">${x?E(x):'Без префикса'}</option>`).join('')}</select>
-   <input class="fx-in" id="fxTitle" placeholder="Заголовок темы" maxlength="120" style="flex:1;min-width:200px"></div><div id="fxNew"></div></div>`;
+   <input class="fx-in" id="fxTitle" placeholder="Заголовок темы" maxlength="120" style="flex:1;min-width:200px"></div>
+   <details class="fx-poll-create" style="margin:10px 0;padding:10px;border:1px solid var(--fx-ln);border-radius:10px">
+    <summary style="cursor:pointer;font-weight:700">📊 Добавить опрос (необязательно)</summary>
+    <input class="fx-in" id="fxPollQ" placeholder="Вопрос опроса" maxlength="200" style="width:100%;margin:8px 0">
+    <div id="fxPollOpts">
+     <input class="fx-in fx-po" placeholder="Вариант 1" maxlength="100" style="width:100%;margin:4px 0">
+     <input class="fx-in fx-po" placeholder="Вариант 2" maxlength="100" style="width:100%;margin:4px 0">
+    </div>
+    <button type="button" class="fx-b g sm" id="fxPollAdd" style="margin:6px 0">+ Вариант</button>
+    <label class="fx-chk" style="display:block;margin-top:6px"><input type="checkbox" id="fxPollMulti"> Можно выбрать несколько вариантов</label>
+   </details>
+   <div id="fxNew"></div></div>`;
+ const addBtn=$('fxPollAdd');if(addBtn)addBtn.onclick=()=>{const box=$('fxPollOpts');if(!box||box.children.length>=10)return;const i=document.createElement('input');i.className='fx-in fx-po';i.placeholder='Вариант '+(box.children.length+1);i.maxLength=100;i.style.cssText='width:100%;margin:4px 0';box.appendChild(i)};
  mkEditor($('fxNew'),{placeholder:'Текст темы…',draftKey:'n'+c.id,submitLabel:'Создать тему',onSubmit:async(text,atts)=>{
   const title=$('fxTitle').value.trim();if(title.length<3){$('fxTitle').focus();throw new Error('Введите заголовок (минимум 3 символа)')}
-  const r=await post('/api/forum/create',{cat:c.id,title,prefix:$('fxPfx').value,body:text,atts});
+  const payload={cat:c.id,title,prefix:$('fxPfx').value,body:text,atts};
+  const pq=($('fxPollQ')&&$('fxPollQ').value||'').trim();
+  if(pq){
+   const opts=[...document.querySelectorAll('#fxPollOpts .fx-po')].map(el=>el.value.trim()).filter(Boolean);
+   if(opts.length<2)throw new Error('Для опроса нужно минимум 2 варианта');
+   payload.poll={question:pq,options:opts,multi:!!($('fxPollMulti')&&$('fxPollMulti').checked)};
+  }
+  const r=await post('/api/forum/create',payload);
   toast('Тема создана');location.replace('#forum/t/'+r.id);
  }});
  top();$('fxTitle').focus();
@@ -543,6 +592,39 @@ const actions={
  catdel:async d=>{
   if(!confirm('Удалить раздел? (возможно только если в нём нет тем)'))return;
   try{await post('/api/forum/cat_del',{id:d.id});toast('Раздел удалён');route()}catch(e){toast(e.message,1)}
+ },
+ report:async d=>{
+  const reason=prompt('Причина жалобы (минимум 5 символов):');
+  if(!reason||reason.trim().length<5)return;
+  try{await post('/api/forum/report',{kind:d.k,id:+d.id,reason:reason.trim()});toast('Жалоба отправлена')}catch(e){toast(e.message,1)}
+ },
+ sub:async(d,el)=>{
+  try{const r=await post('/api/forum/sub',{kind:d.k,id:d.id});
+   if(el)el.textContent=r.subbed?'★ Отписаться':'☆ Подписаться';
+   toast(r.subbed?'Подписка оформлена':'Подписка отменена')}catch(e){toast(e.message,1)}
+ },
+ solve:async d=>{
+  try{await post('/api/forum/solve',{post_id:+d.pid,reply_id:+d.rid||0,solved:d.rid?1:undefined});toast('Готово');route()}catch(e){toast(e.message,1)}
+ },
+ pollvote:async d=>{
+  try{await post('/api/forum/poll_vote',{poll_id:+d.pid,opt_id:+d.oid});toast('Голос учтён');route()}catch(e){toast(e.message,1)}
+ },
+ markread:async()=>{
+  try{await gj('/api/forum/mark_read');if(typeof forumUnread!=='undefined')forumUnread=0;if(typeof menu==='function')menu();toast('Подписки отмечены прочитанными')}catch(e){toast(e.message,1)}
+ },
+ mine:async()=>{
+  loading();
+  try{
+   const j=await gj('/api/forum/mine');
+   let h=bcHtml([{t:'Форум',h:'#forum'},{t:'Моё'}])+'<h2 class="fx-h">Мои темы</h2><div class="fx-grp">';
+   h+=(j.posts&&j.posts.length?j.posts.map(p=>`<div class="fx-th" data-a="thread" data-id="${p.id}"><div class="fx-tm"><b>${E(p.title)}</b><small>${dtf(p.ts)}${p.solved?' · ✓':''}</small></div></div>`).join(''):'<div class="fx-empty">Нет тем</div>');
+   h+='</div><h2 class="fx-h">Мои ответы</h2><div class="fx-grp">';
+   h+=(j.replies&&j.replies.length?j.replies.map(p=>`<div class="fx-th" data-a="thread" data-id="${p.id}"><div class="fx-tm"><b>${E(p.title)}</b><small>${dtf(p.ts)}</small></div></div>`).join(''):'<div class="fx-empty">Нет ответов</div>');
+   h+='</div><h2 class="fx-h">Подписки</h2><div class="fx-grp">';
+   h+=(j.subs&&j.subs.length?j.subs.map(p=>`<div class="fx-th" data-a="thread" data-id="${p.id}"><div class="fx-tm"><b>${E(p.title)}</b><small>${ago(p.last_ts)}</small></div></div>`).join(''):'<div class="fx-empty">Нет подписок</div>');
+   h+='</div>';
+   shell().innerHTML=h;hydrate(R());top();
+  }catch(e){shell().innerHTML='<div class="fx-err">'+E(e.message)+'</div>'}
  }
 };
 function catForm(c){

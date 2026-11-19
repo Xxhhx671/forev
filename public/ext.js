@@ -329,18 +329,32 @@ window.openUserProfile=async function(name){
  try{
   const r=await post('/api/profile/view',{u:name});if(r.error)throw new Error(r.error);
   const u=r.user;
+  let fx=null;
+  try{const fr=await fetch((window.API_BASE||'')+'/api/forum/user?id='+u.id,{credentials:'include'});fx=await fr.json();if(fx.error)fx=null}catch{}
   const ban=u.banner?`style="background-image:url('${esc(u.banner).replace(/'/g,'')}')"`:'';
   const av=u.avatar?`<img src="${esc(u.avatar)}" alt="">`:(u.username[0]||'?').toUpperCase();
   const likeOn=r.myVote===1?' on-like':'',disOn=r.myVote===-1?' on-dis':'';
+  const fu=fx&&fx.user||{};
+  const rank=fu.rank?`<span style="color:${esc(fu.rank_color||'#9ca3af')};font-weight:700">${esc(fu.rank)}</span>`:'';
+  const online=fu.last_online?(Date.now()-fu.last_online<300000?'<span style="color:#34d399">● онлайн</span>':'был '+new Date(fu.last_online).toLocaleString('ru')):'';
+  const achs=(fx&&fx.achievements||[]).map(a=>`<span class="bdg" title="${esc(a.desc||'')}">${esc(a.title||a.code)}</span>`).join(' ');
+  const posts=(fx&&fx.recentPosts||[]).map(p=>`<a href="#forum/t/${p.id}" onclick="$('pfOv').remove()" style="display:block;margin:4px 0">${esc(p.title)}</a>`).join('')||'<small style="color:var(--m)">Нет тем</small>';
+  const reps=(fx&&fx.recentReplies||[]).map(p=>`<a href="#forum/t/${p.post_id}" onclick="$('pfOv').remove()" style="display:block;margin:4px 0">${esc(p.title)} <small>#${p.id}</small></a>`).join('')||'<small style="color:var(--m)">Нет ответов</small>';
   $('pfIn').innerHTML=`<div class="pf-ban" ${ban}><div class="pf-av">${av}</div></div>
    <div class="pf-body">
     <h2 ${u.color?`style="color:${u.color}"`:''}>${u.badge&&FLB[u.badge]?`<span class="fl-bd">${flBadge(u.badge,18)}</span> `:''}${esc(u.username)}</h2>
-    <small style="color:var(--m)">${u.is_admin?'ADMIN · ':''}${u.is_super?'SUPER · ':''}с ${u.created?new Date(u.created).toLocaleDateString('ru-RU'):'—'}</small>
+    <div style="margin:4px 0;font-size:13px">${rank} ${online}</div>
+    <small style="color:var(--m)">${u.is_admin?'ADMIN · ':''}${u.is_super?'SUPER · ':''}с ${u.created?new Date(u.created).toLocaleDateString('ru-RU'):'—'}
+     ${fu.msgs!=null?' · сообщений: '+fu.msgs:''}${fu.reputation!=null?' · репутация: '+fu.reputation:''}${fu.likes!=null?' · лайков: '+fu.likes:''}</small>
     ${u.bio?`<div class="pf-bio">${esc(u.bio)}</div>`:'<div class="pf-bio" style="opacity:.5">Нет описания</div>'}
+    ${achs?`<div style="margin:10px 0;display:flex;flex-wrap:wrap;gap:6px">${achs}</div>`:''}
     <div class="pf-votes">
      <button class="${likeOn}" onclick="pfVote(${u.id},1)">👍 ${r.likes}</button>
      <button class="${disOn}" onclick="pfVote(${u.id},-1)">👎 ${r.dislikes}</button>
+     ${user&&user.is_admin?`<button class="btn sm ghost" onclick="fmUserMod(${u.id},'warn')">Варн</button><button class="btn sm ghost" onclick="fmUserMod(${u.id},'ban')">Бан форум</button>`:''}
     </div>
+    <div style="margin-top:14px"><h4 style="margin:0 0 6px">Последние темы</h4>${posts}</div>
+    <div style="margin-top:12px"><h4 style="margin:0 0 6px">Последние ответы</h4>${reps}</div>
     <div class="pf-com">
      <h4 style="margin:0 0 10px">Комментарии</h4>
      <div id="pfComs">${r.comments.map(c=>`<div class="c"><b onclick="openUserProfile('${esc(c.username)}')">@${esc(c.username)}</b> <small style="color:var(--m)">${dt(c.ts)}</small><div>${esc(c.text)}</div></div>`).join('')||'<small style="color:var(--m)">Пока нет комментариев</small>'}</div>
@@ -352,6 +366,6 @@ window.openUserProfile=async function(name){
 window.pfVote=async(id,v)=>{try{const r=await post('/api/profile/vote',{id,v});const box=document.querySelector('.pf-votes');if(box){box.children[0].textContent='👍 '+r.likes;box.children[1].textContent='👎 '+r.dislikes}}catch(e){toast(e.message,1)}};
 window.pfComment=async(id,name)=>{try{await post('/api/profile/comment',{id,text:$('pfCmt').value});openUserProfile(name)}catch(e){toast(e.message,1)}};
 
-const _r=window.render;window.render=function(){_r.apply(this,arguments);try{if(user){loadExt();injectAdmin()}else landing()}catch{}};
+const _r=window.render;window.render=function(){_r.apply(this,arguments);try{if(user){loadExt();injectAdmin();if(typeof pollForumUnread==='function')pollForumUnread()}else landing()}catch{}};
 setTimeout(()=>{try{user?loadExt():landing()}catch{}},1500);
 })();
