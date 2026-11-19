@@ -2359,9 +2359,9 @@ function chLoop(d){clearTimeout(chTm);chTm=setTimeout(async()=>{try{await chPoll
 let chAgain=false;
 async function chPoll(){if(!user)return;if(chBusy){chAgain=true;return}chBusy=true;try{
   const full=chLast===0||(chOpen&&++chN%10===0);
-  const r=await fetch(API_BASE+'/api/chat/list?after='+(full?0:chLast),{cache:'no-store',credentials:'include',signal:AbortSignal.timeout(10000)});
+  const r=await fetch(API_BASE+'/api/chat/list?after='+(full?0:chLast)+'&_='+Date.now(),{cache:'no-store',credentials:'include',signal:AbortSignal.timeout(10000)});
   if(r.status===401){chatStop();return}
-  const j=await r.json();chMe=j.me;chAdm=j.admin;
+  const j=await r.json();if(j.inst){if(window.__chInst&&window.__chInst!==j.inst)console.warn('[chat] ответы приходят с РАЗНЫХ экземпляров сервера ('+window.__chInst+' → '+j.inst+') — у них разные базы, сообщения не будут общими');window.__chInst=j.inst}chMe=j.me;chAdm=j.admin;
   $('chOnline').textContent='онлайн: '+j.online;$('chClear').style.display=chAdm?'':'none';
   if(j.full){const first=chLast===0;chRender(j.list,first);chLast=j.last||0}
   else if(j.list.length){chAppend(j.list,true);chLast=Math.max(chLast,...j.list.map(m=>m.id))}
@@ -2430,4 +2430,4 @@ function ldUpload(){if(!ldFile)return;if(!confirm('Заменить лоадер
   x.onerror=()=>{$('ldBar').style.display='none';$('ldPct').textContent='';toast('Нет связи с сервером',1);$('ldGo').disabled=false};
   x.send(ldFile)}
 async function ldRollback(){if(!confirm('Вернуть предыдущую версию лоадера?'))return;try{await api('/api/admin/loader/rollback',{});toast('Возвращена предыдущая версия');ldInfo()}catch(e){toast(e.message,1)}}
-</script><script src="/ext.js?v=fl6"></script><script src="/forum.js?v=2"></script></body></html>
+</script><script src="/ext.js?v=fl7"></script><script src="/forum.js?v=3"></script></body></html>

@@ -97,6 +97,8 @@ const st=document.createElement('style');st.textContent=`
 .fx-cat:hover,.fx-th:hover{background:rgba(59,158,255,.06)}
 .fx-cat{grid-template-columns:44px 1fr 80px 90px minmax(0,250px)}
 .fx-ci{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:18px;background:linear-gradient(135deg,rgba(59,158,255,.28),rgba(59,158,255,.06));color:var(--fx-ac)}
+.fx-ci svg{display:block}
+.fx-icons{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}.fx-mb .fx-ic{display:block;cursor:pointer}.fx-ic input{position:absolute;opacity:0;pointer-events:none}.fx-ic span{display:grid;place-items:center;height:38px;border:1px solid var(--fx-ln);border-radius:9px;background:var(--fx-bg2);color:var(--fx-mu)}.fx-ic input:checked+span{border-color:var(--fx-ac);color:var(--fx-ac);background:rgba(59,158,255,.14)}.fx-ic:hover span{border-color:var(--fx-ac)}
 .fx-cm b,.fx-tm b{font-size:15px}.fx-cm small{display:block;color:var(--fx-mu);margin-top:2px}
 .fx-cs{text-align:center}.fx-cs b{display:block;font-size:15px}.fx-cs small{color:var(--fx-mu);font-size:11.5px}
 .fx-cl{font-size:12.5px;color:var(--fx-mu);min-width:0}.fx-cl a{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg);cursor:pointer}
@@ -185,7 +187,25 @@ const av=(a,s=40)=>`<span class="fx-avw" data-av="${E(a.avatar||'')}" data-u="${
 const hydrate=el=>el.querySelectorAll('[data-av]:not([data-ok])').forEach(n=>{n.dataset.ok=1;avFill(n,n.dataset.av?U(n.dataset.av):'',n.dataset.u)});
 const roleOf=a=>a.is_admin?'Администратор':a.role==='moderator'?'Модератор':a.role==='support'?'Поддержка':'';
 const nameHtml=a=>`${a.badge&&window.flBadge&&window.FLB&&FLB[a.badge]?`<span class="fl-bd">${flBadge(a.badge,14)}</span> `:''}<span${a.color?` style="color:${E(a.color)}"`:''}>${E(a.username)}</span>`;
-const icon=n=>(n||'?').trim()[0].toUpperCase();
+const ICON_SVG={
+ folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>',
+ news:'<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/>',
+ update:'<path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4"/>',
+ target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/>',
+ key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
+ code:'<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
+ book:'<path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/><path d="M4 20a2 2 0 0 0 2 1h13v-3M8.5 7.5h7"/>',
+ chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+ shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+ tools:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
+ help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/>',
+ bug:'<rect x="8" y="8" width="8" height="11" rx="4"/><path d="M9 5l1.5 2M15 5l-1.5 2M4 13h4M16 13h4M5 7l3 2M19 7l-3 2M5 19l3-2M19 19l-3-2"/>',
+ image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-9 9"/>',
+ download:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>'
+};
+const svgIcon=(n,z=22)=>`<svg viewBox="0 0 24 24" width="${z}" height="${z}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_SVG[n]||ICON_SVG.folder}</svg>`;
 
 function pager(page,pages,tag){
  if(pages<=1)return '';
@@ -366,7 +386,7 @@ async function vHome(my){
   h+=`<div class="fx-grp"><div class="fx-gh"><span>${E(g)}</span></div>`;
   map[g].forEach(c=>{
    h+=`<div class="fx-cat" data-a="cat" data-id="${E(c.id)}">
-    <div class="fx-ci">${E(icon(c.name))}</div>
+    <div class="fx-ci">${svgIcon(c.icon,24)}</div>
     <div class="fx-cm"><b>${E(c.name)}</b>${c.staff?'<span class="fx-tag ro">только чтение</span>':''}<small>${E(c.descr)}</small>
      ${j.staff?`<div class="fx-row" style="margin-top:6px"><button class="fx-b g sm" data-a="catedit" data-id="${E(c.id)}">Изменить</button><button class="fx-b d sm" data-a="catdel" data-id="${E(c.id)}">Удалить</button></div>`:''}</div>
     <div class="fx-cs"><b>${nfmt(c.threads)}</b><small>${plural(c.threads,'тема','темы','тем')}</small></div>
@@ -531,12 +551,13 @@ function catForm(c){
   <label>Название<input class="fx-in" id="fcN" maxlength="40" value="${E(c?c.name:'')}"></label>
   <label>Описание<input class="fx-in" id="fcD" maxlength="140" value="${E(c?c.descr:'')}"></label>
   <label>Группа<input class="fx-in" id="fcG" list="fcGl" maxlength="30" value="${E(c?c.group:'Community')}"><datalist id="fcGl">${groups.map(g=>`<option value="${E(g)}">`).join('')}</datalist></label>
+  <label>Иконка<div class="fx-icons">${Object.keys(ICON_SVG).map(k=>`<label class="fx-ic"><input type="radio" name="fcI" value="${k}"${(c?c.icon:'folder')===k?' checked':''}><span title="${k}">${svgIcon(k,20)}</span></label>`).join('')}</div></label>
   <label>Порядок (меньше — выше)<input class="fx-in" id="fcS" type="number" value="${c?c.sort:100}"></label>
   <label class="fx-chk"><input type="checkbox" id="fcT"${c&&c.staff?' checked':''}> Только чтение: темы и ответы пишут только администраторы</label>
   <div class="fx-row"><button class="fx-b" id="fcOk">Сохранить</button><button class="fx-b g" data-x>Отмена</button></div>`,o=>{
   o.querySelector('[data-x]').onclick=()=>o.remove();
   o.querySelector('#fcOk').onclick=async()=>{try{
-   await post('/api/forum/cat_save',{id:c?c.id:'',name:o.querySelector('#fcN').value,descr:o.querySelector('#fcD').value,group:o.querySelector('#fcG').value,sort:+o.querySelector('#fcS').value,staff:o.querySelector('#fcT').checked});
+   await post('/api/forum/cat_save',{id:c?c.id:'',name:o.querySelector('#fcN').value,descr:o.querySelector('#fcD').value,group:o.querySelector('#fcG').value,sort:+o.querySelector('#fcS').value,icon:(o.querySelector('input[name=fcI]:checked')||{}).value||'folder',staff:o.querySelector('#fcT').checked});
    o.remove();toast('Сохранено');route()}catch(e){toast(e.message,1)}};
  });
 }
